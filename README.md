@@ -21,27 +21,27 @@ The `checkouts` task creates checkout symlinks to all the internal packages that
 this project depends on.
 
 ```bash
-lein mono checkouts
+lein monolith checkouts
 ```
 
 ### Check External Dependency Versions
 
 This task loads the list of approved versions for external dependencies and
-warns if the current project depends on an incorrect version.
+warns if the current project depends on an incorrect version. It will also warn
+if any dependencies are neither internal projects nor have specified versions.
 
 ```bash
-lein mono check-deps
+lein monolith deps
 ```
 
 ### Merged Source Profile
 
 The plugin also creates a profile with `:src-paths` and `:test-paths` updated
-to include the source and test files from all projects in the monorepo. This can
-be useful for running lint and tests on all the projects at once.
+to include the source and test files from all projects in the monorepo. The
+`:dependencies` vector will also be merged across all projects.
+
+This can be useful for running lint and tests on all the projects at once:
 
 ```bash
-lein mono with-all test
-
-# alternately:
-lein with-profile +monolith/all test
+lein monolith with-all test
 ```
