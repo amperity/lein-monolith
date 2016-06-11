@@ -3,17 +3,45 @@ lein-monolith
 
 A Leiningen plugin to work with multiple projects inside a monorepo.
 
+## Installation
+
+Library releases are published on Clojars. To use the latest version with
+Leiningen, add the following plugin to your user profile or project
+definitions:
+
+[![Clojars Project](http://clojars.org/mvxcvi/lein-monolith/latest-version.svg)](http://clojars.org/mvxcvi/lein-monolith)
+
 ## Usage
 
-FIXME: Use this for user-level plugins:
+Monolith offers a number of tasks to make working with monorepos easier.
 
-Put `[lein-monolith "0.1.0-SNAPSHOT"]` into the `:plugins` vector of your `:user`
-profile.
+### Set Up Checkout Links
 
-FIXME: Use this for project-level plugins:
+The `checkouts` task creates checkout symlinks to all the internal packages that
+this project depends on.
 
-Put `[lein-monolith "0.1.0-SNAPSHOT"]` into the `:plugins` vector of your project.clj.
+```bash
+lein mono checkouts
+```
 
-FIXME: and add an example usage that actually makes sense:
+### Check External Dependency Versions
 
-    $ lein mono
+This task loads the list of approved versions for external dependencies and
+warns if the current project depends on an incorrect version.
+
+```bash
+lein mono check-deps
+```
+
+### Merged Source Profile
+
+The plugin also creates a profile with `:src-paths` and `:test-paths` updated
+to include the source and test files from all projects in the monorepo. This can
+be useful for running lint and tests on all the projects at once.
+
+```bash
+lein mono with-all test
+
+# alternately:
+lein with-profile +monolith/all test
+```
