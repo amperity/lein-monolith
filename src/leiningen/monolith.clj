@@ -133,7 +133,10 @@
   (println)
   (println "    info         Print some information about the current configuration")
   (println "    checkout     Set up checkout dependency links to internal projects")
+  (println "      --force       Override existing checkout links")
   (println "    deps         Check external dependency versions against the approved list")
+  (println "      --unlocked    Print warnings for external dependencies with no specified version")
+  (println "      --strict      Exit with a failure status if any versions don't match")
   (println "    with-all     Run the following commands with a merged profile of all project sources")
   (println "    help         Show this help message"))
 
@@ -155,7 +158,7 @@
   dependencies in the current project."
   [project args]
   (let [config (load-config!)
-        options (set (map read-string args))
+        options (set args)
         checkouts-dir (jio/file (:root project) "checkouts")]
     (when-not (.exists checkouts-dir)
       (.mkdir checkouts-dir))
@@ -172,7 +175,7 @@
                 ; Link exists and points to target already.
                 (println "Link for" dependency "is correct")
                 ; Link exists but points somewhere else.
-                (if (:force options)
+                (if (get options "--force")
                   ; Recreate link since :force is set.
                   (do (println "Relinking" dependency "from"
                                (str actual-target) "to" (str target))
@@ -190,7 +193,7 @@
   "Check the versions of external dependencies of the current project."
   [project args]
   (let [config (load-config!)
-        options (set (map read-string args))
+        options (set args)
         ext-deps (->> (:external-dependencies config)
                       (map (juxt first identity))
                       (into {}))
@@ -202,9 +205,9 @@
           (if-let [expected-spec (ext-deps pname')]
             (when-not (= expected-spec spec')
               (println "ERROR: External dependency" (pr-str spec') "does not match expected spec" (pr-str expected-spec))
-              (when (:strict options)
+              (when (get options "--strict")
                 (reset! error-flag true)))
-            (when (:warn-unspecified options)
+            (when (get options "--unlocked")
               (println "WARN: External dependency" (pr-str pname') "has no expected version defined"))))))
     (when @error-flag
       (System/exit 1))))
