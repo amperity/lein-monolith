@@ -11,6 +11,15 @@
 (def config-name "monolith.clj")
 
 
+(defn- collapse-project-name
+  "Simplifies a dependency name symbol with identical name and namespace
+  components to a symbol with just a name."
+  [sym]
+  (if (= (namespace sym) (name sym))
+    (symbol (name sym))
+    sym))
+
+
 (defn- read-clj
   "Read the first data structure in a clojure file."
   [file]
@@ -146,9 +155,7 @@
                       (into {}))
         error-flag (atom false)]
     (doseq [[pname :as spec] (:dependencies project)]
-      (let [pname' (if (= (namespace pname) (name pname))
-                     (symbol (name pname))
-                     pname)
+      (let [pname' (collapse-project-name pname)
             spec' (vec (cons pname' (rest spec)))]
         (when-not (internal-project? config pname')
           (if-let [expected-spec (ext-deps pname')]
