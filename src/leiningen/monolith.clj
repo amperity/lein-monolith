@@ -116,13 +116,23 @@
 
 (defn- link-checkouts!
   [project args]
-  ; ...
+  ; 1. Find dependencies (in all profiles?) and determine if any are internal
+  ;    projects.
+  ; 2. Create directory `(jio/file project-dir "checkouts")` if needed.
+  ; 3. Create symlinks which don't exist pointing to the (ideally relative)
+  ;    internal project paths. Warn about existing symlinks pointing to other
+  ;    locations.
+  ; TODO: allow `:force` option to override existing links
   (println "NYI"))
 
 
 (defn- check-dependencies
   [project args]
-  ; ...
+  ; 1. Find dependencies (in all profiles?) and determine which are external
+  ;    projects.
+  ; 2. For each external dependency, check the version against the approved
+  ;    version from the config map. Warn if it's not present in the map.
+  ; TODO: allow `:strict` option to error on mismatched versions
   (println "NYI"))
 
 
