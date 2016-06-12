@@ -153,18 +153,20 @@
               create-link! #(Files/createSymbolicLink link target (make-array java.nio.file.attribute.FileAttribute 0))]
           (if (Files/exists link (into-array LinkOption [LinkOption/NOFOLLOW_LINKS]))
             ; Link file exists.
-            (if (and (Files/isSymbolicLink link)
-                     (= target (Files/readSymbolicLink link)))
-              ; Link exists and points to target already.
-              (println "Link for" dependency "is correct")
-              ; Link exists but points somewhere else.
-              (if (:force options)
-                ; Recreate link since :force is set.
-                (do (Files/delete link)
-                    (create-link!))
-                ; Otherwise print a warning.
-                (println "WARN:" dependency "links to" (str (Files/readSymbolicLink link))
-                         "instead of" (str target))))
+            (let [actual-target (Files/readSymbolicLink link)]
+              (if (and (Files/isSymbolicLink link) (= target actual-target))
+                ; Link exists and points to target already.
+                (println "Link for" dependency "is correct")
+                ; Link exists but points somewhere else.
+                (if (:force options)
+                  ; Recreate link since :force is set.
+                  (do (println "Relinking" dependency "from"
+                               (str actual-target) "to" (str target))
+                      (Files/delete link)
+                      (create-link!))
+                  ; Otherwise print a warning.
+                  (println "WARN:" dependency "links to" (str actual-target)
+                           "instead of" (str target)))))
             ; Link does not exist, so create it.
             (do (println "Linking" dependency "to" (str target))
                 (create-link!))))))))
