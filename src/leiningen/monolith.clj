@@ -151,6 +151,8 @@
 
 
 (defn- link-checkouts!
+  "Create symlinks in the checkouts directory pointing to all internal
+  dependencies in the current project."
   [project args]
   (let [config (load-config!)
         options (set (map read-string args))
@@ -185,6 +187,7 @@
 
 
 (defn- check-dependencies
+  "Check the versions of external dependencies of the current project."
   [project args]
   (let [config (load-config!)
         options (set (map read-string args))
@@ -208,10 +211,11 @@
 
 
 (defn- apply-with-all
+  "Execute the following commands in the context of a merged set of source and
+  test paths."
   [project args]
   (let [config (load-config!)
         profile (merged-profile config)]
-    ;(pprint profile)
     (apply with-profile
       (project/add-profiles project {:monolith/all profile})
       "monolith/all"
