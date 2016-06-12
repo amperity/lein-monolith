@@ -5,7 +5,11 @@
   (:import
     (java.io
       File
-      PushbackReader)))
+      PushbackReader)
+    (java.nio.file
+      Files
+      LinkOption
+      Paths)))
 
 
 (def config-name "monolith.clj")
@@ -136,14 +140,34 @@
 
 (defn- link-checkouts!
   [project args]
-  ; 1. Find dependencies (in all profiles?) and determine if any are internal
-  ;    projects.
-  ; 2. Create directory `(jio/file project-dir "checkouts")` if needed.
-  ; 3. Create symlinks which don't exist pointing to the (ideally relative)
-  ;    internal project paths. Warn about existing symlinks pointing to other
-  ;    locations.
-  ; TODO: allow `:force` option to override existing links
-  (println "NYI"))
+  (let [config (load-config!)
+        options (set (map read-string args))
+        checkouts-dir (jio/file (:root project) "checkouts")]
+    (when-not (.exists checkouts-dir)
+      (.mkdir checkouts-dir))
+    (doseq [spec (:dependencies project)
+            :let [dependency (collapse-project-name (first spec))]]
+      (when-let [^File dep-dir (get-in config [:internal-projects dependency :dir])]
+        (let [link (.toPath (jio/file checkouts-dir (.getName dep-dir)))
+              target (.relativize (.toPath checkouts-dir) (.toPath dep-dir))
+              create-link! #(Files/createSymbolicLink link target (make-array java.nio.file.attribute.FileAttribute 0))]
+          (if (Files/exists link (into-array LinkOption [LinkOption/NOFOLLOW_LINKS]))
+            ; Link file exists.
+            (if (and (Files/isSymbolicLink link)
+                     (= target (Files/readSymbolicLink link)))
+              ; Link exists and points to target already.
+              (println "Link for" dependency "is correct")
+              ; Link exists but points somewhere else.
+              (if (:force options)
+                ; Recreate link since :force is set.
+                (do (Files/delete link)
+                    (create-link!))
+                ; Otherwise print a warning.
+                (println "WARN:" dependency "links to" (str (Files/readSymbolicLink link))
+                         "instead of" (str target))))
+            ; Link does not exist, so create it.
+            (do (println "Linking" dependency "to" (str target))
+                (create-link!))))))))
 
 
 (defn- check-dependencies
@@ -191,7 +215,7 @@
     "info"
       (print-info)
 
-    "checkouts"
+    "checkout"
       (link-checkouts! project args)
 
     "deps"
