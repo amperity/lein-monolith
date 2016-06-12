@@ -99,22 +99,23 @@
   []
   (println "Usage: lein monolith <command> [args...]")
   (println)
-  (println "    config       Print some information about the current configuration")
+  (println "    info         Print some information about the current configuration")
   (println "    checkout     Set up checkout dependency links to internal projects")
   (println "    deps         Check external dependency versions against the approved list")
   (println "    with-all     Run the following commands with a merged profile of all project sources")
   (println "    help         Show this help message"))
 
 
-(defn- print-config
+(defn- print-info
+  "Prints some information about the monorepo configuration."
   []
   (let [config (load-config!)]
     (println "Config path:" (:config-path config))
     (println)
     (println "Internal projects:")
-    (let [prefix-len (inc (count (str (mono-root config))))]
-      (doseq [[coord dir] (find-internal-projects config)]
-        (printf "  %-40s -> %s\n" (pr-str coord) (subs (str dir) prefix-len))))))
+    (let [prefix-len (inc (count (:mono-root config)))]
+      (doseq [[pname {:keys [version path]}] (:internal-projects config)]
+        (printf "  %-40s -> %s\n" (pr-str [pname version]) (subs (str path) prefix-len))))))
 
 
 (defn- link-checkouts!
@@ -155,8 +156,8 @@
     (nil "help")
       (print-help)
 
-    "config"
-      (print-config)
+    "info"
+      (print-info)
 
     "checkouts"
       (link-checkouts! project args)
