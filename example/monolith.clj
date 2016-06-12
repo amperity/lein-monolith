@@ -1,5 +1,5 @@
-{:project-paths
- ["code" "libs"]
+{:project-dirs
+ ["apps" "libs"]
 
  :external-dependencies
  [[org.clojure/clojure "1.8.0"]
