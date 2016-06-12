@@ -20,10 +20,39 @@
       (read)))
 
 
+(defn- read-project-coord
+  "Reads a leiningen project definition from the given directory and returns a
+  vector of the project's name symbol and version. Returns nil if the project
+  file does not exist or is invalid."
+  [dir]
+  (let [project-file (jio/file dir "project.clj")]
+    (when-let [project (and (.exists project-file) (read-clj project-file))]
+      (if (and (list? project) (= 'defproject (first project)))
+        [(nth project 1) (nth project 2)]
+        (println "WARN:" (str project-file) "does not appear to be a valid leiningen project definition!")))))
+
+
+(defn- find-internal-projects
+  "Returns a sequence of vectors containing the project name and the path to
+  the project's directory."
+  [root project-dirs]
+  (when root
+    (->>
+      project-dirs
+      (mapcat
+        (fn list-projects
+          [path]
+          (let [projects-dir (jio/file root path)]
+            (->> (.listFiles projects-dir)
+                 (map #(vector (read-project-coord %) %))
+                 (filter first))))))))
+
+
 (defn- find-config
   "Searches upward from the project root until it finds a configuration file.
   Returns the `File` object if found, or nil if no matching file could be
   located in the parent directories."
+  ^java.io.File
   [dir]
   (when dir
     (let [dir (jio/file dir)
@@ -43,42 +72,16 @@
      (when-not file
        (println "Could not find configuration file" config-name "in any parent directory of" dir)
        (System/exit 1))
-     (-> (read-clj file)
-         (assoc :config-path (str file))))))
-
-
-(defn- mono-root
-  "Returns the path to the monorepo's root."
-  [config]
-  (.getParent (jio/file (:config-path config))))
-
-
-(defn- read-project-coord
-  "Reads a leiningen project definition from the given directory and returns a
-  vector of the project's name symbol and version. Returns nil if the project
-  file does not exist or is invalid."
-  [dir]
-  (let [project-file (jio/file dir "project.clj")]
-    (when-let [project (and (.exists project-file) (read-clj project-file))]
-      (if (and (list? project) (= 'defproject (first project)))
-        [(nth project 1) (nth project 2)]
-        (println "WARN:" (str project-file) "does not appear to be a valid leiningen project definition!")))))
-
-
-(defn- find-internal-projects
-  "Returns a sequence of vectors containing the project name and the path to
-  the project's directory."
-  [config]
-  (when-let [root (mono-root config)]
-    (->>
-      (:project-dirs config)
-      (mapcat
-        (fn list-projects
-          [path]
-          (let [projects-dir (jio/file root path)]
-            (->> (.listFiles projects-dir)
-                 (map #(vector (read-project-coord %) %))
-                 (filter first))))))))
+     (let [root (.getParent file)
+           config (read-clj file)
+           projects (->> (find-internal-projects root (:project-dirs config))
+                         (map (fn [[[pname version] path]]
+                                [pname {:version version, :path path}]))
+                         (into {}))]
+       (assoc config
+              :config-path (str file)
+              :mono-root (str root)
+              :internal-projects projects)))))
 
 
 (defn- merged-profile
