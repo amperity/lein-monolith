@@ -1,7 +1,7 @@
 lein-monolith
 =============
 
-A Leiningen plugin to work with multiple projects inside a monorepo.
+Monolith is a Leiningen plugin to work with multiple projects inside a monorepo.
 
 ## Installation
 
@@ -13,7 +13,14 @@ definitions:
 
 ## Usage
 
-Monolith offers a number of tasks to make working with monorepos easier.
+Monolith offers a number of tasks to make working with monorepos easier. To get
+started, create a coniguration file named `monolith.clj` at the root of the
+monorepo. This file tells monolith where to find the projects inside the repo,
+using the `:project-dirs` key.
+
+You can also specify a set of external dependency versions which should be used
+by the projects inside the monorepo. This is a vector of vectors defined the
+same way it is in a `project.clj` file.
 
 ### Set Up Checkout Links
 
