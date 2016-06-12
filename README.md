@@ -9,7 +9,7 @@ Library releases are published on Clojars. To use the latest version with
 Leiningen, add the following plugin to your user profile or project
 definitions:
 
-[![Clojars Project](http://clojars.org/mvxcvi/lein-monolith/latest-version.svg)](http://clojars.org/mvxcvi/lein-monolith)
+[![Clojars Project](http://clojars.org/lein-monolith/lein-monolith/latest-version.svg)](http://clojars.org/lein-monolith/lein-monolith)
 
 ## Usage
 
