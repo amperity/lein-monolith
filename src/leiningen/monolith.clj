@@ -1,7 +1,9 @@
 (ns leiningen.monolith
   (:require
     [clojure.java.io :as jio]
-    [clojure.pprint :refer [pprint]])
+    [clojure.pprint :refer [pprint]]
+    [leiningen.core.project :as project]
+    [leiningen.with-profile :refer [with-profile]])
   (:import
     (java.io
       File
@@ -105,11 +107,21 @@
 
 
 (defn- merged-profile
-  "Constructs a profile map containing merged `:src-paths` and `:test-paths` entries."
-  [version options]
-  {:src-paths ['...]
-   :test-paths ['...]
-   :dependencies ['...]})
+  "Constructs a profile map containing merged source and test paths."
+  [config]
+  (let [projects (:internal-projects config)]
+    (reduce-kv
+      (fn [profile dependency {:keys [dir]}]
+        (let [project (project/read (str (jio/file dir "project.clj")))]
+          (-> profile
+              (update :source-paths concat (:source-paths project))
+              (update :test-paths   concat (:test-paths   project))
+              ; TODO: dependencies?
+              )))
+      {:source-paths []
+       :test-paths []
+       :dependencies []}
+      projects)))
 
 
 
@@ -197,8 +209,13 @@
 
 (defn- apply-with-all
   [project args]
-  ; ...
-  (println "NYI"))
+  (let [config (load-config!)
+        profile (merged-profile config)]
+    ;(pprint profile)
+    (apply with-profile
+      (project/add-profiles project {:monolith/all profile})
+      "monolith/all"
+      args)))
 
 
 
