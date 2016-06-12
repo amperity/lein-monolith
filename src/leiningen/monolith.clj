@@ -178,6 +178,9 @@
     (nil "help")
       (print-help)
 
+    "debug"
+      (pprint (load-config!))
+
     "info"
       (print-info)
 
