@@ -2,5 +2,6 @@
  ["apps" "libs"]
 
  :external-dependencies
- [[org.clojure/clojure "1.8.0"]
+ [[commons-io "2.5"]
+  [org.clojure/clojure "1.8.0"]
   [org.clojure/tools.logging "0.3.1"]]}
