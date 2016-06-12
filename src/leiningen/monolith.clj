@@ -11,6 +11,15 @@
 (def config-name "monolith.clj")
 
 
+(defn- read-clj
+  "Read the first data structure in a clojure file."
+  [file]
+  (-> (jio/file file)
+      (jio/reader)
+      (PushbackReader.)
+      (read)))
+
+
 (defn- find-config
   "Searches upward from the project root until it finds a configuration file.
   Returns the `File` object if found, or nil if no matching file could be
@@ -34,10 +43,42 @@
      (when-not file
        (println "Could not find configuration file" config-name "in any parent directory of" dir)
        (System/exit 1))
-     (-> (jio/reader file)
-         (PushbackReader.)
-         (read)
-         (vary-meta assoc ::config-path (str file))))))
+     (-> (read-clj file)
+         (assoc :config-path (str file))))))
+
+
+(defn- mono-root
+  "Returns the path to the monorepo's root."
+  [config]
+  (.getParent (jio/file (:config-path config))))
+
+
+(defn- read-project-coord
+  "Reads a leiningen project definition from the given directory and returns a
+  vector of the project's name symbol and version. Returns nil if the project
+  file does not exist or is invalid."
+  [dir]
+  (let [project-file (jio/file dir "project.clj")]
+    (when-let [project (and (.exists project-file) (read-clj project-file))]
+      (if (and (list? project) (= 'defproject (first project)))
+        [(nth project 1) (nth project 2)]
+        (println "WARN:" (str project-file) "does not appear to be a valid leiningen project definition!")))))
+
+
+(defn- find-internal-projects
+  "Returns a sequence of vectors containing the project name and the path to
+  the project's directory."
+  [config]
+  (when-let [root (mono-root config)]
+    (->>
+      (:project-dirs config)
+      (mapcat
+        (fn list-projects
+          [path]
+          (let [projects-dir (jio/file root path)]
+            (->> (.listFiles projects-dir)
+                 (map #(vector (read-project-coord %) %))
+                 (filter first))))))))
 
 
 (defn- merged-profile
