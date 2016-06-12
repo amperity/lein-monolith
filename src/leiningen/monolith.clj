@@ -84,6 +84,13 @@
               :internal-projects projects)))))
 
 
+(defn- internal-project?
+  "Determines whether the given project symbol names a project defined inside
+  the monorepo."
+  [config project]
+  (boolean (get-in config [:internal-projects project])))
+
+
 (defn- merged-profile
   "Constructs a profile map containing merged `:src-paths` and `:test-paths` entries."
   [version options]
@@ -132,12 +139,27 @@
 
 (defn- check-dependencies
   [project args]
-  ; 1. Find dependencies (in all profiles?) and determine which are external
-  ;    projects.
-  ; 2. For each external dependency, check the version against the approved
-  ;    version from the config map. Warn if it's not present in the map.
-  ; TODO: allow `:strict` option to error on mismatched versions
-  (println "NYI"))
+  (let [config (load-config!)
+        options (set (map read-string args))
+        ext-deps (->> (:external-dependencies config)
+                      (map (juxt first identity))
+                      (into {}))
+        error-flag (atom false)]
+    (doseq [[pname :as spec] (:dependencies project)]
+      (let [pname' (if (= (namespace pname) (name pname))
+                     (symbol (name pname))
+                     pname)
+            spec' (vec (cons pname' (rest spec)))]
+        (when-not (internal-project? config pname')
+          (if-let [expected-spec (ext-deps pname')]
+            (when-not (= expected-spec spec')
+              (println "ERROR: External dependency" (pr-str spec') "does not match expected spec" (pr-str expected-spec))
+              (when (:strict options)
+                (reset! error-flag true)))
+            (when (:warn-unspecified options)
+              (println "WARN: External dependency" (pr-str pname') "has no expected version defined"))))))
+    (when @error-flag
+      (System/exit 1))))
 
 
 (defn- apply-with-all
