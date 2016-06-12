@@ -75,8 +75,8 @@
      (let [root (.getParent file)
            config (read-clj file)
            projects (->> (find-internal-projects root (:project-dirs config))
-                         (map (fn [[[pname version] path]]
-                                [pname {:version version, :path path}]))
+                         (map (fn [[[pname version] dir]]
+                                [pname {:version version, :dir dir}]))
                          (into {}))]
        (assoc config
               :config-path (str file)
@@ -114,8 +114,8 @@
     (println)
     (println "Internal projects:")
     (let [prefix-len (inc (count (:mono-root config)))]
-      (doseq [[pname {:keys [version path]}] (:internal-projects config)]
-        (printf "  %-40s -> %s\n" (pr-str [pname version]) (subs (str path) prefix-len))))))
+      (doseq [[pname {:keys [version dir]}] (:internal-projects config)]
+        (printf "  %-40s -> %s\n" (pr-str [pname version]) (subs (str dir) prefix-len))))))
 
 
 (defn- link-checkouts!
