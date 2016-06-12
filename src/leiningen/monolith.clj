@@ -94,15 +94,24 @@
 
 (defn- print-help
   []
-  (println "NYI"))
+  (println "Usage: lein monolith <command> [args...]")
+  (println)
+  (println "    config       Print some information about the current configuration")
+  (println "    checkout     Set up checkout dependency links to internal projects")
+  (println "    deps         Check external dependency versions against the approved list")
+  (println "    with-all     Run the following commands with a merged profile of all project sources")
+  (println "    help         Show this help message"))
 
 
-(defn- print-stats
-  [project args]
+(defn- print-config
+  []
   (let [config (load-config!)]
-    (println "Config path:" (::config-path (meta config)))
-    (println "Configuration:")
-    (pprint config)))
+    (println "Config path:" (:config-path config))
+    (println)
+    (println "Internal projects:")
+    (let [prefix-len (inc (count (str (mono-root config))))]
+      (doseq [[coord dir] (find-internal-projects config)]
+        (printf "  %-40s -> %s\n" (pr-str coord) (subs (str dir) prefix-len))))))
 
 
 (defn- link-checkouts!
@@ -130,8 +139,11 @@
   "..."
   [project & [command & args]]
   (case command
-    (nil "stats")
-      (print-stats project args)
+    (nil "help")
+      (print-help)
+
+    "config"
+      (print-config)
 
     "checkouts"
       (link-checkouts! project args)
@@ -142,9 +154,7 @@
     "with-all"
       (apply-with-all project args)
 
-    "help"
-      (print-help)
-
     (do
-      (println (pr-str command) "is not a valid monolith command!")
-      (System/exit 1))))
+      (println (pr-str command) "is not a valid monolith command! (try \"help\")")
+      (System/exit 1)))
+  (flush))
