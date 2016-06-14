@@ -6,6 +6,7 @@
     (leiningen.core
       [main :as lein]
       [project :as project])
+    [leiningen.install :as li]
     (lein-monolith
       [config :as config]
       [plugin :as plugin]))
@@ -113,6 +114,19 @@
                 (create-link!))))))))
 
 
+(defn install
+  "Install all subprojects into the local maven repository. This must be run
+  before checkouts will work if the declared dependencies aren't available in
+  an accessible repo."
+  [project args]
+  (let [config (config/load!)]
+    (lein/info "Installing" (count (:internal-projects config)) "subprojects...")
+    (doseq [[project-name {:keys [dir]}] (:internal-projects config)]
+      (lein/debug "Reading" project-name "subproject definiton from" dir)
+      (let [subproject (project/read (str (jio/file dir "project.clj")))]
+        (li/install subproject)))))
+
+
 (defn ^:higher-order with-all
   "Apply the given task with a merged set of dependencies, sources, and tests
   from all the internal projects.
@@ -139,12 +153,13 @@
 
 (defn monolith
   "Tasks for working with Leiningen projects inside a monorepo."
-  {:subtasks [#'info #'link #'check-deps #'with-all]}
+  {:subtasks [#'info #'link #'install #'check-deps #'with-all]}
   [project command & args]
   (case command
     "debug"      (pprint (config/load!))
     "info"       (info)
     "link"       (link project args)
+    "install"    (install project args)
     "check-deps" (check-deps project args)
     "with-all"   (apply with-all project args)
     (lein/abort (pr-str command) "is not a valid monolith command! (try \"help\")"))
