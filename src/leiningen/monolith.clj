@@ -44,34 +44,6 @@
         (printf "  %-40s   %s\n" (pr-str [pname version]) (subs (str dir) prefix-len))))))
 
 
-(defn check-deps
-  "Check the versions of external dependencies of the current project.
-
-  Options:
-    :unlocked    Print warnings for external dependencies with no specified version
-    :strict      Exit with a failure status if any versions don't match"
-  [project args]
-  (let [config (config/load!)
-        options (set args)
-        ext-deps (->> (:external-dependencies config)
-                      (map (juxt first identity))
-                      (into {}))
-        error-flag (atom false)]
-    (doseq [[pname :as spec] (:dependencies project)]
-      (let [pname' (collapse-project-name pname)
-            spec' (vec (cons pname' (rest spec)))]
-        (when-not (config/internal-project? config pname')
-          (if-let [expected-spec (ext-deps pname')]
-            (when-not (= expected-spec spec')
-              (lein/warn "ERROR: External dependency" (pr-str spec') "does not match expected spec" (pr-str expected-spec))
-              (when (get options ":strict")
-                (reset! error-flag true)))
-            (when (get options ":unlocked")
-              (lein/warn "WARN: External dependency" (pr-str pname') "has no expected version defined"))))))
-    (when @error-flag
-      (lein/abort))))
-
-
 (defn link
   "Create symlinks in the checkouts directory pointing to all internal
   dependencies in the current project.
@@ -125,6 +97,34 @@
       (lein/debug "Reading" project-name "subproject definiton from" dir)
       (let [subproject (project/read (str (jio/file dir "project.clj")))]
         (li/install subproject)))))
+
+
+(defn check-deps
+  "Check the versions of external dependencies of the current project.
+
+  Options:
+    :unlocked    Print warnings for external dependencies with no specified version
+    :strict      Exit with a failure status if any versions don't match"
+  [project args]
+  (let [config (config/load!)
+        options (set args)
+        ext-deps (->> (:external-dependencies config)
+                      (map (juxt first identity))
+                      (into {}))
+        error-flag (atom false)]
+    (doseq [[pname :as spec] (:dependencies project)]
+      (let [pname' (collapse-project-name pname)
+            spec' (vec (cons pname' (rest spec)))]
+        (when-not (config/internal-project? config pname')
+          (if-let [expected-spec (ext-deps pname')]
+            (when-not (= expected-spec spec')
+              (lein/warn "ERROR: External dependency" (pr-str spec') "does not match expected spec" (pr-str expected-spec))
+              (when (get options ":strict")
+                (reset! error-flag true)))
+            (when (get options ":unlocked")
+              (lein/warn "WARN: External dependency" (pr-str pname') "has no expected version defined"))))))
+    (when @error-flag
+      (lein/abort))))
 
 
 (defn ^:higher-order with-all
