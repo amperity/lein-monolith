@@ -2,7 +2,9 @@
   (:require
     [clojure.java.io :as jio]
     [clojure.pprint :refer [pprint]]
-    [leiningen.core.project :as project]
+    (leiningen.core
+      [main :as lein]
+      [project :as project])
     [leiningen.with-profile :refer [with-profile]])
   (:import
     (java.io
@@ -85,8 +87,7 @@
   ([dir]
    (let [file (find-config dir)]
      (when-not file
-       (println "Could not find configuration file" config-name "in any parent directory of" dir)
-       (System/exit 1))
+       (lein/abort "Could not find configuration file" config-name "in any parent directory of" dir))
      (let [root (.getParent file)
            config (read-clj file)
            projects (->> (find-internal-projects root (:project-dirs config))
@@ -126,20 +127,6 @@
 
 
 ;; ## Command Implementations
-
-(defn- print-help
-  []
-  (println "Usage: lein monolith <command> [args...]")
-  (println)
-  (println "    info         Print some information about the current configuration")
-  (println "    checkout     Set up checkout dependency links to internal projects")
-  (println "      --force       Override existing checkout links")
-  (println "    deps         Check external dependency versions against the approved list")
-  (println "      --unlocked    Print warnings for external dependencies with no specified version")
-  (println "      --strict      Exit with a failure status if any versions don't match")
-  (println "    with-all     Run the following commands with a merged profile of all project sources")
-  (println "    help         Show this help message"))
-
 
 (defn- print-info
   "Prints some information about the monorepo configuration."
@@ -204,13 +191,13 @@
         (when-not (internal-project? config pname')
           (if-let [expected-spec (ext-deps pname')]
             (when-not (= expected-spec spec')
-              (println "ERROR: External dependency" (pr-str spec') "does not match expected spec" (pr-str expected-spec))
+              (lein/warn "ERROR: External dependency" (pr-str spec') "does not match expected spec" (pr-str expected-spec))
               (when (get options "--strict")
                 (reset! error-flag true)))
             (when (get options "--unlocked")
-              (println "WARN: External dependency" (pr-str pname') "has no expected version defined"))))))
+              (lein/warn "WARN: External dependency" (pr-str pname') "has no expected version defined"))))))
     (when @error-flag
-      (System/exit 1))))
+      (lein/abort))))
 
 
 (defn- apply-with-all
@@ -221,19 +208,30 @@
         profile (merged-profile config)]
     (apply with-profile
       (project/add-profiles project {:monolith/all profile})
-      "monolith/all"
+      "+monolith/all"
       args)))
 
 
 
 ;; ## Plugin Entry
 
-(defn monolith
-  "..."
+(defn ^:no-project-needed monolith
+  "Entry point for the monolith task. Second arg should be a command, followed
+  by any command-specific arguments."
   [project & [command & args]]
   (case command
     (nil "help")
-      (print-help)
+      (do
+        (println "Usage: lein monolith <command> [args...]")
+        (println)
+        (println "    info         Print some information about the current configuration")
+        (println "    checkout     Set up checkout dependency links to internal projects")
+        (println "      --force       Override existing checkout links")
+        (println "    deps         Check external dependency versions against the approved list")
+        (println "      --unlocked    Print warnings for external dependencies with no specified version")
+        (println "      --strict      Exit with a failure status if any versions don't match")
+        (println "    with-all     Run the following commands with a merged profile of all project sources")
+        (println "    help         Show this help message"))
 
     "debug"
       (pprint (load-config!))
@@ -250,7 +248,5 @@
     "with-all"
       (apply-with-all project args)
 
-    (do
-      (println (pr-str command) "is not a valid monolith command! (try \"help\")")
-      (System/exit 1)))
+    (lein/abort (pr-str command) "is not a valid monolith command! (try \"help\")"))
   (flush))
