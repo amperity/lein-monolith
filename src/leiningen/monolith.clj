@@ -9,7 +9,8 @@
       [project :as project])
     (lein-monolith
       [config :as config]
-      [plugin :as plugin]))
+      [plugin :as plugin]
+      [util :as u]))
   (:import
     (java.io
       File)

@@ -1,7 +1,10 @@
 (ns lein-monolith.config
   (:require
     [clojure.java.io :as jio]
-    [leiningen.core.main :as lein])
+    (leiningen.core
+      [main :as lein]
+      [project :as project])
+    [lein-monolith.util :as u])
   (:import
     (java.io
       PushbackReader)
@@ -10,6 +13,8 @@
       LinkOption
       Paths)))
 
+
+;; ## General Configuration
 
 (def config-name "monolith.clj")
 
@@ -21,34 +26,6 @@
       (jio/reader)
       (PushbackReader.)
       (read)))
-
-
-(defn- read-project-coord
-  "Reads a leiningen project definition from the given directory and returns a
-  vector of the project's name symbol and version. Returns nil if the project
-  file does not exist or is invalid."
-  [dir]
-  (let [project-file (jio/file dir "project.clj")]
-    (when-let [project (and (.exists project-file) (read-clj project-file))]
-      (if (and (list? project) (= 'defproject (first project)))
-        [(nth project 1) (nth project 2)]
-        (lein/warn "WARN:" (str project-file) "does not appear to be a valid leiningen project definition!")))))
-
-
-(defn- find-internal-projects
-  "Returns a sequence of vectors containing the project name and the path to
-  the project's directory."
-  [root project-dirs]
-  (when root
-    (->>
-      project-dirs
-      (mapcat
-        (fn list-projects
-          [path]
-          (let [projects-dir (jio/file root path)]
-            (->> (.listFiles projects-dir)
-                 (map #(vector (read-project-coord %) %))
-                 (filter first))))))))
 
 
 (defn- find-config
@@ -65,29 +42,47 @@
         (recur (.getParent dir))))))
 
 
-(defn load!
+(defn read!
   "Reads the monolith configuration file and returns the contained data
-  structure. Aborts with an error if the file is not found."
+  structure. Aborts with an error if the file is not found.
+
+  Note that this function does *not* load the subproject definitions."
   ([]
-   (load! (System/getProperty "user.dir")))
+   (read! (System/getProperty "user.dir")))
   ([dir]
    (let [file (find-config dir)]
      (when-not file
        (lein/abort "Could not find configuration file" config-name "in any parent directory of" dir))
-     (let [root (.getParent file)
-           config (read-clj file)
-           projects (->> (find-internal-projects root (:project-dirs config))
-                         (map (fn [[[pname version] dir]]
-                                [pname {:version version, :dir dir}]))
-                         (into {}))]
-       (assoc config
-              :config-path (str file)
-              :mono-root (str root)
-              :internal-projects projects)))))
+     (assoc (read-clj file)
+            :config-path (str file)
+            :mono-root (str (.getParent file))))))
 
 
-(defn internal-project?
-  "Determines whether the given project symbol names a project defined inside
-  the monorepo."
-  [config project-name]
-  (boolean (get-in config [:internal-projects project-name])))
+
+;; ## Subproject Configuration
+
+(defn- read-project!
+  "Reads a leiningen project definition from the given directory and returns
+  the loaded project map, or nil if the directory does not contain a valid
+  `project.clj` file."
+  [dir]
+  (let [project-file (jio/file dir "project.clj")]
+    (when (.exists project-file)
+      (lein/debug "Reading subproject definiton from" (str project-file))
+      (project/read (str project-file)))))
+
+
+(defn load-subprojects!
+  "Returns a map of (condensed) project names to loaded leiningen project
+  definitions for all the subprojects in the repo."
+  [config]
+  (->>
+    (:project-dirs config)
+    (mapcat
+      (fn list-projects
+        [path]
+        (->> (jio/file (:mono-root config) path)
+             (.listFiles)
+             (keep read-project!)
+             (map (juxt u/project-name identity)))))
+    (into {})))
