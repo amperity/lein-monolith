@@ -41,13 +41,11 @@
 
 (defn monolith-profile
   "Constructs a profile map containing merged source and test paths."
-  [config]
+  [subprojects]
   (->
     (reduce-kv
-      (fn [profile project-name {:keys [dir]}]
-        (lein/debug "Reading" project-name "subproject definiton from" dir)
-        (let [project (project/read (str (jio/file dir "project.clj")))
-              dependencies (map #(vary-meta % assoc :monolith/project project-name)
+      (fn [profile project-name project]
+        (let [dependencies (map #(vary-meta % assoc :monolith/project project-name)
                                 (:dependencies project))]
           (-> profile
               (update :source-paths concat (:source-paths project))
@@ -56,9 +54,10 @@
       {:source-paths []
        :test-paths []
        :dependencies []}
-      (:internal-projects config))
+      subprojects)
     ; TODO: check dependency versions?
-    (update :dependencies dedupe-dependencies)))
+    (update :dependencies dedupe-dependencies)
+    (assoc :monolith/subprojects subprojects)))
 
 
 (defn add-profile
@@ -66,7 +65,9 @@
   [project]
   (if (get-in project [:profiles :monolith/all])
     project
-    (let [profile (monolith-profile (config/load!))]
+    (let [config (config/read!)
+          subprojects (config/load-subprojects! config)
+          profile (monolith-profile subprojects)]
       (lein/debug "Adding monolith profile to project...")
       (project/add-profiles project {:monolith/all profile}))))
 
