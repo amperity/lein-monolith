@@ -28,13 +28,13 @@
               ; like an :exclude directive in the spec. Use the first one and
               ; warn about the conflict.
               (let [choice (first specs)]
-                (lein/warn "Multiple dependency specs found for" dep-name
+                (lein/warn "WARN: Multiple dependency specs found for" dep-name
                            "in projects" projects "- using" (pr-str choice)
                            "from" (:monolith/project (meta choice)))
                 (conj current choice))
               ; Multiple versions found, set the error flag and continue.
-              (lein/abort "Multiple dependency versions found for" dep-name
-                          "in projects" projects ":" versions))))))
+              (lein/abort "ERROR: Multiple dependency versions found for"
+                          dep-name "in projects" projects ":" versions))))))
     []
     (group-by first dependencies)))
 
