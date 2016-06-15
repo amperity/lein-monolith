@@ -3,10 +3,10 @@
   (:require
     [clojure.java.io :as jio]
     [clojure.pprint :refer [pprint]]
+    [clojure.set :as set]
     (leiningen.core
       [main :as lein]
       [project :as project])
-    [leiningen.install :as li]
     (lein-monolith
       [config :as config]
       [plugin :as plugin]))
@@ -28,6 +28,31 @@
     sym))
 
 
+(defn- map-vals
+  "Helper function to map over the values in a map and re-use the keys."
+  [f m]
+  (into {} (map (fn [[k v]] [k (f v)]) m)))
+
+
+(defn- read-project!
+  "Reads the project map from the definition in the given directory."
+  [dir]
+  (project/read (str (jio/file dir "project.clj"))))
+
+
+(defn- topological-keys
+  "Returns a sequence of the keys in the map `m`, ordered such that no key `k1`
+  appearing before `k2` satisfies `(contains? (get m k1) k2)`. In other words,
+  earlier keys do not 'depend on' later keys."
+  [m]
+  (when (seq m)
+    (let [roots (apply set/difference (set (keys m)) (map set (vals m)))]
+      (when (empty? roots)
+        (throw (ex-info "Cannot sort the keys in the given map, cycle detected!"
+                        {:input m})))
+      (concat (topological-keys (apply dissoc m roots)) roots))))
+
+
 
 ;; ## Subtask Implementations
 
@@ -42,6 +67,43 @@
     (let [prefix-len (inc (count (:mono-root config)))]
       (doseq [[pname {:keys [version dir]}] (:internal-projects config)]
         (printf "  %-40s   %s\n" (pr-str [pname version]) (subs (str dir) prefix-len))))))
+
+
+(defn ^:higher-order each
+  "Iterate over each subproject in the monolith and apply the given task.
+  Projects are iterated in dependency order; that is, later projects may depend
+  on earlier ones."
+  [project task-name & args]
+  (let [config (config/load!)]
+    (lein/info "Applying" task-name "to" (count (:internal-projects config)) "subprojects...")
+    (let [project-maps (map-vals (comp read-project! :dir)
+                                 (:internal-projects config))
+          dependency-edges (map-vals #(set (map first (:dependencies %)))
+                                     project-maps)]
+      (doseq [subproject-name (topological-keys dependency-edges)]
+        (lein/info "\nApplying" task-name "to" subproject-name)
+        (lein/apply-task task-name (get project-maps subproject-name) args)))))
+
+
+(defn ^:higher-order with-all
+  "Apply the given task with a merged set of dependencies, sources, and tests
+  from all the internal projects.
+
+  For example:
+
+      lein monolith with-all test"
+  [project task-name & args]
+  (when (:monolith project)
+    (lein/abort "Running 'with-all' in a monolith project is redundant!"))
+  ; TODO: replace with plugin functions
+  (let [config (config/load!)
+        profile (plugin/monolith-profile config)]
+      (lein/apply-task
+        task-name
+        (-> project
+            (assoc-in [:profiles :monolith/all] profile)
+            (project/set-profiles (conj (:active-profiles (meta project)) :monolith/all)))
+        args)))
 
 
 (defn link
@@ -86,19 +148,6 @@
                 (create-link!))))))))
 
 
-(defn install
-  "Install all subprojects into the local maven repository. This must be run
-  before checkouts will work if the declared dependencies aren't available in
-  an accessible repo."
-  [project args]
-  (let [config (config/load!)]
-    (lein/info "Installing" (count (:internal-projects config)) "subprojects...")
-    (doseq [[project-name {:keys [dir]}] (:internal-projects config)]
-      (lein/debug "Reading" project-name "subproject definiton from" dir)
-      (let [subproject (project/read (str (jio/file dir "project.clj")))]
-        (li/install subproject)))))
-
-
 (defn check-deps
   "Check the versions of external dependencies of the current project.
 
@@ -127,40 +176,19 @@
       (lein/abort))))
 
 
-(defn ^:higher-order with-all
-  "Apply the given task with a merged set of dependencies, sources, and tests
-  from all the internal projects.
-
-  For example:
-
-      lein monolith with-all test"
-  [project task-name & args]
-  (when (:monolith project)
-    (lein/abort "Running 'with-all' in a monolith project is redundant!"))
-  (let [config (config/load!)
-        profile (plugin/monolith-profile config)]
-      ; Figure out list of active profiles and the merged profile.
-      (lein/apply-task
-        task-name
-        (-> project
-            (assoc-in [:profiles :monolith/all] profile)
-            (project/set-profiles (conj (:active-profiles (meta project)) :monolith/all)))
-        args)))
-
-
 
 ;; ## Plugin Entry
 
 (defn monolith
   "Tasks for working with Leiningen projects inside a monorepo."
-  {:subtasks [#'info #'link #'install #'check-deps #'with-all]}
+  {:subtasks [#'info #'each #'with-all #'link #'check-deps]}
   [project command & args]
   (case command
     "debug"      (pprint (config/load!))
     "info"       (info)
-    "link"       (link project args)
-    "install"    (install project args)
-    "check-deps" (check-deps project args)
+    "each"       (apply each project args)
     "with-all"   (apply with-all project args)
+    "check-deps" (check-deps project args)
+    "link"       (link project args)
     (lein/abort (pr-str command) "is not a valid monolith command! (try \"help\")"))
   (flush))
