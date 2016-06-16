@@ -97,15 +97,12 @@
   [project task-name & args]
   (when (:monolith project)
     (lein/abort "Running 'with-all' in a monolith project is redundant!"))
-  ; TODO: replace with plugin functions
-  (let [config (config/read!)
-        profile (plugin/monolith-profile config)]
-      (lein/apply-task
-        task-name
-        (-> project
-            (assoc-in [:profiles :monolith/all] profile)
-            (project/set-profiles (conj (:active-profiles (meta project)) :monolith/all)))
-        args)))
+  (lein/apply-task
+    task-name
+    (-> project
+        (plugin/add-profile)
+        (plugin/activate-profile))
+    args))
 
 
 (defn link
