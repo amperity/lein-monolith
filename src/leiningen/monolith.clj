@@ -44,20 +44,29 @@
 ;; ## Subtask Implementations
 
 (defn ^:no-project-needed info
-  "Show information about the monorepo configuration."
-  [project]
-  (let [config (config/read!)]
-    (println "Monolith root:" (:mono-root config))
-    (println "Subproject directories:" (:project-dirs config))
-    (println)
+  "Show information about the monorepo configuration.
+
+  Options:
+    :bare        Only print the project names and directories, one per line"
+  [project args]
+  (let [bare? (some #{":bare"} args)
+        config (config/read!)]
+    (when-not bare?
+      (println "Monolith root:" (:mono-root config))
+      (println "Subproject directories:" (:project-dirs config))
+      (println))
     (let [subprojects (get-subprojects project config)
           prefix-len (inc (count (:mono-root config)))]
-      (printf "Internal projects (%d):\n" (count subprojects))
-      (doseq [subproject-name (dependency-order subprojects)]
-        (let [{:keys [version root]} (get subprojects subproject-name)]
+      (when-not bare?
+        (printf "Internal projects (%d):\n" (count subprojects)))
+      (doseq [subproject-name (dependency-order subprojects)
+              :let [{:keys [version root]} (get subprojects subproject-name)
+                    relative-path (subs (str root) prefix-len)]]
+        (if bare?
+          (println subproject-name relative-path)
           (printf "  %-50s   %s\n"
                   (pr-str [subproject-name version])
-                  (subs (str root) prefix-len)))))))
+                  relative-path))))))
 
 
 (defn ^:no-project-needed ^:higher-order each
@@ -183,7 +192,7 @@
   [project command & args]
   (case command
     "debug"      (pprint (config/read!))
-    "info"       (info project)
+    "info"       (info project args)
     "each"       (apply each project args)
     "with-all"   (apply with-all project args)
     "check-deps" (check-deps project args)
