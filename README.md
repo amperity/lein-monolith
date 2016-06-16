@@ -22,40 +22,49 @@ giving a vector of relative paths in the the `:project-dirs` key. Each entry
 should point to a directory _containing_ the project dirs in question - you
 don't need to specify every individual project location.
 
-You can also specify a set of external dependency versions which should be used
-by the projects inside the monorepo. This is a vector of vectors defined the
-same way it is in a `project.clj` file.
-
 ## Usage
 
 `lein-monolith` can be used inside the individual projects within the monorepo,
 or you can use it from the repository root to operate on all the subprojects
 together.
 
-### Set Up Checkout Links
+### Subproject Info
 
-The `checkouts` task creates checkout symlinks to all the internal packages that
-this project depends on.
+To see a list of all the projects that lein-monolith knows about, you can use
+the `info` task:
 
 ```
-lein monolith checkout
+lein monolith info [:bare]
+```
+
+This will print out the config file location, coordinates of every subproject
+found, and a relative path to their location within the repo. For scripting, you
+can pass the `:bare` flag, which will restrict the output to just the project
+name and path.
+
+### Set Up Checkout Links
+
+The `link` task creates
+[checkout](https://github.com/technomancy/leiningen/blob/stable/doc/TUTORIAL.md#checkout-dependencies)
+symlinks to all the internal packages that this project depends on.
+
+```
+lein monolith link [:force]
 ```
 
 If you have existing checkout links which conflict, you'll get warnings. To
-override them, you can pass the `--force` option.
+override them, you can pass the `:force` option.
 
-### Check External Dependency Versions
+### Subproject Iteration
 
-This task loads the list of approved versions for external dependencies and
-warns if the current project depends on an incorrect version.
+A useful higher-order task is `each`, which will run the following commands on
+every subproject in the repo, in dependency order. That means that projects
+which don't depend on any other internal projects will run first, letting you do
+things like:
 
 ```
-lein monolith deps
+lein monolith each install
 ```
-
-To get warnings about external dependencies with no defined version, use the
-`--unlocked` option. The `--strict` option will cause the task to exit with a
-failure code if any dependencies don't match the expected spec.
 
 ### Merged Source Profile
 
