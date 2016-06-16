@@ -39,3 +39,14 @@
   "Extracts the (condensed) project name from a project definition map."
   [project]
   (condense-name (symbol (:group project) (:name project))))
+
+
+(defn unscope-coord
+  "Removes the `:scope` entry from a leiningen dependency coordinate vector,
+  if it is present. Preserves any metadata on the coordinate."
+  [coord]
+  (-> coord
+      (->> (partition-all 2)
+           (mapcat #(when-not (= :scope (first %)) %)))
+      (vec)
+      (with-meta (meta coord))))

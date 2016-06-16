@@ -16,7 +16,7 @@
   "Given a dependency name and a collection of specs for that dependency, either
   select one for use or return nil on conflicts."
   [dep-name specs]
-  (let [specs (distinct specs)]
+  (let [specs (distinct (map u/unscope-coord specs))]
     (if (= 1 (count specs))
       ; Only one (unique) version declared, use it.
       (first specs)
@@ -24,10 +24,9 @@
       (let [versions (distinct (map second specs))
             projects (map (comp :monolith/project meta) specs)]
         (if (= 1 (count versions))
-          ; Only one version in use, so the distinction must be something
-          ; like a :scope or :exclude directive in the spec. Use the first one
-          ; and warn about the conflict.
-          ; TODO: ignore :scope conflicts?
+          ; Only one version in use, so the distinction must be something like
+          ; an :exclude directive in the spec. Use the first one and warn about
+          ; the conflict.
           (let [choice (first specs)]
             (lein/warn "WARN: Multiple dependency specs found for"
                        (u/condense-name dep-name) "in projects" projects
@@ -79,7 +78,6 @@
        :test-paths []
        :dependencies []}
       subprojects)
-    ; TODO: check dependency versions?
     (update :dependencies dedupe-dependencies)
     (assoc :monolith/subprojects subprojects)))
 
