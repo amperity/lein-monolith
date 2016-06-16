@@ -102,18 +102,23 @@
   Options:
     :force       Override any existing checkout links with conflicting names"
   [project args]
+  (when-not project
+    (lein/abort "The 'link' task requires a project to run in"))
   (when (:monolith project)
     (lein/abort "The 'link' task does not need to be run for the monolith project!"))
   (let [options (set args)
         config (config/read!)
         subprojects (get-subprojects project config)
         checkouts-dir (jio/file (:root project) "checkouts")]
+    ; Create checkouts directory if needed.
     (when-not (.exists checkouts-dir)
       (lein/debug "Creating checkout directory" checkouts-dir)
       (.mkdir checkouts-dir))
+    ; Check each dependency for internal projects.
     (doseq [spec (:dependencies project)
-            :let [dependency (u/condense-name (first spec))]]
-      (when-let [^File dep-dir (get-in subprojects [dependency :root])]
+            :let [dependency (u/condense-name (first spec))
+                  dep-dir (jio/file (get-in subprojects [dependency :root]))]]
+      (when dep-dir
         (let [link (.toPath (jio/file checkouts-dir (.getName dep-dir)))
               target (.relativize (.toPath checkouts-dir) (.toPath dep-dir))
               create-link! #(Files/createSymbolicLink link target (make-array java.nio.file.attribute.FileAttribute 0))]
@@ -124,7 +129,7 @@
                 ; Link exists and points to target already.
                 (lein/info "Link for" dependency "is correct")
                 ; Link exists but points somewhere else.
-                (if (get options "--force")
+                (if (get options ":force")
                   ; Recreate link since :force is set.
                   (do (lein/warn "Relinking" dependency "from"
                                  (str actual-target) "to" (str target))
@@ -172,7 +177,7 @@
 
 ;; ## Plugin Entry
 
-(defn monolith
+(defn ^:no-project-needed monolith
   "Tasks for working with Leiningen projects inside a monorepo."
   {:subtasks [#'info #'each #'with-all #'link #'check-deps]}
   [project command & args]
