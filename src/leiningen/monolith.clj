@@ -72,7 +72,11 @@
 (defn ^:no-project-needed ^:higher-order each
   "Iterate over each subproject in the monolith and apply the given task.
   Projects are iterated in dependency order; that is, later projects may depend
-  on earlier ones."
+  on earlier ones.
+
+  Example:
+
+      lein monolith each check"
   [project task-name & args]
   (let [config (config/read!)
         subprojects (get-subprojects project config)]
@@ -115,7 +119,7 @@
     (lein/abort "The 'link' task requires a project to run in"))
   (when (:monolith project)
     (lein/abort "The 'link' task does not need to be run for the monolith project!"))
-  (let [options (set args)
+  (let [flags (set args)
         config (config/read!)
         subprojects (get-subprojects project config)
         checkouts-dir (jio/file (:root project) "checkouts")]
@@ -138,7 +142,7 @@
                 ; Link exists and points to target already.
                 (lein/info "Link for" dependency "is correct")
                 ; Link exists but points somewhere else.
-                (if (get options ":force")
+                (if (flags ":force")
                   ; Recreate link since :force is set.
                   (do (lein/warn "Relinking" dependency "from"
                                  (str actual-target) "to" (str target))
@@ -161,7 +165,7 @@
   [project args]
   (let [config (config/read!)
         subprojects (config/load-subprojects! config)
-        options (set args)
+        flags (set args)
         ext-deps (->> (:external-dependencies config)
                       (map (juxt first identity))
                       (into {}))
@@ -174,9 +178,9 @@
           (when-not (= expected spec)
             (lein/warn "ERROR: External dependency" (pr-str spec)
                        "does not match expected spec" (pr-str expected))
-            (when (get options ":strict")
+            (when (flags ":strict")
               (reset! error-flag true)))
-          (when (get options ":unlocked")
+          (when (flags ":unlocked")
             (lein/warn "WARN: External dependency" (pr-str depname)
                        "has no expected version defined")))))
     (when @error-flag
@@ -197,5 +201,5 @@
     "with-all"   (apply with-all project args)
     "check-deps" (check-deps project args)
     "link"       (link project args)
-    (lein/abort (pr-str command) "is not a valid monolith command! (try \"help\")"))
+    (lein/abort (pr-str command) "is not a valid monolith command! Try: lein help monolith"))
   (flush))
