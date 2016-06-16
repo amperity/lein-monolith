@@ -10,7 +10,9 @@
     (lein-monolith
       [config :as config]
       [plugin :as plugin]
-      [util :as u]))
+      [util :as u])
+    [puget.printer :as puget]
+    [puget.color.ansi :as ansi])
   (:import
     (java.io
       File)
@@ -53,7 +55,8 @@
         config (config/read!)]
     (when-not bare?
       (println "Monolith root:" (:mono-root config))
-      (println "Subproject directories:" (:project-dirs config))
+      (println "Subproject directories:")
+      (puget/cprint (:project-dirs config))
       (println))
     (let [subprojects (get-subprojects project config)
           prefix-len (inc (count (:mono-root config)))]
@@ -64,8 +67,8 @@
                     relative-path (subs (str root) prefix-len)]]
         (if bare?
           (println subproject-name relative-path)
-          (printf "  %-50s   %s\n"
-                  (pr-str [subproject-name version])
+          (printf "  %-80s   %s\n"
+                  (puget/cprint-str [subproject-name version])
                   relative-path))))))
 
 
@@ -79,12 +82,21 @@
       lein monolith each check"
   [project task-name & args]
   (let [config (config/read!)
-        subprojects (get-subprojects project config)]
-    (lein/info "Applying" task-name "to" (count subprojects) "subprojects...")
+        subprojects (get-subprojects project config)
+        n (count subprojects)
+        start (System/nanoTime)]
+    (lein/info "Applying" task-name "to" (ansi/sgr n :cyan) "subprojects...")
     (doseq [[i subproject-name] (map vector (range) (dependency-order subprojects))]
-      (lein/info "\nApplying to" subproject-name
-                 (format "(%d/%d)" (inc i) (count subprojects)))
-      (lein/apply-task task-name (get subprojects subproject-name) args))))
+      (lein/info (format "\nApplying to %s (%s/%s)"
+                         (ansi/sgr subproject-name :bold :yellow)
+                         (ansi/sgr (inc i) :cyan)
+                         (ansi/sgr n :cyan)))
+      (lein/apply-task task-name (get subprojects subproject-name) args))
+    (lein/info (format "\n%s: Applied %s to %s projects in %.3f seconds"
+                       (ansi/sgr "SUCCESS" :bold :green)
+                       task-name
+                       (ansi/sgr n :cyan)
+                       (/ (- (System/nanoTime) start) 1000000000.0M)))))
 
 
 (defn ^:higher-order with-all
