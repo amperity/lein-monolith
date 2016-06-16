@@ -53,8 +53,11 @@
     (let [subprojects (get-subprojects project config)
           prefix-len (inc (count (:mono-root config)))]
       (printf "Internal projects (%d):\n" (count subprojects))
-      (doseq [[pname {:keys [version root]}] subprojects]
-        (printf "  %-50s   %s\n" (pr-str [pname version]) (subs (str root) prefix-len))))))
+      (doseq [subproject-name (dependency-order subprojects)]
+        (let [{:keys [version root]} (get subprojects subproject-name)]
+          (printf "  %-50s   %s\n"
+                  (pr-str [subproject-name version])
+                  (subs (str root) prefix-len)))))))
 
 
 (defn ^:no-project-needed ^:higher-order each
@@ -65,8 +68,9 @@
   (let [config (config/read!)
         subprojects (get-subprojects project config)]
     (lein/info "Applying" task-name "to" (count subprojects) "subprojects...")
-    (doseq [subproject-name (dependency-order subprojects)]
-      (lein/info "\nApplying to" subproject-name)
+    (doseq [[i subproject-name] (map vector (range) (dependency-order subprojects))]
+      (lein/info "\nApplying to" subproject-name
+                 (format "(%d/%d)" (inc i) (count subprojects)))
       (lein/apply-task task-name (get subprojects subproject-name) args))))
 
 
@@ -102,7 +106,7 @@
     (lein/abort "The 'link' task does not need to be run for the monolith project!"))
   (let [options (set args)
         config (config/read!)
-        subprojects (get-subprojects config)
+        subprojects (get-subprojects project config)
         checkouts-dir (jio/file (:root project) "checkouts")]
     (when-not (.exists checkouts-dir)
       (lein/debug "Creating checkout directory" checkouts-dir)

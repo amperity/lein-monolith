@@ -22,7 +22,8 @@
       (when (empty? roots)
         (throw (ex-info "Cannot sort the keys in the given map, cycle detected!"
                         {:input m})))
-      (concat (topological-sort (apply dissoc m roots)) roots))))
+      (concat (topological-sort (apply dissoc m roots))
+              (sort roots)))))
 
 
 (defn condense-name
