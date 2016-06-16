@@ -156,6 +156,7 @@
                 (create-link!))))))))
 
 
+#_ ; TODO: determine if needed
 (defn check-deps
   "Check the versions of external dependencies of the current project.
 
@@ -192,14 +193,12 @@
 
 (defn ^:no-project-needed monolith
   "Tasks for working with Leiningen projects inside a monorepo."
-  {:subtasks [#'info #'each #'with-all #'link #'check-deps]}
+  {:subtasks [#'info #'link #'each #'with-all]}
   [project command & args]
   (case command
-    "debug"      (pprint (config/read!))
     "info"       (info project args)
+    "link"       (link project args)
     "each"       (apply each project args)
     "with-all"   (apply with-all project args)
-    "check-deps" (check-deps project args)
-    "link"       (link project args)
     (lein/abort (pr-str command) "is not a valid monolith command! Try: lein help monolith"))
   (flush))
