@@ -174,12 +174,24 @@
         checkouts-dir (jio/file (:root project) "checkouts")]
     ; Create checkouts directory if needed.
     (when-not (.exists checkouts-dir)
-      (lein/debug "Creating checkout directory" checkouts-dir)
+      (lein/info "Creating checkout directory" checkouts-dir)
       (.mkdir checkouts-dir))
     ; Check each dependency for internal projects.
     (doseq [spec (:dependencies project)]
       (when-let [subproject (get subprojects (u/condense-name (first spec)))]
         (link-checkout! checkouts-dir subproject (flags ":force"))))))
+
+
+(defn unlink
+  "Remove the checkout directory from a project."
+  [project]
+  (when-let [checkouts-dir (some-> (:root project) (jio/file "checkouts"))]
+    (when (.exists checkouts-dir)
+      (lein/info "Removing checkout directory" (str checkouts-dir))
+      (doseq [link (.listFiles checkouts-dir)]
+        (lein/debug "Removing checkout link" (str link))
+        (.delete ^File link))
+      (.delete checkouts-dir))))
 
 
 #_ ; TODO: determine if needed
@@ -219,11 +231,12 @@
 
 (defn ^:no-project-needed monolith
   "Tasks for working with Leiningen projects inside a monorepo."
-  {:subtasks [#'info #'link #'each #'with-all]}
+  {:subtasks [#'info #'link #'unlink #'each #'with-all]}
   [project command & args]
   (case command
     "info"       (info project args)
     "link"       (link project args)
+    "unlink"     (unlink project)
     "each"       (apply each project args)
     "with-all"   (apply with-all project args)
     (lein/abort (pr-str command) "is not a valid monolith command! Try: lein help monolith"))

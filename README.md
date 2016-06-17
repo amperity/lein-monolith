@@ -48,14 +48,21 @@ name and path.
 
 The `link` task creates
 [checkout](https://github.com/technomancy/leiningen/blob/stable/doc/TUTORIAL.md#checkout-dependencies)
-symlinks to all the internal packages that this project depends on.
-
-```
-lein monolith link [:force]
-```
+symlinks to all the internal packages that this project depends on. The plugin
+also includes an `unlink` task as a convenience method for removing checkout
+dependencies.
 
 If you have existing checkout links which conflict, you'll get warnings. To
 override them, you can pass the `:force` option.
+
+```
+lein monolith link [:force]
+lein monolith unlink
+```
+
+In general, it's recommended to only link between the projects you're actually
+actively working on, otherwise Leiningen has to recursively trace the full tree
+of checkouts before running things.
 
 ### Subproject Iteration
 
