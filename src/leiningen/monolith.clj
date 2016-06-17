@@ -2,7 +2,6 @@
   "Leiningen task implementations for working with monorepos."
   (:require
     [clojure.java.io :as jio]
-    [clojure.pprint :refer [pprint]]
     [clojure.set :as set]
     (leiningen.core
       [main :as lein]
@@ -40,6 +39,47 @@
   [project config]
   (or (:monolith/subprojects project)
       (config/load-subprojects! config)))
+
+
+(defn- create-symlink!
+  "Creates a link from the given source path to the given target."
+  [source target]
+  (Files/createSymbolicLink
+    source target
+    (make-array java.nio.file.attribute.FileAttribute 0)))
+
+
+(defn- link-checkout!
+  "Creates a checkout dependency link to the given subproject."
+  [^File checkouts-dir subproject force?]
+  (let [dep-root (jio/file (:root subproject))
+        dep-name (u/condense-name (symbol (:group subproject)
+                                          (:name subproject)))
+        link-name (if (namespace dep-name)
+                    (str (namespace dep-name) "~" (name dep-name))
+                    (name dep-name))
+        link-path (.toPath (jio/file checkouts-dir link-name))
+        target-path (.relativize (.toPath checkouts-dir) (.toPath dep-root))]
+    (if (Files/exists link-path (into-array LinkOption [LinkOption/NOFOLLOW_LINKS]))
+      ; Link file exists.
+      (let [actual-target (Files/readSymbolicLink link-path)]
+        (if (and (Files/isSymbolicLink link-path)
+                 (= target-path actual-target))
+          ; Link exists and points to target already.
+          (lein/info "Link for" dep-name "is correct")
+          ; Link exists but points somewhere else.
+          (if force?
+            ; Recreate link since force is set.
+            (do (lein/warn "Relinking" dep-name "from"
+                           (str actual-target) "to" (str target-path))
+                (Files/delete link-path)
+                (create-symlink! link-path target-path))
+            ; Otherwise print a warning.
+            (lein/warn "WARN:" dep-name "links to" (str actual-target)
+                       "instead of" (str target-path)))))
+      ; Link does not exist, so create it.
+      (do (lein/info "Linking" dep-name "to" (str target-path))
+          (create-symlink! link-path target-path)))))
 
 
 
@@ -137,32 +177,9 @@
       (lein/debug "Creating checkout directory" checkouts-dir)
       (.mkdir checkouts-dir))
     ; Check each dependency for internal projects.
-    (doseq [spec (:dependencies project)
-            :let [dependency (u/condense-name (first spec))
-                  dep-dir (jio/file (get-in subprojects [dependency :root]))]]
-      (when dep-dir
-        (let [link (.toPath (jio/file checkouts-dir (.getName dep-dir)))
-              target (.relativize (.toPath checkouts-dir) (.toPath dep-dir))
-              create-link! #(Files/createSymbolicLink link target (make-array java.nio.file.attribute.FileAttribute 0))]
-          (if (Files/exists link (into-array LinkOption [LinkOption/NOFOLLOW_LINKS]))
-            ; Link file exists.
-            (let [actual-target (Files/readSymbolicLink link)]
-              (if (and (Files/isSymbolicLink link) (= target actual-target))
-                ; Link exists and points to target already.
-                (lein/info "Link for" dependency "is correct")
-                ; Link exists but points somewhere else.
-                (if (flags ":force")
-                  ; Recreate link since :force is set.
-                  (do (lein/warn "Relinking" dependency "from"
-                                 (str actual-target) "to" (str target))
-                      (Files/delete link)
-                      (create-link!))
-                  ; Otherwise print a warning.
-                  (lein/warn "WARN:" dependency "links to" (str actual-target)
-                             "instead of" (str target)))))
-            ; Link does not exist, so create it.
-            (do (lein/info "Linking" dependency "to" (str target))
-                (create-link!))))))))
+    (doseq [spec (:dependencies project)]
+      (when-let [subproject (get subprojects (u/condense-name (first spec)))]
+        (link-checkout! checkouts-dir subproject (flags ":force"))))))
 
 
 #_ ; TODO: determine if needed
