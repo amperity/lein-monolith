@@ -19,8 +19,10 @@ at the root of the monorepo.
 
 The config file tells monolith where to find the projects inside the repo by
 giving a vector of relative paths in the the `:project-dirs` key. Each entry
-should point to a directory _containing_ the project dirs in question - you
-don't need to specify every individual project location.
+should point to either a direct subproject directory (containing a `project.clj`
+file) such as `apps/app-a`, or end with a `*` to indicate that all child
+directories should be searched for projects, like `libs/*`. Note that this only
+works with a single level of wildcard matching at the end of the path.
 
 ## Usage
 

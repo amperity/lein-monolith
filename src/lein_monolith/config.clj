@@ -7,6 +7,7 @@
     [lein-monolith.util :as u])
   (:import
     (java.io
+      File
       PushbackReader)
     (java.nio.file
       Files
@@ -61,6 +62,23 @@
 
 ;; ## Subproject Configuration
 
+(defn- pick-directories
+  "Given a path, use it to find directories. If the path names a directory,
+  return a vector containing it. If the path ends in `/*` and the parent is a
+  directory, return a sequence of directories which are children of the parent.
+  Otherwise, returns nil."
+  [path]
+  (let [file (jio/file path)]
+    (cond
+      (.isDirectory file)
+        [file]
+      (and (= "*" (.getName file)) (.isDirectory (.getParentFile file)))
+        (->> (.getParentFile file)
+             (.listFiles)
+             (filter #(.isDirectory ^File %)))
+      :else
+        nil)))
+
 (defn- read-project!
   "Reads a leiningen project definition from the given directory and returns
   the loaded project map, or nil if the directory does not contain a valid
@@ -78,11 +96,7 @@
   [config]
   (->>
     (:project-dirs config)
-    (mapcat
-      (fn list-projects
-        [path]
-        (->> (jio/file (:mono-root config) path)
-             (.listFiles)
-             (keep read-project!)
-             (map (juxt u/project-name identity)))))
+    (mapcat pick-directories)
+    (keep read-project!)
+    (map (juxt u/project-name identity))
     (into {})))
