@@ -207,38 +207,6 @@
       (.delete checkouts-dir))))
 
 
-#_ ; TODO: determine if needed
-(defn check-deps
-  "Check the versions of external dependencies of the current project.
-
-  Options:
-    :unlocked    Print warnings for external dependencies with no specified version
-    :strict      Exit with a failure status if any versions don't match"
-  [project args]
-  (let [config (config/read!)
-        subprojects (config/load-subprojects! config)
-        flags (set args)
-        ext-deps (->> (:external-dependencies config)
-                      (map (juxt first identity))
-                      (into {}))
-        error-flag (atom false)]
-    (doseq [dependency (:dependencies project)
-            :let [depname (u/condense-name (first dependency))
-                  spec (vec (cons depname (rest dependency)))]]
-      (when-not (get subprojects depname)
-        (if-let [expected (ext-deps depname)]
-          (when-not (= expected spec)
-            (lein/warn "ERROR: External dependency" (pr-str spec)
-                       "does not match expected spec" (pr-str expected))
-            (when (flags ":strict")
-              (reset! error-flag true)))
-          (when (flags ":unlocked")
-            (lein/warn "WARN: External dependency" (pr-str depname)
-                       "has no expected version defined")))))
-    (when @error-flag
-      (lein/abort))))
-
-
 
 ;; ## Plugin Entry
 
