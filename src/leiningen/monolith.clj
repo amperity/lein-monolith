@@ -121,7 +121,7 @@
       (lein/info "\nSubprojects which use" (ansi/sgr dep-name :bold :yellow))
       (doseq [subproject-name (dependency-order subprojects)
               :let [{:keys [version dependencies]} (get subprojects subproject-name)]]
-        (when-let [spec (first (filter (comp #{dep-name} first) dependencies))]
+        (when-let [spec (first (filter (comp #{dep-name} u/condense-name first) dependencies))]
           (printf "  %-80s -> %s\n"
                   (puget/cprint-str [subproject-name version])
                   (puget/cprint-str spec)))))))
