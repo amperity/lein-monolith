@@ -117,16 +117,29 @@
   Projects are iterated in dependency order; that is, later projects may depend
   on earlier ones.
 
-  Example:
+  If the iteration fails on a subproject, you can continue where you left off
+  by providing the `:start` option as the first argument, giving the name of the
+  project to resume from.
 
-      lein monolith each check"
-  [project task-name & args]
+  Examples:
+
+      lein monolith each check
+      lein monolith each :start my/lib-a test"
+  [project & args]
   (let [config (config/read!)
         subprojects (get-subprojects project config)
         n (count subprojects)
-        start (System/nanoTime)]
-    (lein/info "Applying" task-name "to" (ansi/sgr n :cyan) "subprojects...")
-    (doseq [[i subproject-name] (map vector (range) (dependency-order subprojects))]
+        [start-from [task-name & args]]
+        (if (= ":start" (first args))
+          [(read-string (second args)) (drop 2 args)]
+          [nil args])
+        start-time (System/nanoTime)
+        ordered-names (cond->> (map-indexed vector (dependency-order subprojects))
+                        start-from
+                          (drop-while (comp (partial not= start-from) second)))]
+    (lein/info "Applying" task-name "to" (ansi/sgr (count ordered-names) :cyan)
+               "subprojects...")
+    (doseq [[i subproject-name] ordered-names]
       (lein/info (format "\nApplying to %s (%s/%s)"
                          (ansi/sgr subproject-name :bold :yellow)
                          (ansi/sgr (inc i) :cyan)
@@ -136,7 +149,7 @@
                        (ansi/sgr "SUCCESS" :bold :green)
                        task-name
                        (ansi/sgr n :cyan)
-                       (/ (- (System/nanoTime) start) 1000000000.0M)))))
+                       (/ (- (System/nanoTime) start-time) 1000000000.0M)))))
 
 
 (defn ^:higher-order with-all

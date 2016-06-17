@@ -73,6 +73,7 @@ things like:
 
 ```
 lein monolith each install
+lein monolith each :start my-lib/foo do check, test
 ```
 
 ### Merged Source Profile
