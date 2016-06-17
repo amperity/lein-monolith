@@ -112,6 +112,21 @@
                   relative-path))))))
 
 
+(defn ^:no-project-needed uses
+  "Print a list of subprojects which depend on the given package(s)."
+  [project args]
+  (let [config (config/read!)
+        subprojects (get-subprojects project config)]
+    (doseq [dep-name (map read-string args)]
+      (lein/info "\nSubprojects which use" (ansi/sgr dep-name :bold :yellow))
+      (doseq [subproject-name (dependency-order subprojects)
+              :let [{:keys [version dependencies]} (get subprojects subproject-name)]]
+        (when-let [spec (first (filter (comp #{dep-name} first) dependencies))]
+          (printf "  %-80s -> %s\n"
+                  (puget/cprint-str [subproject-name version])
+                  (puget/cprint-str spec)))))))
+
+
 (defn ^:no-project-needed ^:higher-order each
   "Iterate over each subproject in the monolith and apply the given task.
   Projects are iterated in dependency order; that is, later projects may depend
@@ -212,13 +227,14 @@
 
 (defn ^:no-project-needed monolith
   "Tasks for working with Leiningen projects inside a monorepo."
-  {:subtasks [#'info #'link #'unlink #'each #'with-all]}
+  {:subtasks [#'info #'uses #'each #'with-all #'link #'unlink]}
   [project command & args]
   (case command
     "info"       (info project args)
-    "link"       (link project args)
-    "unlink"     (unlink project)
+    "uses"       (uses project args)
     "each"       (apply each project args)
     "with-all"   (apply with-all project args)
+    "link"       (link project args)
+    "unlink"     (unlink project)
     (lein/abort (pr-str command) "is not a valid monolith command! Try: lein help monolith"))
   (flush))
