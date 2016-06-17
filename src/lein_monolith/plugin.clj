@@ -4,6 +4,7 @@
   value for the `:monolith` key."
   (:require
     [clojure.java.io :as jio]
+    [clojure.string :as str]
     (leiningen.core
       [main :as lein]
       [project :as project])
@@ -29,17 +30,17 @@
           ; the conflict.
           (let [choice (first specs)]
             (lein/warn "WARN: Multiple dependency specs found for"
-                       (u/condense-name dep-name) "in projects" projects
+                       (u/condense-name dep-name) "in projects" (vec projects)
                        "- using" (pr-str choice) "from"
                        (:monolith/project (meta choice)) "and ignoring"
-                       (rest specs))
+                       (str/join " " (map pr-str (rest specs))))
             choice)
           ; Multiple versions found, warn and return nil.
           ; TODO: allow overrides?
           (do
             (lein/warn "ERROR: Multiple dependency versions found for"
-                       (u/condense-name dep-name) "in projects" projects ":"
-                       versions)
+                       (u/condense-name dep-name) "in projects"
+                       (vec projects) ":" (str/join " " versions))
             nil))))))
 
 
