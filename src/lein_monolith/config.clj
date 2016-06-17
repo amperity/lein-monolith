@@ -67,17 +67,16 @@
   return a vector containing it. If the path ends in `/*` and the parent is a
   directory, return a sequence of directories which are children of the parent.
   Otherwise, returns nil."
-  [path]
-  (let [file (jio/file path)]
-    (cond
-      (.isDirectory file)
-        [file]
-      (and (= "*" (.getName file)) (.isDirectory (.getParentFile file)))
-        (->> (.getParentFile file)
-             (.listFiles)
-             (filter #(.isDirectory ^File %)))
-      :else
-        nil)))
+  [^File file]
+  (cond
+    (.isDirectory file)
+      [file]
+    (and (= "*" (.getName file)) (.isDirectory (.getParentFile file)))
+      (->> (.getParentFile file)
+           (.listFiles)
+           (filter #(.isDirectory ^File %)))
+    :else
+      nil))
 
 (defn- read-project!
   "Reads a leiningen project definition from the given directory and returns
@@ -96,6 +95,7 @@
   [config]
   (->>
     (:project-dirs config)
+    (map (partial jio/file (:mono-root config)))
     (mapcat pick-directories)
     (keep read-project!)
     (map (juxt u/project-name identity))
