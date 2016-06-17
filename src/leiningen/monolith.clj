@@ -112,7 +112,7 @@
                   relative-path))))))
 
 
-(defn ^:no-project-needed uses
+(defn ^:no-project-needed depends
   "Print a list of subprojects which depend on the given package(s)."
   [project args]
   (let [config (config/read!)
@@ -227,11 +227,11 @@
 
 (defn ^:no-project-needed monolith
   "Tasks for working with Leiningen projects inside a monorepo."
-  {:subtasks [#'info #'uses #'each #'with-all #'link #'unlink]}
+  {:subtasks [#'info #'depends #'each #'with-all #'link #'unlink]}
   [project command & args]
   (case command
     "info"       (info project args)
-    "uses"       (uses project args)
+    "depends"    (depends project args)
     "each"       (apply each project args)
     "with-all"   (apply with-all project args)
     "link"       (link project args)

@@ -44,11 +44,11 @@ found, and a relative path to their location within the repo. For scripting, you
 can pass the `:bare` flag, which will restrict the output to just the project
 name and path.
 
-The plugin also provides the `uses` task to query which subprojects have a
+The plugin also provides the `depends` task to query which subprojects have a
 certain dependency:
 
 ```
-lein monolith uses example/lib-b
+lein monolith depends example/lib-b
 ```
 
 ### Subproject Iteration
