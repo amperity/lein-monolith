@@ -3,4 +3,4 @@
 
   :dependencies
   [[example/lib-a "1.0.0"]
-   [org.clojure/clojure "1.7.0"]])
+   [org.clojure/clojure "1.8.0"]])
