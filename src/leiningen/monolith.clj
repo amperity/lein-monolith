@@ -165,10 +165,9 @@
                              (ansi/sgr (count subprojects) :cyan)))
           (lein/apply-task (first task) (get subprojects subproject-name) (rest task)))
         (catch Exception ex
-          (lein/warn (format "\n%s: Try re-running with lein monolith each :start %s %s\n"
-                             (ansi/sgr "FAIL" :bold :red)
-                             subproject-name
-                             (str/join " " task)))
+          (lein/warn (format "\n%s lein monolith each :start %s %s\n"
+                             (ansi/sgr "Resume with:" :bold :red)
+                             subproject-name (str/join " " task)))
           (throw ex))))
     (lein/info (format "\n%s: Applied %s to %s projects in %.3f seconds"
                        (ansi/sgr "SUCCESS" :bold :green)
