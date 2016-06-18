@@ -10,7 +10,8 @@
       [project :as project])
     (lein-monolith
       [config :as config]
-      [util :as u])))
+      [util :as u])
+    [puget.color.ansi :as ansi]))
 
 
 (defn- select-dependency
@@ -28,19 +29,25 @@
           ; Only one version in use, so the distinction must be something like
           ; an :exclude directive in the spec. Use the first one and warn about
           ; the conflict.
-          (let [choice (first specs)]
-            (lein/warn "WARN: Multiple dependency specs found for"
-                       (u/condense-name dep-name) "in projects" (vec projects)
-                       "- using" (pr-str choice) "from"
-                       (:monolith/project (meta choice)) "and ignoring"
-                       (str/join " " (map pr-str (rest specs))))
+          (let [choice (first specs)
+                source (:monolith/project (meta choice))]
+            (->
+              (str "WARN: Multiple dependency specs found for "
+                   (u/condense-name dep-name) " in projects " (vec projects)
+                   " - using " (pr-str choice) " from " source " and ignoring"
+                   (str/join " " (map pr-str (rest specs))))
+              (ansi/sgr :red)
+              (lein/warn))
             choice)
           ; Multiple versions found, warn and return nil.
-          ; TODO: allow overrides?
           (do
-            (lein/warn "ERROR: Multiple dependency versions found for"
-                       (u/condense-name dep-name) "in projects"
-                       (vec projects) ":" (str/join " " versions))
+            (->
+              (str "ERROR: Multiple dependency versions found for "
+                   (u/condense-name dep-name) " in projects "
+                   (vec projects) ": " (str/join " " versions))
+              (ansi/sgr :red)
+              (lein/warn))
+            ; TODO: allow overrides?
             nil))))))
 
 
