@@ -3,6 +3,7 @@
   (:require
     [clojure.java.io :as jio]
     [clojure.set :as set]
+    [clojure.string :as str]
     (leiningen.core
       [main :as lein]
       [project :as project])
@@ -109,7 +110,7 @@
           (println subproject-name relative-path)
           (printf "  %-80s   %s\n"
                   (puget/cprint-str [subproject-name version])
-                  relative-path))))))
+                  (ansi/sgr relative-path :cyan)))))))
 
 
 (defn ^:no-project-needed depends
@@ -143,27 +144,36 @@
   [project & args]
   (let [config (config/read!)
         subprojects (get-subprojects project config)
-        n (count subprojects)
-        [start-from [task-name & args]]
+        [start-from task]
         (if (= ":start" (first args))
           [(read-string (second args)) (drop 2 args)]
           [nil args])
-        start-time (System/nanoTime)
-        ordered-names (cond->> (map-indexed vector (dependency-order subprojects))
-                        start-from
-                          (drop-while (comp (partial not= start-from) second)))]
-    (lein/info "Applying" task-name "to" (ansi/sgr (count ordered-names) :cyan)
+        targets (cond->> (map-indexed vector (dependency-order subprojects))
+                  start-from
+                    (drop-while (comp (partial not= start-from) second))) 
+        start-time (System/nanoTime)]
+    (lein/info "Applying"
+               (ansi/sgr (str/join " " task) :bold :cyan)
+               "to" (ansi/sgr (count targets) :cyan)
                "subprojects...")
-    (doseq [[i subproject-name] ordered-names]
-      (lein/info (format "\nApplying to %s (%s/%s)"
-                         (ansi/sgr subproject-name :bold :yellow)
-                         (ansi/sgr (inc i) :cyan)
-                         (ansi/sgr n :cyan)))
-      (lein/apply-task task-name (get subprojects subproject-name) args))
+    (doseq [[i subproject-name] targets]
+      (try
+        (binding [lein/*exit-process?* false]
+          (lein/info (format "\nApplying to %s (%s/%s)"
+                             (ansi/sgr subproject-name :bold :yellow)
+                             (ansi/sgr (inc i) :cyan)
+                             (ansi/sgr (count subprojects) :cyan)))
+          (lein/apply-task (first task) (get subprojects subproject-name) (rest task)))
+        (catch Exception ex
+          (lein/warn (format "\n%s: Try re-running with lein monolith each :start %s %s\n"
+                             (ansi/sgr "FAIL" :bold :red)
+                             subproject-name
+                             (str/join " " task)))
+          (throw ex))))
     (lein/info (format "\n%s: Applied %s to %s projects in %.3f seconds"
                        (ansi/sgr "SUCCESS" :bold :green)
-                       task-name
-                       (ansi/sgr n :cyan)
+                       (ansi/sgr (str/join " " task) :bold :cyan)
+                       (ansi/sgr (count targets) :cyan)
                        (/ (- (System/nanoTime) start-time) 1000000000.0M)))))
 
 
