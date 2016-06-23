@@ -165,6 +165,7 @@
                              (ansi/sgr (count subprojects) :cyan)))
           (lein/apply-task (first task) (get subprojects subproject-name) (rest task)))
         (catch Exception ex
+          ; TODO: report number skipped, number succeeded, number remaining?
           (lein/warn (format "\n%s lein monolith each :start %s %s\n"
                              (ansi/sgr "Resume with:" :bold :red)
                              subproject-name (str/join " " task)))

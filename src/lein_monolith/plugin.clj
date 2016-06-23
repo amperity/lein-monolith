@@ -33,8 +33,9 @@
                 source (:monolith/project (meta choice))]
             (->
               (str "WARN: Multiple dependency specs found for "
-                   (u/condense-name dep-name) " in projects " (vec projects)
-                   " - using " (pr-str choice) " from " source " and ignoring"
+                   (u/condense-name dep-name) " in projects "
+                   (str/join " " projects) " - using " (pr-str choice)
+                   " from " source " and ignoring"
                    (str/join " " (map pr-str (rest specs))))
               (ansi/sgr :red)
               (lein/warn))
