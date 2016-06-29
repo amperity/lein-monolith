@@ -108,7 +108,7 @@
                     relative-path (subs (str root) prefix-len)]]
         (if bare?
           (println subproject-name relative-path)
-          (printf "  %-80s   %s\n"
+          (printf "  %-90s   %s\n"
                   (puget/cprint-str [subproject-name version])
                   (ansi/sgr relative-path :cyan)))))))
 

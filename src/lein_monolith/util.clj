@@ -4,6 +4,8 @@
     [clojure.set :as set]))
 
 
+;; ## General Utilities
+
 (defn map-vals
   "Helper function to map over the values in a map and re-use the keys."
   [f m]
@@ -25,6 +27,9 @@
       (concat (topological-sort (apply dissoc m roots))
               (sort roots)))))
 
+
+
+;; ## Dependency Functions
 
 (defn condense-name
   "Simplifies a dependency name symbol with identical name and namespace
@@ -50,3 +55,16 @@
            (mapcat #(when-not (= :scope (first %)) %)))
       (vec)
       (with-meta (meta coord))))
+
+
+(defn with-source
+  "Attaches metadata to a dependency vector which notes the source project."
+  [dependency project-name]
+  (vary-meta dependency assoc :monolith/project project-name))
+
+
+(defn dep-source
+  "Retrieves the project which pulled in the dependency from metadata on the
+  spec vector."
+  [dependency]
+  (:monolith/project (meta dependency)))

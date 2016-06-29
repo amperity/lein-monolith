@@ -11,45 +11,37 @@
     (lein-monolith
       [config :as config]
       [util :as u])
-    [puget.color.ansi :as ansi]))
+    [puget.color.ansi :as ansi]
+    [puget.printer :as puget]))
 
 
 (defn- select-dependency
   "Given a dependency name and a collection of specs for that dependency, either
   select one for use or return nil on conflicts."
   [dep-name specs]
-  (let [specs (distinct (map u/unscope-coord specs))]
-    (if (= 1 (count specs))
-      ; Only one (unique) version declared, use it.
-      (first specs)
-      ; Multiple versions or specs declared! Try to resolve.
-      (let [versions (distinct (map second specs))
-            projects (map (comp :monolith/project meta) specs)]
-        (if (= 1 (count versions))
-          ; Only one version in use, so the distinction must be something like
-          ; an :exclude directive in the spec. Use the first one and warn about
-          ; the conflict.
-          (let [choice (first specs)
-                source (:monolith/project (meta choice))]
-            (->
-              (str "WARN: Multiple dependency specs found for "
-                   (u/condense-name dep-name) " in projects "
-                   (str/join " " projects) " - using " (pr-str choice)
-                   " from " source " and ignoring"
-                   (str/join " " (map pr-str (rest specs))))
-              (ansi/sgr :red)
-              (lein/warn))
-            choice)
-          ; Multiple versions found, warn and return nil.
-          (do
-            (->
-              (str "ERROR: Multiple dependency versions found for "
-                   (u/condense-name dep-name) " in projects "
-                   (vec projects) ": " (str/join " " versions))
-              (ansi/sgr :red)
-              (lein/warn))
-            ; TODO: allow overrides?
-            nil))))))
+  (let [specs (map u/unscope-coord specs)
+        default-choice (first specs)
+        projects-for-specs (reduce (fn [m d]
+                                     (update m d (fnil conj []) (u/dep-source d)))
+                                   {} specs)]
+    (if (= 1 (count (distinct specs)))
+      ; Only one (unique) dependency spec declared, use it.
+      default-choice
+      ; Multiple versions or specs declared! Warn and use the default.
+      (do
+        (-> (str "WARN: Multiple dependency specs found for "
+                 (u/condense-name dep-name) " in "
+                 (count (distinct (map u/dep-source specs)))
+                 " projects - using " (pr-str default-choice) " from "
+                 (u/dep-source default-choice))
+            (ansi/sgr :red)
+            (lein/warn))
+        (doseq [[spec projects] projects-for-specs]
+          (lein/warn (format "%-50s from %s"
+                             (puget/cprint-str spec)
+                             (str/join " " (sort projects)))))
+        (lein/warn "")
+        default-choice))))
 
 
 (defn- dedupe-dependencies
@@ -77,7 +69,7 @@
   (->
     (reduce-kv
       (fn [profile project-name project]
-        (let [dependencies (map #(vary-meta % assoc :monolith/project project-name)
+        (let [dependencies (map #(u/with-source % project-name)
                                 (:dependencies project))]
           (-> profile
               (update :source-paths concat (:source-paths project))
