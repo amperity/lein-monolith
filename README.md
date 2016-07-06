@@ -102,3 +102,8 @@ It is often convenient to create a 'top-level'
 setting the `:monolith` key, the plugin will automatically merge the full list
 of source paths, test paths, and dependencies into the top-level project. This
 is the same as running your commands using the `with-all` task above.
+
+## License
+
+Licensed under the Apache License, Version 2.0. See the [LICENSE](LICENSE) file
+for rights and restrictions.
