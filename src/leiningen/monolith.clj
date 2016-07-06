@@ -232,6 +232,32 @@
       (.delete checkouts-dir))))
 
 
+(defn graph
+  "Generate a graph of subprojects and their interdependencies."
+  [project]
+  (require 'rhizome.viz)
+  (let [visualize! (ns-resolve 'rhizome.viz 'save-graph)
+        config (config/read!)
+        subprojects (get-subprojects project config)
+        dependencies (u/map-vals #(set (map (comp u/condense-name first)
+                                            (:dependencies %)))
+                                 subprojects)
+        graph-file (jio/file (:target-path project) "project-hierarchy.png")
+        path-prefix (inc (count (:mono-root config)))]
+    (.mkdir (jio/file (:target-path project)))
+    (visualize!
+      (keys dependencies)
+      dependencies
+      :vertical? false
+      :node->descriptor #(array-map :label (name %))
+      :node->cluster (fn [id]
+                       (when-let [root (get-in subprojects [id :root])]
+                         (str/join "/" (butlast (str/split root #"/")))))
+      :cluster->descriptor #(array-map :label (subs (str %) path-prefix))
+      :filename (str graph-file))
+    (lein/info "Generated dependency graph in" (str graph-file))))
+
+
 
 ;; ## Plugin Entry
 
@@ -246,5 +272,6 @@
     "with-all"   (apply with-all project args)
     "link"       (link project args)
     "unlink"     (unlink project)
+    "graph"      (graph project)
     (lein/abort (pr-str command) "is not a valid monolith command! Try: lein help monolith"))
   (flush))
