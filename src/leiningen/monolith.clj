@@ -143,20 +143,28 @@
   by providing the `:start` option as the first argument, giving the name of the
   project to resume from.
 
+  Options:
+    :subtree            Only iterate over transitive dependencies of the current project
+    :start <project>    Provide a starting point for the subproject iteration
+
   Examples:
 
       lein monolith each check
+      lein monolith each :subtree install
       lein monolith each :start my/lib-a test"
   [project & args]
   (let [config (config/read!)
         subprojects (get-subprojects project config)
-        [start-from task]
-        (if (= ":start" (first args))
-          [(read-string (second args)) (drop 2 args)]
-          [nil args])
-        targets (cond->> (map-indexed vector (dependency-order subprojects))
-                  start-from
-                    (drop-while (comp (partial not= start-from) second))) 
+        [opts task] (u/parse-kw-args {:subtree 0, :start 1} args)
+        start-from (some-> (:start opts) ffirst read-string)
+        targets (-> (dependency-map subprojects)
+                    (cond->
+                      (:subtree opts) (u/subtree-from (project-sym project)))
+                    (u/topological-sort)
+                    (->> (map-indexed vector))
+                    (cond->>
+                      start-from
+                        (drop-while (comp (partial not= start-from) second))))
         start-time (System/nanoTime)]
     (lein/info "Applying"
                (ansi/sgr (str/join " " task) :bold :cyan)
