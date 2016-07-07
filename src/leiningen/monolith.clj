@@ -201,9 +201,11 @@
     (let [config (config/read!)
           subprojects (get-subprojects project config)
           start-from (some-> (:start opts) ffirst read-string)
-          targets (-> (dependency-map subprojects)
-                      (cond->
-                        (:subtree opts) (u/subtree-from (project-sym project)))
+          relevant-subprojects (-> (dependency-map subprojects)
+                                   (cond->
+                                     (:subtree opts)
+                                       (u/subtree-from (project-sym project))))
+          targets (-> relevant-subprojects
                       (u/topological-sort)
                       (->> (map-indexed vector))
                       (cond->>
@@ -220,7 +222,7 @@
             (lein/info (format "\nApplying to %s (%s/%s)"
                                (ansi/sgr subproject-name :bold :yellow)
                                (ansi/sgr (inc i) :cyan)
-                               (ansi/sgr (count subprojects) :cyan)))
+                               (ansi/sgr (count relevant-subprojects) :cyan)))
             (lein/apply-task (first task) (get subprojects subproject-name) (rest task)))
           (catch Exception ex
             ; TODO: report number skipped, number succeeded, number remaining?
