@@ -122,7 +122,9 @@
   [project args]
   (let [config (config/read!)
         subprojects (get-subprojects project config)]
-    (doseq [dep-name (map read-string args)]
+    (doseq [dep-name (if (seq args)
+                       (map read-string args)
+                       [(project-sym project)])]
       (lein/info "\nSubprojects which use" (ansi/sgr dep-name :bold :yellow))
       (doseq [subproject-name (u/topological-sort (dependency-map subprojects))
               :let [{:keys [version dependencies]} (get subprojects subproject-name)]]
