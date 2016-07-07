@@ -139,9 +139,8 @@
         (when-let [spec (first (filter (comp #{dep-name} u/condense-name first) dependencies))]
           (if (:bare opts)
             (println subproject-name (first spec) (second spec))
-            (printf "  %-80s -> %s\n"
-                    (puget/cprint-str subproject-name)
-                    (puget/cprint-str spec))))))))
+            (println "  " (puget/cprint-str subproject-name)
+                     "->" (puget/cprint-str spec))))))))
 
 
 (defn deps-of
@@ -173,9 +172,8 @@
                          (filter subprojects)))]
         (if (:bare opts)
           (println project-name dep)
-          (printf "  %-80s -> %s\n"
-                  (puget/cprint-str project-name)
-                  dep))))))
+          (println "  " (puget/cprint-str project-name)
+                   "->" dep))))))
 
 
 (defn ^:higher-order each
