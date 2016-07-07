@@ -63,6 +63,13 @@
     chosen-deps))
 
 
+(defn remove-internal
+  "Given a vector of dependency coordinates and a collection of internal
+  project names, return a vector without internal dependencies."
+  [dependencies subproject-names]
+  (vec (remove (comp (set subproject-names) first) dependencies)))
+
+
 (defn monolith-profile
   "Constructs a profile map containing merged source and test paths."
   [subprojects]
@@ -80,6 +87,7 @@
        :dependencies []}
       subprojects)
     (update :dependencies dedupe-dependencies)
+    (update :dependencies remove-internal (keys subprojects))
     (assoc :monolith/subprojects subprojects)))
 
 
