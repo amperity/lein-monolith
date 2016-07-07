@@ -90,27 +90,28 @@
 
 ;; ## Subtask Implementations
 
-(defn ^:no-project-needed info
+(defn info
   "Show information about the monorepo configuration.
 
   Options:
     :bare        Only print the project names and directories, one per line"
   [project args]
-  (let [bare? (some #{":bare"} args)
+  (let [[opts _] (u/parse-kw-args {:bare 0} args)
         config (config/read!)]
-    (when-not bare?
+    (when-not (:bare opts)
       (println "Monolith root:" (:mono-root config))
       (println "Subproject directories:")
       (puget/cprint (:project-dirs config))
       (println))
     (let [subprojects (get-subprojects project config)
+          targets (u/topological-sort (dependency-map subprojects))
           prefix-len (inc (count (:mono-root config)))]
-      (when-not bare?
-        (printf "Internal projects (%d):\n" (count subprojects)))
-      (doseq [subproject-name (dependency-order subprojects)
+      (when-not (:bare opts)
+        (printf "Internal projects (%d):\n" (count targets)))
+      (doseq [subproject-name targets
               :let [{:keys [version root]} (get subprojects subproject-name)
                     relative-path (subs (str root) prefix-len)]]
-        (if bare?
+        (if (:bare opts)
           (println subproject-name relative-path)
           (printf "  %-90s   %s\n"
                   (puget/cprint-str [subproject-name version])
