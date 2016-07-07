@@ -12,6 +12,59 @@
   (zipmap (keys m) (map f (vals m))))
 
 
+(defn parse-kw-args
+  "Given a sequence of string arguments, parse out expected keywords. Returns
+  a vector with a map of keywords to values (or `true` for flags) followed by
+  a sequence the remaining unparsed arguments."
+  [expected args]
+  (loop [opts {}
+         args args]
+    (let [kw (and (first args)
+                  (.startsWith ^String (first args) ":")
+                  (keyword (subs (first args) 1)))
+          arg-count (get expected kw)]
+      (cond
+        ; Not an expected kw arg
+        (nil? arg-count)
+          [opts args]
+
+        ; Flag keyword
+        (zero? arg-count)
+          (recur (assoc opts kw true) (rest args))
+
+        ; Multi-arg keyword
+        :else
+          (recur
+            (update opts kw (fnil conj []) (vec (take arg-count (rest args))))
+            (drop (inc arg-count) args))))))
+
+
+
+;; ## Dependency Resolution
+
+(defn subtree-from
+  "Takes a map of node keys to sets of dependent nodes and a root node to start
+  from. Returns the same dependency map containing only keys in the transitive
+  subtree of the root."
+  [m root]
+  (loop [result {}
+         front [root]]
+    (if-let [node (first front)]
+      (if (contains? m node)
+        ; Node is part of the internal tree.
+        (let [deps (set (get m node))
+              new-front (set/difference deps (set (keys result)))]
+          (recur
+            ; Add the node to the result map.
+            (assoc result node deps)
+            ; Add any unprocessed dependencies to the front.
+            (concat (next front) (set/difference deps (set (keys result))))))
+        ; Node is not internal, so ignore.
+        (recur result (next front)))
+      ; No more nodes to process.
+      result)))
+
+
 (defn topological-sort
   "Returns a sequence of the keys in the map `m`, ordered such that no key `k1`
   appearing before `k2` satisfies `(contains? (get m k1) k2)`. In other words,
@@ -29,7 +82,7 @@
 
 
 
-;; ## Dependency Functions
+;; ## Coordinate Functions
 
 (defn condense-name
   "Simplifies a dependency name symbol with identical name and namespace
