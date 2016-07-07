@@ -1,4 +1,4 @@
-(defproject example/lib-a "0.1.0-SNAPSHOT"
+(defproject example/lib-a "1.0.0"
   :description "Example library with no internal dependencies."
 
   :dependencies

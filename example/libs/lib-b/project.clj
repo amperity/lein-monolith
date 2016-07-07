@@ -1,4 +1,4 @@
-(defproject example/lib-b "0.1.0-SNAPSHOT"
+(defproject example/lib-b "0.2.0"
   :description "Example lib depending on lib-a."
 
   :dependencies

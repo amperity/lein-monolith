@@ -1,4 +1,4 @@
-(defproject example/app-a "0.1.0-SNAPSHOT"
+(defproject example/app-a "0.5.0"
   :description "Example project with internal and external dependencies."
 
   :dependencies
