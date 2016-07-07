@@ -195,42 +195,44 @@
       lein monolith each :subtree install
       lein monolith each :start my/lib-a test"
   [project & args]
-  (let [config (config/read!)
-        subprojects (get-subprojects project config)
-        [opts task] (u/parse-kw-args {:subtree 0, :start 1} args)
-        start-from (some-> (:start opts) ffirst read-string)
-        targets (-> (dependency-map subprojects)
-                    (cond->
-                      (:subtree opts) (u/subtree-from (project-sym project)))
-                    (u/topological-sort)
-                    (->> (map-indexed vector))
-                    (cond->>
-                      start-from
-                        (drop-while (comp (partial not= start-from) second))))
-        start-time (System/nanoTime)]
-    (lein/info "Applying"
-               (ansi/sgr (str/join " " task) :bold :cyan)
-               "to" (ansi/sgr (count targets) :cyan)
-               "subprojects...")
-    (doseq [[i subproject-name] targets]
-      (try
-        (binding [lein/*exit-process?* false]
-          (lein/info (format "\nApplying to %s (%s/%s)"
-                             (ansi/sgr subproject-name :bold :yellow)
-                             (ansi/sgr (inc i) :cyan)
-                             (ansi/sgr (count subprojects) :cyan)))
-          (lein/apply-task (first task) (get subprojects subproject-name) (rest task)))
-        (catch Exception ex
-          ; TODO: report number skipped, number succeeded, number remaining?
-          (lein/warn (format "\n%s lein monolith each :start %s %s\n"
-                             (ansi/sgr "Resume with:" :bold :red)
-                             subproject-name (str/join " " task)))
-          (throw ex))))
-    (lein/info (format "\n%s: Applied %s to %s projects in %.3f seconds"
-                       (ansi/sgr "SUCCESS" :bold :green)
-                       (ansi/sgr (str/join " " task) :bold :cyan)
-                       (ansi/sgr (count targets) :cyan)
-                       (/ (- (System/nanoTime) start-time) 1000000000.0M)))))
+  (let [[opts task] (u/parse-kw-args {:subtree 0, :start 1} args)]
+    (when (empty? task)
+      (lein/abort "Cannot run each with no task argument!"))
+    (let [config (config/read!)
+          subprojects (get-subprojects project config)
+          start-from (some-> (:start opts) ffirst read-string)
+          targets (-> (dependency-map subprojects)
+                      (cond->
+                        (:subtree opts) (u/subtree-from (project-sym project)))
+                      (u/topological-sort)
+                      (->> (map-indexed vector))
+                      (cond->>
+                        start-from
+                          (drop-while (comp (partial not= start-from) second))))
+          start-time (System/nanoTime)]
+      (lein/info "Applying"
+                 (ansi/sgr (str/join " " task) :bold :cyan)
+                 "to" (ansi/sgr (count targets) :cyan)
+                 "subprojects...")
+      (doseq [[i subproject-name] targets]
+        (try
+          (binding [lein/*exit-process?* false]
+            (lein/info (format "\nApplying to %s (%s/%s)"
+                               (ansi/sgr subproject-name :bold :yellow)
+                               (ansi/sgr (inc i) :cyan)
+                               (ansi/sgr (count subprojects) :cyan)))
+            (lein/apply-task (first task) (get subprojects subproject-name) (rest task)))
+          (catch Exception ex
+            ; TODO: report number skipped, number succeeded, number remaining?
+            (lein/warn (format "\n%s lein monolith each :start %s %s\n"
+                               (ansi/sgr "Resume with:" :bold :red)
+                               subproject-name (str/join " " task)))
+            (throw ex))))
+      (lein/info (format "\n%s: Applied %s to %s projects in %.3f seconds"
+                         (ansi/sgr "SUCCESS" :bold :green)
+                         (ansi/sgr (str/join " " task) :bold :cyan)
+                         (ansi/sgr (count targets) :cyan)
+                         (/ (- (System/nanoTime) start-time) 1000000000.0M))))))
 
 
 (defn ^:higher-order with-all
