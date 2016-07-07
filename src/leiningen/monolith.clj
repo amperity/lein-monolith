@@ -22,15 +22,20 @@
       Paths)))
 
 
-(defn- dependency-order
-  "Returns a sequence of project names in dependency order, determined from the
-  input subproject map. Later projects in the sequence may depend on earlier
-  ones."
+(defn- project-sym
+  "Given a project map with `:group` and `:name` strings, combine them into one
+  namespaced name."
+  [project]
+  (symbol (:group project) (:name project)))
+
+
+(defn- dependency-map
+  "Converts a map of project names to definitions into a map of project names
+  to sets of projects that node depends on."
   [projects]
-  (->> projects
-       (u/map-vals #(set (map (comp u/condense-name first)
-                              (:dependencies %))))
-       (u/topological-sort)))
+  (u/map-vals #(set (map (comp u/condense-name first)
+                         (:dependencies %)))
+              projects))
 
 
 (defn- get-subprojects
@@ -54,8 +59,7 @@
   "Creates a checkout dependency link to the given subproject."
   [^File checkouts-dir subproject force?]
   (let [dep-root (jio/file (:root subproject))
-        dep-name (u/condense-name (symbol (:group subproject)
-                                          (:name subproject)))
+        dep-name (u/condense-name (project-sym subproject))
         link-name (if (namespace dep-name)
                     (str (namespace dep-name) "~" (name dep-name))
                     (name dep-name))
@@ -120,7 +124,7 @@
         subprojects (get-subprojects project config)]
     (doseq [dep-name (map read-string args)]
       (lein/info "\nSubprojects which use" (ansi/sgr dep-name :bold :yellow))
-      (doseq [subproject-name (dependency-order subprojects)
+      (doseq [subproject-name (u/topological-sort (dependency-map subprojects))
               :let [{:keys [version dependencies]} (get subprojects subproject-name)]]
         (when-let [spec (first (filter (comp #{dep-name} u/condense-name first) dependencies))]
           (printf "  %-80s -> %s\n"
