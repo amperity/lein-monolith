@@ -144,7 +144,41 @@
                     (puget/cprint-str spec))))))))
 
 
-(defn ^:no-project-needed ^:higher-order each
+(defn deps-of
+  "Print a list of subprojects which given package(s) depend on. Defaults to
+  the current project if none are provided.
+
+  Options:
+    :bare          Only print the project names and dependent versions, one per line
+    :transitive    Include transitive dependencies in addition to direct ones"
+  [project args]
+  (let [[opts args] (u/parse-kw-args {:bare 0, :transitive 0} args)
+        config (config/read!)
+        subprojects (get-subprojects project config)
+        dep-map (dependency-map subprojects)]
+    (doseq [project-name (if (seq args)
+                           (map read-string args)
+                           [(project-sym project)])]
+      (when-not (:bare opts)
+        (lein/info "\nSubprojects which" (ansi/sgr project-name :bold :yellow)
+                   (if (:transitive opts)
+                     "transitively depends on"
+                     "depends on")))
+      (doseq [dep (if (:transitive opts)
+                    (-> (u/subtree-from dep-map project-name)
+                        (dissoc project-name)
+                        (u/topological-sort))
+                    (->> (get-in subprojects [project-name :dependencies])
+                         (map first)
+                         (filter subprojects)))]
+        (if (:bare opts)
+          (println project-name dep)
+          (printf "  %-80s -> %s\n"
+                  (puget/cprint-str project-name)
+                  dep))))))
+
+
+(defn ^:higher-order each
   "Iterate over each subproject in the monolith and apply the given task.
   Projects are iterated in dependency order; that is, later projects may depend
   on earlier ones.
@@ -287,11 +321,12 @@
 
 (defn ^:no-project-needed monolith
   "Tasks for working with Leiningen projects inside a monorepo."
-  {:subtasks [#'info #'deps-on #'each #'with-all #'link #'unlink]}
+  {:subtasks [#'info #'deps-on #'deps-of #'each #'with-all #'link #'unlink]}
   [project command & args]
   (case command
     "info"       (info project args)
     "deps-on"    (deps-on project args)
+    "deps-of"    (deps-of project args)
     "each"       (apply each project args)
     "with-all"   (apply with-all project args)
     "link"       (link project args)
