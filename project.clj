@@ -1,6 +1,11 @@
 (defproject lein-monolith "0.1.0"
   :description "Leiningen plugin for managing subrojects within a monorepo."
   :url "https://github.com/amperity/lein-monolith"
+  :license {:name "Apache Licence 2.0"
+            :url "http://www.apache.org/licenses/LICENSE-2.0"}
+
+  :deploy-branches ["master"]
+
   :eval-in-leiningen true
 
   :dependencies
