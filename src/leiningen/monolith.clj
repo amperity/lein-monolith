@@ -201,10 +201,9 @@
     (let [config (config/read!)
           subprojects (get-subprojects project config)
           start-from (some-> (:start opts) ffirst read-string)
-          relevant-subprojects (-> (dependency-map subprojects)
-                                   (cond->
-                                     (:subtree opts)
-                                       (u/subtree-from (project-sym project))))
+          relevant-subprojects (cond-> (dependency-map subprojects)
+                                 (:subtree opts)
+                                 (u/subtree-from (project-sym project)))
           targets (-> relevant-subprojects
                       (u/topological-sort)
                       (->> (map-indexed vector))
