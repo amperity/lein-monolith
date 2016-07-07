@@ -44,11 +44,18 @@ found, and a relative path to their location within the repo. For scripting, you
 can pass the `:bare` flag, which will restrict the output to just the project
 name and path.
 
-The plugin also provides the `depends` task to query which subprojects have a
+The plugin also provides the `deps-on` task to query which subprojects have a
 certain dependency:
 
 ```
-lein monolith depends example/lib-b
+lein monolith deps-on example/lib-b
+```
+
+Or you can go the other way with `deps-of` to find the subprojects which a
+certain project depends on:
+
+```
+lein monolith deps-of example/app-a
 ```
 
 ### Subproject Iteration
@@ -59,7 +66,8 @@ which don't depend on any other internal projects will run first, letting you do
 things like:
 
 ```
-lein monolith each install
+lein monolith each check
+lein monolith each :subtree install
 lein monolith each :start my-lib/foo do check, test
 ```
 
