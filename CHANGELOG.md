@@ -7,7 +7,11 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 
-- Fixed a bug in which `lein each :subtree` would show the wrong number of total subprojects while printing its progress.
+### Fixed
+- Fixed a bug in which `each :subtree` would show the wrong number of total
+  subprojects while printing its progress.
+- Internal projects are now implicit dependencies of the merged monolith
+  profile.
 
 ## 0.1.0 - 2016-07-07
 
