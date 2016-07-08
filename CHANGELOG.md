@@ -7,7 +7,7 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 
-...
+- Fixed a bug in which `lein each :subtree` would show the wrong number of total subprojects while printing its progress.
 
 ## 0.1.0 - 2016-07-07
 
