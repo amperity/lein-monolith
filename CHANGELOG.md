@@ -7,6 +7,8 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 
+## [0.1.1] - 2016-07-08
+
 ### Fixed
 - Fixed a bug in which `each :subtree` would show the wrong number of total
   subprojects while printing its progress.
@@ -17,4 +19,5 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 
 Initial project release
 
-[Unreleased]: https://github.com/amperity/lein-monolith/compare/0.1.0...HEAD
+[Unreleased]: https://github.com/amperity/lein-monolith/compare/0.1.1...HEAD
+[0.1.1]: https://github.com/amperity/lein-monolith/compare/0.1.0...0.1.1
