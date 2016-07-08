@@ -1,7 +1,9 @@
 lein-monolith
 =============
 
-Monolith is a Leiningen plugin to work with multiple projects inside a monorepo.
+`lein-monolith` is a Leiningen plugin to work with multiple projects inside a monorepo.
+For an introduction to the project and some motivation, see this
+[2016 Seajure presentation](https://docs.google.com/presentation/d/1jqYG2N2YalWdVG4oDqs1mua4hOyxVD_nejANrg6h8to/present).
 
 ## Installation
 
