@@ -16,7 +16,7 @@ definitions:
 ## Configuration
 
 Monolith offers a number of tasks to make working with monorepos easier. To get
-started, create a coniguration file named [`monolith.clj`](example/monolith.clj)
+started, create a configuration file named [`monolith.clj`](example/monolith.clj)
 at the root of the monorepo.
 
 The config file tells monolith where to find the projects inside the repo by
