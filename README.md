@@ -15,16 +15,21 @@ definitions:
 
 ## Configuration
 
-Monolith offers a number of tasks to make working with monorepos easier. To get
-started, create a configuration file named [`monolith.clj`](example/monolith.clj)
-at the root of the monorepo.
+The `monolith` task provides several commands to make working with monorepos
+easier. In order to use most of them, you'll need to create some configuration
+telling the plugin where your subprojects are.
 
-The config file tells monolith where to find the projects inside the repo by
-giving a vector of relative paths in the the `:project-dirs` key. Each entry
-should point to either a direct subproject directory (containing a `project.clj`
-file) such as `apps/app-a`, or end with a `*` to indicate that all child
-directories should be searched for projects, like `libs/*`. Note that this only
-works with a single level of wildcard matching at the end of the path.
+The configuration is provided by a _metaproject_, which lives in the repository
+root and must contain a value for the `:monolith` project key. Create a
+top-level [`project.clj`](example/project.clj) file and add the plugin and
+monolith entries.
+
+The `:project-dirs` key tells monolith where to find the projects inside the
+repo by giving a vector of relative paths. Each entry should point to either a
+direct subproject directory (containing a `project.clj` file) such as
+`apps/app-a`, or end with a wildcard `*` to indicate that all child directories
+should be searched for projects, like `libs/*`. Note that this only works with a
+single level of wildcard matching at the end of the path.
 
 ## Usage
 
@@ -104,14 +109,6 @@ lein monolith unlink
 In general, it's recommended to only link between the projects you're actually
 actively working on, otherwise Leiningen has to recursively trace the full tree
 of checkouts before running things.
-
-## Tips
-
-It is often convenient to create a 'top-level'
-[`project.clj`](example/project.clj) file representing the entire monolith. By
-setting the `:monolith` key, the plugin will automatically merge the full list
-of source paths, test paths, and dependencies into the top-level project. This
-is the same as running your commands using the `with-all` task above.
 
 ## License
 
