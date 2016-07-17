@@ -222,7 +222,11 @@
                                (ansi/sgr subproject-name :bold :yellow)
                                (ansi/sgr (inc i) :cyan)
                                (ansi/sgr (count relevant-subprojects) :cyan)))
-            (lein/apply-task (first task) (get subprojects subproject-name) (rest task)))
+            (-> (get subprojects subproject-name)
+                ; TODO: inject inherited profile here
+                (project/init-project [:default])
+                (as-> subproject
+                  (lein/apply-task (first task) subproject (rest task)))))
           (catch Exception ex
             ; TODO: report number skipped, number succeeded, number remaining?
             (lein/warn (format "\n%s lein monolith each :start %s %s\n"

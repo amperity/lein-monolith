@@ -86,7 +86,7 @@
   (let [project-file (jio/file dir "project.clj")]
     (when (.exists project-file)
       (lein/debug "Reading subproject definiton from" (str project-file))
-      (project/read (str project-file)))))
+      (project/read-raw (str project-file)))))
 
 
 (defn load-subprojects!
