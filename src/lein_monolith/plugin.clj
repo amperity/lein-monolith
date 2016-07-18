@@ -15,11 +15,44 @@
     [puget.printer :as puget]))
 
 
+;; ## Profile Generation
+
 (defn- subproject-dependencies
   "Given a map of internal projects, return a vector of dependency coordinates
   for the subprojects."
   [subprojects]
   (mapv #(vector (key %) (:version (val %))) subprojects))
+
+
+(defn- add-profile-paths
+  "Update a profile paths entry by adding the absolute paths from the given
+  project. Returns the updated profile."
+  [profile project k]
+  (update profile k into
+          (map (partial str (:root project) "/")
+               (get project k))))
+
+
+(defn merged-profile
+  "Constructs a profile map containing merged (re)source and test paths."
+  [subprojects]
+  (let [add-paths (fn update-paths
+                    [profile project k]
+                    (update profile k concat
+                            (map (partial str (:root project) "/")
+                                 (get project k))))]
+    (->
+      (reduce-kv
+        (fn [profile project-name project]
+          (-> profile
+              (add-profile-paths project :resource-paths)
+              (add-profile-paths project :source-paths)
+              (add-profile-paths project :test-paths)))
+        {:dependencies (subproject-dependencies subprojects)
+         :resource-paths []
+         :source-paths []
+         :test-paths []}
+        subprojects))))
 
 
 (defn inherited-profile
@@ -49,25 +82,8 @@
                         {:inherit inherit})))))
 
 
-(defn merged-profile
-  "Constructs a profile map containing merged (re)source and test paths."
-  [subprojects]
-  (->
-    (reduce-kv
-      (fn [profile project-name project]
-        (let [dependencies (map #(dep/with-source % project-name)
-                                (:dependencies project))]
-          (-> profile
-              (update :resource-paths concat (:resource-paths project))
-              (update :source-paths   concat (:source-paths project))
-              (update :test-paths     concat (:test-paths project)))))
-      {:resource-paths []
-       :source-paths []
-       :test-paths []}
-      subprojects)
-    (assoc :dependencies (subproject-dependencies subprojects))
-    #_(update :dependencies dep/dedupe-dependencies)))
 
+;; ## Profile Utilities
 
 (defn add-profile
   "Adds the monolith profile to the given project if it's not already present."
@@ -87,20 +103,25 @@
         (project/merge-profiles project [profile-key]))))
 
 
+(defn add-active-profile
+  "Combines the effects of `add-profile` and `activate-profile`."
+  [project profile-key profile]
+  (-> project
+      (add-profile profile-key profile)
+      (activate-profile profile-key)))
+
+
+
+;; ## Plugin Middleware
+
 (defn middleware
   "Handles inherited properties in monolith subprojects by looking for the
   `:monolith/inherit` key."
   [project]
   (if (:monolith/inherit project)
     ; Monolith subproject, add inherited profile.
-    (if (get-in project [:profiles :monolith/inherited])
-      ; Already added the profile.
-      project
-      ; Generate and merge in the profile.
-      (let [metaproject (config/find-monolith!)
-            profile (inherited-profile metaproject (:monolith/inherit project))]
-        (-> project
-            (add-profile :monolith/inherited profile)
-            (activate-profile :monolith/inherited))))
+    (let [metaproject (config/find-monolith! project)
+          profile (inherited-profile metaproject (:monolith/inherit project))]
+      (add-active-profile project :monolith/inherited profile))
     ; Normal project, don't activate.
     project))

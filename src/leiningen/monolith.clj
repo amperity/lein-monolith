@@ -210,7 +210,6 @@
     (lein/info "Generated dependency graph in" (str graph-file))))
 
 
-#_
 (defn ^:higher-order with-all
   "Apply the given task with a merged set of dependencies, sources, and tests
   from all the internal projects.
@@ -218,15 +217,15 @@
   For example:
 
       lein monolith with-all test"
-  [project task-name & args]
-  (let [metaproject (config/find-monolith!)
+  [project task & args]
+  (when (empty? task)
+    (lein/abort "Cannot run with-all without task argument!"))
+  (let [metaproject (config/find-monolith! project)
         subprojects (config/read-subprojects! metaproject)
         profile (plugin/merged-profile subprojects)]
     (lein/apply-task
-      task-name
-      (-> project
-          (plugin/add-profile :monolith/all profile)
-          (plugin/activate-profile :monolith/all))
+      task
+      (plugin/add-active-profile project :monolith/all profile)
       args)))
 
 
@@ -252,7 +251,7 @@
   [project & args]
   (let [[opts task] (parse-kw-args {:subtree 0, :start 1} args)]
     (when (empty? task)
-      (lein/abort "Cannot run each with no task argument!"))
+      (lein/abort "Cannot run each without task argument!"))
     (let [config (config/read!)
           subprojects (get-subprojects project config)
           start-from (some-> (:start opts) ffirst read-string)
@@ -342,7 +341,7 @@
     "deps-on"    (deps-on project args)
     "deps-of"    (deps-of project args)
     "graph"      (graph project)
-    ;"with-all"   (apply with-all project args)
+    "with-all"   (apply with-all project args)
     ;"each"       (apply each project args)
     "link"       (link project args)
     "unlink"     (unlink project)
