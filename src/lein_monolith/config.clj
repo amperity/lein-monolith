@@ -51,8 +51,8 @@
     project
     (some (fn check-project
             [file]
-            (lein/debug "Reading parent project file" (str file))
-            (let [super (project/read (str file))]
+            (lein/debug "Reading candidate project file" (str file))
+            (let [super (project/read-raw (str file))]
               (when (:monolith super)
                 super)))
           (find-up (:root project) "project.clj"))))
