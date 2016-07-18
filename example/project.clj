@@ -8,5 +8,12 @@
   [[org.clojure/clojure "1.8.0"]]
 
   :monolith
-  {:project-dirs
-   ["apps/app-a" "libs/*" "not-found"]})
+  {:inherit
+   [:repositories
+    :test-selectors
+    :managed-dependencies]
+
+   :project-dirs
+   ["apps/app-a"
+    "libs/*"
+    "not-found"]})
