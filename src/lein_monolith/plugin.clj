@@ -85,6 +85,13 @@
 
 ;; ## Profile Utilities
 
+(defn profile-active?
+  "Check whether the given profile key is in the set of active profiles on the
+  given project."
+  [project profile-key]
+  (contains? (set (:active-profiles (meta project))) profile-key))
+
+
 (defn add-profile
   "Adds the monolith profile to the given project if it's not already present."
   [project profile-key profile]
@@ -97,7 +104,7 @@
 (defn activate-profile
   "Activates the monolith profile in the project if it's not already active."
   [project profile-key]
-  (if (contains? (set (:active-profiles (meta project))) profile-key)
+  (if (profile-active? project profile-key)
     project
     (do (lein/debug "Merging" profile-key "profile into project" (dep/project-name project))
         (project/merge-profiles project [profile-key]))))
@@ -120,8 +127,12 @@
   [project]
   (if (:monolith/inherit project)
     ; Monolith subproject, add inherited profile.
-    (let [metaproject (config/find-monolith! project)
-          profile (inherited-profile metaproject (:monolith/inherit project))]
-      (add-active-profile project :monolith/inherited profile))
+    (if (profile-active? project :monolith/inherited)
+      ; Already active, return project.
+      project
+      ; Find monolith metaproject and generate profile.
+      (let [metaproject (config/find-monolith! project)
+            profile (inherited-profile metaproject (:monolith/inherit project))]
+        (add-active-profile project :monolith/inherited profile)))
     ; Normal project, don't activate.
     project))

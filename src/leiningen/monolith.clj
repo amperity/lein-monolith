@@ -103,7 +103,7 @@
     (when-not (:bare opts)
       (println "Monolith root:" (:root monolith))
       (println)
-      (when-let [inherited (get-in monolith [:monolith :inherited])]
+      (when-let [inherited (get-in monolith [:monolith :inherit])]
         (println "Inherited properties:")
         (puget/cprint inherited)
         (println))

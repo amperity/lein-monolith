@@ -2,10 +2,14 @@
   :description "Overarching example project."
 
   :plugins
-  [[lein-monolith "0.1.0"]]
+  [[lein-monolith "0.1.2-SNAPSHOT"]]
 
   :dependencies
   [[org.clojure/clojure "1.8.0"]]
+
+  :test-selectors
+  {:unit (complement :integration)
+   :integration :integration}
 
   :monolith
   {:inherit
