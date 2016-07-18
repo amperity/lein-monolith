@@ -42,7 +42,7 @@ subprojects. In each subproject where you want this behavior, add a
 
 A value of `true` will merge in a profile with the attributes set in the
 metaproject. Alternately, you can provide a vector of additional keys to merge
-from the metaproject. Attaching `^:force` metadata will cause the vector to
+from the metaproject. Attaching `^:replace` metadata will cause the vector to
 override the attributes set in the metaproject.
 
 ## Usage
