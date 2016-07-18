@@ -9,8 +9,8 @@
       [project :as project])
     (lein-monolith
       [config :as config]
-      [plugin :as plugin]
-      [util :as u])
+      [dependency :as dep]
+      [plugin :as plugin])
     [puget.printer :as puget]
     [puget.color.ansi :as ansi])
   (:import
@@ -22,22 +22,34 @@
       Paths)))
 
 
-(defn- project-sym
-  "Given a project map with `:group` and `:name` strings, combine them into one
-  namespaced name."
-  [project]
-  (symbol (:group project) (:name project)))
+(defn- parse-kw-args
+  "Given a sequence of string arguments, parse out expected keywords. Returns
+  a vector with a map of keywords to values (or `true` for flags) followed by
+  a sequence the remaining unparsed arguments."
+  [expected args]
+  (loop [opts {}
+         args args]
+    (let [kw (and (first args)
+                  (.startsWith ^String (first args) ":")
+                  (keyword (subs (first args) 1)))
+          arg-count (get expected kw)]
+      (cond
+        ; Not an expected kw arg
+        (nil? arg-count)
+          [opts args]
+
+        ; Flag keyword
+        (zero? arg-count)
+          (recur (assoc opts kw true) (rest args))
+
+        ; Multi-arg keyword
+        :else
+          (recur
+            (update opts kw (fnil conj []) (vec (take arg-count (rest args))))
+            (drop (inc arg-count) args))))))
 
 
-(defn- dependency-map
-  "Converts a map of project names to definitions into a map of project names
-  to sets of projects that node depends on."
-  [projects]
-  (u/map-vals #(set (map (comp u/condense-name first)
-                         (:dependencies %)))
-              projects))
-
-
+#_
 (defn- get-subprojects
   "Attempts to look up the subprojects definitions in the project map, in case
   they were already loaded by the `:monolith/all` profile. Otherwise, loads them
@@ -59,7 +71,7 @@
   "Creates a checkout dependency link to the given subproject."
   [^File checkouts-dir subproject force?]
   (let [dep-root (jio/file (:root subproject))
-        dep-name (u/condense-name (project-sym subproject))
+        dep-name (dep/project-name subproject)
         link-name (if (namespace dep-name)
                     (str (namespace dep-name) "~" (name dep-name))
                     (name dep-name))
@@ -96,16 +108,22 @@
   Options:
     :bare        Only print the project names and directories, one per line"
   [project args]
-  (let [[opts _] (u/parse-kw-args {:bare 0} args)
-        config (config/read!)]
+  (let [[opts _] (parse-kw-args {:bare 0} args)
+        monolith (config/find-monolith! project)]
     (when-not (:bare opts)
-      (println "Monolith root:" (:mono-root config))
-      (println "Subproject directories:")
-      (puget/cprint (:project-dirs config))
-      (println))
-    (let [subprojects (get-subprojects project config)
-          targets (u/topological-sort (dependency-map subprojects))
-          prefix-len (inc (count (:mono-root config)))]
+      (println "Monolith root:" (:root monolith))
+      (println)
+      (when-let [inherited (get-in monolith [:monolith :inherited])]
+        (println "Inherited properties:")
+        (puget/cprint inherited)
+        (println))
+      (when-let [dirs (get-in monolith [:monolith :project-dirs])]
+        (println "Subproject directories:")
+        (puget/cprint dirs)
+        (println)))
+    (let [subprojects (config/load-subprojects! monolith)
+          targets (dep/topological-sort (dep/dependency-map subprojects))
+          prefix-len (inc (count (:root monolith)))]
       (when-not (:bare opts)
         (printf "Internal projects (%d):\n" (count targets)))
       (doseq [subproject-name targets
@@ -118,6 +136,7 @@
                   (ansi/sgr relative-path :cyan)))))))
 
 
+#_
 (defn deps-on
   "Print a list of subprojects which depend on the given package(s). Defaults
   to the current project if none are provided.
@@ -125,24 +144,25 @@
   Options:
     :bare          Only print the project names and dependent versions, one per line"
   [project args]
-  (let [[opts args] (u/parse-kw-args {:bare 0} args)
+  (let [[opts args] (parse-kw-args {:bare 0} args)
         config (config/read!)
         subprojects (get-subprojects project config)
         dep-map (dependency-map subprojects)]
     (doseq [dep-name (if (seq args)
                        (map read-string args)
-                       [(project-sym project)])]
+                       [(dep/project-name project)])]
       (when-not (:bare opts)
         (lein/info "\nSubprojects which depend on" (ansi/sgr dep-name :bold :yellow)))
-      (doseq [subproject-name (u/topological-sort dep-map)
+      (doseq [subproject-name (dep/topological-sort dep-map)
               :let [{:keys [version dependencies]} (get subprojects subproject-name)]]
-        (when-let [spec (first (filter (comp #{dep-name} u/condense-name first) dependencies))]
+        (when-let [spec (first (filter (comp #{dep-name} dep/condense-name first) dependencies))]
           (if (:bare opts)
             (println subproject-name (first spec) (second spec))
             (println "  " (puget/cprint-str subproject-name)
                      "->" (puget/cprint-str spec))))))))
 
 
+#_
 (defn deps-of
   "Print a list of subprojects which given package(s) depend on. Defaults to
   the current project if none are provided.
@@ -151,22 +171,22 @@
     :bare          Only print the project names and dependent versions, one per line
     :transitive    Include transitive dependencies in addition to direct ones"
   [project args]
-  (let [[opts args] (u/parse-kw-args {:bare 0, :transitive 0} args)
+  (let [[opts args] (parse-kw-args {:bare 0, :transitive 0} args)
         config (config/read!)
         subprojects (get-subprojects project config)
         dep-map (dependency-map subprojects)]
     (doseq [project-name (if (seq args)
                            (map read-string args)
-                           [(project-sym project)])]
+                           [(dep/project-name project)])]
       (when-not (:bare opts)
         (lein/info "\nSubprojects which" (ansi/sgr project-name :bold :yellow)
                    (if (:transitive opts)
                      "transitively depends on"
                      "depends on")))
       (doseq [dep (if (:transitive opts)
-                    (-> (u/subtree-from dep-map project-name)
+                    (-> (dep/subtree-from dep-map project-name)
                         (dissoc project-name)
-                        (u/topological-sort))
+                        (dep/topological-sort))
                     (->> (get-in subprojects [project-name :dependencies])
                          (map first)
                          (filter subprojects)))]
@@ -176,6 +196,7 @@
                    "->" dep))))))
 
 
+#_
 (defn ^:higher-order each
   "Iterate over each subproject in the monolith and apply the given task.
   Projects are iterated in dependency order; that is, later projects may depend
@@ -195,7 +216,7 @@
       lein monolith each :subtree install
       lein monolith each :start my/lib-a test"
   [project & args]
-  (let [[opts task] (u/parse-kw-args {:subtree 0, :start 1} args)]
+  (let [[opts task] (parse-kw-args {:subtree 0, :start 1} args)]
     (when (empty? task)
       (lein/abort "Cannot run each with no task argument!"))
     (let [config (config/read!)
@@ -203,9 +224,9 @@
           start-from (some-> (:start opts) ffirst read-string)
           relevant-subprojects (cond-> (dependency-map subprojects)
                                  (:subtree opts)
-                                 (u/subtree-from (project-sym project)))
+                                 (dep/subtree-from (dep/project-name project)))
           targets (-> relevant-subprojects
-                      (u/topological-sort)
+                      (dep/topological-sort)
                       (->> (map-indexed vector))
                       (cond->>
                         start-from
@@ -240,6 +261,7 @@
                          (/ (- (System/nanoTime) start-time) 1000000000.0M))))))
 
 
+#_
 (defn ^:higher-order with-all
   "Apply the given task with a merged set of dependencies, sources, and tests
   from all the internal projects.
@@ -248,16 +270,18 @@
 
       lein monolith with-all test"
   [project task-name & args]
-  (when (:monolith project)
-    (lein/abort "Running 'with-all' in a monolith project is redundant!"))
-  (lein/apply-task
-    task-name
-    (-> project
-        (plugin/add-profile)
-        (plugin/activate-profile))
-    args))
+  (let [metaproject (config/find-monolith!)
+        subprojects (config/load-subprojects! metaproject)
+        profile (plugin/merged-profile subprojects)]
+    (lein/apply-task
+      task-name
+      (-> project
+          (plugin/add-profile :monolith/all profile)
+          (plugin/activate-profile :monolith/all))
+      args)))
 
 
+#_
 (defn link
   "Create symlinks in the checkouts directory pointing to all internal
   dependencies in the current project.
@@ -279,10 +303,11 @@
       (.mkdir checkouts-dir))
     ; Check each dependency for internal projects.
     (doseq [spec (:dependencies project)]
-      (when-let [subproject (get subprojects (u/condense-name (first spec)))]
+      (when-let [subproject (get subprojects (dep/condense-name (first spec)))]
         (link-checkout! checkouts-dir subproject (flags ":force"))))))
 
 
+#_
 (defn unlink
   "Remove the checkout directory from a project."
   [project]
@@ -295,6 +320,7 @@
       (.delete checkouts-dir))))
 
 
+#_
 (defn graph
   "Generate a graph of subprojects and their interdependencies."
   [project]
@@ -302,9 +328,7 @@
   (let [visualize! (ns-resolve 'rhizome.viz 'save-graph)
         config (config/read!)
         subprojects (get-subprojects project config)
-        dependencies (u/map-vals #(set (map (comp u/condense-name first)
-                                            (:dependencies %)))
-                                 subprojects)
+        dependencies (dep/dependency-map subprojects)
         graph-file (jio/file (:target-path project) "project-hierarchy.png")
         path-prefix (inc (count (:mono-root config)))]
     (.mkdir (jio/file (:target-path project)))
@@ -324,18 +348,21 @@
 
 ;; ## Plugin Entry
 
-(defn ^:no-project-needed monolith
+(defn monolith
   "Tasks for working with Leiningen projects inside a monorepo."
-  {:subtasks [#'info #'deps-on #'deps-of #'each #'with-all #'link #'unlink]}
+  #_{:subtasks [#'info #'deps-on #'deps-of #'each #'with-all #'link #'unlink]}
   [project command & args]
   (case command
     "info"       (info project args)
-    "deps-on"    (deps-on project args)
-    "deps-of"    (deps-of project args)
-    "each"       (apply each project args)
-    "with-all"   (apply with-all project args)
-    "link"       (link project args)
-    "unlink"     (unlink project)
-    "graph"      (graph project)
+    ;"deps-on"    (deps-on project args)
+    ;"deps-of"    (deps-of project args)
+    ;"each"       (apply each project args)
+    ;"with-all"   (apply with-all project args)
+    ;"link"       (link project args)
+    ;"unlink"     (unlink project)
+    ;"graph"      (graph project)
+    ; TODO: lint checks:
+    ; - dependency version conflicts
+    ; - lack of :pedantic? :abort
     (lein/abort (pr-str command) "is not a valid monolith command! Try: lein help monolith"))
   (flush))

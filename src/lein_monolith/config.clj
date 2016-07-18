@@ -38,6 +38,7 @@
     project
     (some (fn check-project
             [file]
+            (lein/debug "Reading parent project file" (str file))
             (let [super (project/read (str file))]
               (when (:monolith super)
                 super)))
