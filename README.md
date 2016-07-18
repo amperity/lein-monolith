@@ -16,13 +16,15 @@ definitions:
 ## Configuration
 
 The `monolith` task provides several commands to make working with monorepos
-easier. In order to use most of them, you'll need to create some configuration
-telling the plugin where your subprojects are.
+easier. In order to use them, you'll need to create some configuration telling
+the plugin where your subprojects are.
 
 The configuration is provided by a _metaproject_, which lives in the repository
 root and must contain a value for the `:monolith` project key. Create a
 top-level [`project.clj`](example/project.clj) file and add the plugin and
 monolith entries.
+
+### Subproject Locations
 
 The `:project-dirs` key tells monolith where to find the projects inside the
 repo by giving a vector of relative paths. Each entry should point to either a
@@ -30,6 +32,18 @@ direct subproject directory (containing a `project.clj` file) such as
 `apps/app-a`, or end with a wildcard `*` to indicate that all child directories
 should be searched for projects, like `libs/*`. Note that this only works with a
 single level of wildcard matching at the end of the path.
+
+### Config Inheritance
+
+In order to share common project definition entries, you can also set the
+`:inherit` key to a vector of attributes which should be inherited by
+subprojects. In each subproject where you want this behavior, add a
+`:monolith/inherit` key.
+
+A value of `true` will merge in a profile with the attributes set in the
+metaproject. Alternately, you can provide a vector of additional keys to merge
+from the metaproject. Attaching `^:force` metadata will cause the vector to
+override the attributes set in the metaproject.
 
 ## Usage
 
@@ -80,9 +94,10 @@ lein monolith each :start my-lib/foo do check, test
 
 ### Merged Source Profile
 
-The plugin also creates a profile with `:source-paths` and `:test-paths` updated
-to include the source and test files from all projects in the monorepo. The
-`:dependencies` vector will also be merged across all projects.
+The plugin also creates a profile with `:resource-paths`, `:source-paths` and
+`:test-paths` updated to include the source and test files from all projects in
+the monorepo. The profile also sets `:dependencies` on each internal project,
+giving you a closure of all dependencies across all the subprojects.
 
 This can be useful for running lint and tests on all the projects at once:
 
