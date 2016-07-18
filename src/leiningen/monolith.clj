@@ -49,16 +49,6 @@
             (drop (inc arg-count) args))))))
 
 
-#_
-(defn- get-subprojects
-  "Attempts to look up the subprojects definitions in the project map, in case
-  they were already loaded by the `:monolith/all` profile. Otherwise, loads them
-  directly using the config."
-  [project config]
-  (or (:monolith/subprojects project)
-      (config/load-subprojects! config)))
-
-
 (defn- create-symlink!
   "Creates a link from the given source path to the given target."
   [source target]
@@ -121,7 +111,7 @@
         (println "Subproject directories:")
         (puget/cprint dirs)
         (println)))
-    (let [subprojects (config/load-subprojects! monolith)
+    (let [subprojects (config/read-subprojects! monolith)
           targets (dep/topological-sort (dep/dependency-map subprojects))
           prefix-len (inc (count (:root monolith)))]
       (when-not (:bare opts)
@@ -136,7 +126,6 @@
                   (ansi/sgr relative-path :cyan)))))))
 
 
-#_
 (defn deps-on
   "Print a list of subprojects which depend on the given package(s). Defaults
   to the current project if none are provided.
@@ -145,9 +134,9 @@
     :bare          Only print the project names and dependent versions, one per line"
   [project args]
   (let [[opts args] (parse-kw-args {:bare 0} args)
-        config (config/read!)
-        subprojects (get-subprojects project config)
-        dep-map (dependency-map subprojects)]
+        monolith (config/find-monolith! project)
+        subprojects (config/read-subprojects! monolith)
+        dep-map (dep/dependency-map subprojects)]
     (doseq [dep-name (if (seq args)
                        (map read-string args)
                        [(dep/project-name project)])]
@@ -162,7 +151,6 @@
                      "->" (puget/cprint-str spec))))))))
 
 
-#_
 (defn deps-of
   "Print a list of subprojects which given package(s) depend on. Defaults to
   the current project if none are provided.
@@ -172,12 +160,14 @@
     :transitive    Include transitive dependencies in addition to direct ones"
   [project args]
   (let [[opts args] (parse-kw-args {:bare 0, :transitive 0} args)
-        config (config/read!)
-        subprojects (get-subprojects project config)
-        dep-map (dependency-map subprojects)]
+        monolith (config/find-monolith! project)
+        subprojects (config/read-subprojects! monolith)
+        dep-map (dep/dependency-map subprojects)]
     (doseq [project-name (if (seq args)
                            (map read-string args)
                            [(dep/project-name project)])]
+      (when-not (get dep-map project-name)
+        (lein/abort project-name "is not a valid subproject!"))
       (when-not (:bare opts)
         (lein/info "\nSubprojects which" (ansi/sgr project-name :bold :yellow)
                    (if (:transitive opts)
@@ -271,7 +261,7 @@
       lein monolith with-all test"
   [project task-name & args]
   (let [metaproject (config/find-monolith!)
-        subprojects (config/load-subprojects! metaproject)
+        subprojects (config/read-subprojects! metaproject)
         profile (plugin/merged-profile subprojects)]
     (lein/apply-task
       task-name
@@ -354,8 +344,8 @@
   [project command & args]
   (case command
     "info"       (info project args)
-    ;"deps-on"    (deps-on project args)
-    ;"deps-of"    (deps-of project args)
+    "deps-on"    (deps-on project args)
+    "deps-of"    (deps-of project args)
     ;"each"       (apply each project args)
     ;"with-all"   (apply with-all project args)
     ;"link"       (link project args)

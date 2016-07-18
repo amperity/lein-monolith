@@ -87,11 +87,10 @@
       (project/read-raw (str project-file)))))
 
 
-(defn load-subprojects!
+(defn read-subprojects!
   "Returns a map of (condensed) project names to raw leiningen project
   definitions for all the subprojects in the repo."
   [project]
-  ; TODO: should this return an updated project?
   (->>
     (get-in project [:monolith :project-dirs])
     (map (partial jio/file (:root project)))
