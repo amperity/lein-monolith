@@ -9,6 +9,19 @@
     java.io.File))
 
 
+(defmacro debug-profile
+  "Measure the time to compute the value in `body`, printing out a debug
+  message with the total elapsed time."
+  [message & body]
+  `(let [start# (System/nanoTime)
+         message# ~message
+         value# (do ~@body)
+         elapsed# (/ (- (System/nanoTime) start#) 1000000.0)]
+     (lein/debug "Elapsed:" message# (format "=> %.3f ms" elapsed#))
+     value#))
+
+
+
 ;; ## General Configuration
 
 (defn- find-up
@@ -49,10 +62,11 @@
   "Returns the loaded project map for the monolith metaproject. Aborts with an
   error if not found."
   [project]
-  (let [monolith (find-monolith project)]
+  (let [monolith (debug-profile "find-monolith" (find-monolith project))]
     (when-not monolith
       (lein/abort "Could not find monolith project in any parent directory of"
                   (:root project)))
+    (lein/debug "Found monolith project rooted at" (:root monolith))
     monolith))
 
 
@@ -90,11 +104,12 @@
 (defn read-subprojects!
   "Returns a map of (condensed) project names to raw leiningen project
   definitions for all the subprojects in the repo."
-  [project]
+  [monolith]
   (->>
-    (get-in project [:monolith :project-dirs])
-    (map (partial jio/file (:root project)))
+    (get-in monolith [:monolith :project-dirs])
+    (map (partial jio/file (:root monolith)))
     (mapcat pick-directories)
     (keep read-subproject)
     (map (juxt dep/project-name identity))
-    (into {})))
+    (into {})
+    (debug-profile "read-subprojects!")))
