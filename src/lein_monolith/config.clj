@@ -20,7 +20,7 @@
     (lazy-seq
       (let [dir (jio/file root)
             file (jio/file dir file-name)
-            next-files (find-up (.getParent dir) file-name)]
+            next-files (find-up (.getParentFile dir) file-name)]
         (if (.exists file)
           (cons file next-files)
           next-files)))))

@@ -186,6 +186,50 @@
                    "->" dep))))))
 
 
+(defn graph
+  "Generate a graph of subprojects and their interdependencies."
+  [project]
+  (require 'rhizome.viz)
+  (let [visualize! (ns-resolve 'rhizome.viz 'save-graph)
+        monolith (config/find-monolith! project)
+        subprojects (config/read-subprojects! monolith)
+        dependencies (dep/dependency-map subprojects)
+        graph-file (jio/file (:target-path monolith) "project-hierarchy.png")
+        path-prefix (inc (count (:root monolith)))]
+    (.mkdir (.getParentFile graph-file))
+    (visualize!
+      (keys dependencies)
+      dependencies
+      :vertical? false
+      :node->descriptor #(array-map :label (name %))
+      :node->cluster (fn [id]
+                       (when-let [root (get-in subprojects [id :root])]
+                         (str/join "/" (butlast (str/split root #"/")))))
+      :cluster->descriptor #(array-map :label (subs (str %) path-prefix))
+      :filename (str graph-file))
+    (lein/info "Generated dependency graph in" (str graph-file))))
+
+
+#_
+(defn ^:higher-order with-all
+  "Apply the given task with a merged set of dependencies, sources, and tests
+  from all the internal projects.
+
+  For example:
+
+      lein monolith with-all test"
+  [project task-name & args]
+  (let [metaproject (config/find-monolith!)
+        subprojects (config/read-subprojects! metaproject)
+        profile (plugin/merged-profile subprojects)]
+    (lein/apply-task
+      task-name
+      (-> project
+          (plugin/add-profile :monolith/all profile)
+          (plugin/activate-profile :monolith/all))
+      args)))
+
+
 #_
 (defn ^:higher-order each
   "Iterate over each subproject in the monolith and apply the given task.
@@ -251,27 +295,6 @@
                          (/ (- (System/nanoTime) start-time) 1000000000.0M))))))
 
 
-#_
-(defn ^:higher-order with-all
-  "Apply the given task with a merged set of dependencies, sources, and tests
-  from all the internal projects.
-
-  For example:
-
-      lein monolith with-all test"
-  [project task-name & args]
-  (let [metaproject (config/find-monolith!)
-        subprojects (config/read-subprojects! metaproject)
-        profile (plugin/merged-profile subprojects)]
-    (lein/apply-task
-      task-name
-      (-> project
-          (plugin/add-profile :monolith/all profile)
-          (plugin/activate-profile :monolith/all))
-      args)))
-
-
-#_
 (defn link
   "Create symlinks in the checkouts directory pointing to all internal
   dependencies in the current project.
@@ -279,25 +302,22 @@
   Options:
     :force       Override any existing checkout links with conflicting names"
   [project args]
-  (when-not project
-    (lein/abort "The 'link' task requires a project to run in"))
   (when (:monolith project)
     (lein/abort "The 'link' task does not need to be run for the monolith project!"))
-  (let [flags (set args)
-        config (config/read!)
-        subprojects (get-subprojects project config)
+  (let [[opts _] (parse-kw-args {:force 0} args)
+        monolith (config/find-monolith! project)
+        subprojects (config/read-subprojects! monolith)
         checkouts-dir (jio/file (:root project) "checkouts")]
     ; Create checkouts directory if needed.
     (when-not (.exists checkouts-dir)
-      (lein/info "Creating checkout directory" checkouts-dir)
+      (lein/info "Creating checkout directory" (str checkouts-dir))
       (.mkdir checkouts-dir))
     ; Check each dependency for internal projects.
     (doseq [spec (:dependencies project)]
       (when-let [subproject (get subprojects (dep/condense-name (first spec)))]
-        (link-checkout! checkouts-dir subproject (flags ":force"))))))
+        (link-checkout! checkouts-dir subproject (:force opts))))))
 
 
-#_
 (defn unlink
   "Remove the checkout directory from a project."
   [project]
@@ -308,31 +328,6 @@
         (lein/debug "Removing checkout link" (str link))
         (.delete ^File link))
       (.delete checkouts-dir))))
-
-
-#_
-(defn graph
-  "Generate a graph of subprojects and their interdependencies."
-  [project]
-  (require 'rhizome.viz)
-  (let [visualize! (ns-resolve 'rhizome.viz 'save-graph)
-        config (config/read!)
-        subprojects (get-subprojects project config)
-        dependencies (dep/dependency-map subprojects)
-        graph-file (jio/file (:target-path project) "project-hierarchy.png")
-        path-prefix (inc (count (:mono-root config)))]
-    (.mkdir (jio/file (:target-path project)))
-    (visualize!
-      (keys dependencies)
-      dependencies
-      :vertical? false
-      :node->descriptor #(array-map :label (name %))
-      :node->cluster (fn [id]
-                       (when-let [root (get-in subprojects [id :root])]
-                         (str/join "/" (butlast (str/split root #"/")))))
-      :cluster->descriptor #(array-map :label (subs (str %) path-prefix))
-      :filename (str graph-file))
-    (lein/info "Generated dependency graph in" (str graph-file))))
 
 
 
@@ -346,11 +341,11 @@
     "info"       (info project args)
     "deps-on"    (deps-on project args)
     "deps-of"    (deps-of project args)
-    ;"each"       (apply each project args)
+    "graph"      (graph project)
     ;"with-all"   (apply with-all project args)
-    ;"link"       (link project args)
-    ;"unlink"     (unlink project)
-    ;"graph"      (graph project)
+    ;"each"       (apply each project args)
+    "link"       (link project args)
+    "unlink"     (unlink project)
     ; TODO: lint checks:
     ; - dependency version conflicts
     ; - lack of :pedantic? :abort
