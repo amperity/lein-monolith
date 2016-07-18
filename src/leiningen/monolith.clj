@@ -229,7 +229,6 @@
       args)))
 
 
-#_
 (defn ^:higher-order each
   "Iterate over each subproject in the monolith and apply the given task.
   Projects are iterated in dependency order; that is, later projects may depend
@@ -252,10 +251,10 @@
   (let [[opts task] (parse-kw-args {:subtree 0, :start 1} args)]
     (when (empty? task)
       (lein/abort "Cannot run each without task argument!"))
-    (let [config (config/read!)
-          subprojects (get-subprojects project config)
+    (let [monolith (config/find-monolith! project)
+          subprojects (config/read-subprojects! monolith)
           start-from (some-> (:start opts) ffirst read-string)
-          relevant-subprojects (cond-> (dependency-map subprojects)
+          relevant-subprojects (cond-> (dep/dependency-map subprojects)
                                  (:subtree opts)
                                  (dep/subtree-from (dep/project-name project)))
           targets (-> relevant-subprojects
@@ -276,11 +275,14 @@
                                (ansi/sgr subproject-name :bold :yellow)
                                (ansi/sgr (inc i) :cyan)
                                (ansi/sgr (count relevant-subprojects) :cyan)))
-            (-> (get subprojects subproject-name)
-                ; TODO: inject inherited profile here
-                (project/init-project [:default])
-                (as-> subproject
-                  (lein/apply-task (first task) subproject (rest task)))))
+            (as-> (get subprojects subproject-name) subproject
+              (if-let [inherited (:monolith/inherit subproject)]
+                (assoc-in subproject [:profiles :monolith/inherited]
+                          (plugin/inherited-profile monolith inherited))
+                subproject)
+              (config/debug-profile "init-subproject"
+                (project/init-project subproject [:default :monolith/inherited]))
+              (lein/apply-task (first task) subproject (rest task))))
           (catch Exception ex
             ; TODO: report number skipped, number succeeded, number remaining?
             (lein/warn (format "\n%s lein monolith each :start %s %s\n"
@@ -334,7 +336,8 @@
 
 (defn monolith
   "Tasks for working with Leiningen projects inside a monorepo."
-  #_{:subtasks [#'info #'deps-on #'deps-of #'each #'with-all #'link #'unlink]}
+  {:subtasks [#'info #'deps-on #'deps-of #'graph #'with-all #'each #'link
+              #'unlink]}
   [project command & args]
   (case command
     "info"       (info project args)
@@ -342,7 +345,7 @@
     "deps-of"    (deps-of project args)
     "graph"      (graph project)
     "with-all"   (apply with-all project args)
-    ;"each"       (apply each project args)
+    "each"       (apply each project args)
     "link"       (link project args)
     "unlink"     (unlink project)
     ; TODO: lint checks:
