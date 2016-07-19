@@ -107,7 +107,14 @@
 
 ;; ## Dependency Resolution
 
-; TODO: this warning stuff is probably better treated as a lint task
+(defn sourced-dependencies
+  "Given a project map, returns a sequence of dependency coordinates with
+  metadata tracking the source."
+  [project]
+  (let [pn (project-name project)]
+    (map #(with-source % pn) (:dependencies project))))
+
+
 (defn select-dependency
   "Given a dependency name and a collection of specs for that dependency, either
   select one for use or return nil on conflicts."

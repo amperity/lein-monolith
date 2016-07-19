@@ -134,6 +134,22 @@
                   (ansi/sgr relative-path :cyan)))))))
 
 
+(defn lint
+  "Check various aspects of the monolith and warn about possible problems.
+
+  Options:
+    :deps        Check for conflicting dependency versions"
+  [project args]
+  (let [flags (set (or (seq args) [":deps"]))
+        [monolith subprojects] (load-monolith! project)]
+    ; TODO: lack of :pedantic? :abort
+    (when (flags ":deps")
+      (doseq [[dep-name coords] (->> (vals subprojects)
+                                     (mapcat dep/sourced-dependencies)
+                                     (group-by first))]
+        (dep/select-dependency dep-name coords)))))
+
+
 (defn deps-on
   "Print a list of subprojects which depend on the given package(s). Defaults
   to the current project if none are provided.
@@ -338,11 +354,13 @@
 
 (defn monolith
   "Tasks for working with Leiningen projects inside a monorepo."
-  {:subtasks [#'info #'deps-on #'deps-of #'graph #'with-all #'each #'link
-              #'unlink]}
+  {:subtasks [#'info #'lint #'deps-on #'deps-of #'graph
+              #'with-all #'each
+              #'link #'unlink]}
   [project command & args]
   (case command
     "info"       (info project args)
+    "lint"       (lint project args)
     "deps-on"    (deps-on project args)
     "deps-of"    (deps-of project args)
     "graph"      (graph project)
@@ -350,8 +368,5 @@
     "each"       (apply each project args)
     "link"       (link project args)
     "unlink"     (unlink project)
-    ; TODO: lint checks:
-    ; - dependency version conflicts
-    ; - lack of :pedantic? :abort
     (lein/abort (pr-str command) "is not a valid monolith command! Try: lein help monolith"))
   (flush))
