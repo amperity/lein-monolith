@@ -49,6 +49,14 @@
             (drop (inc arg-count) args))))))
 
 
+(defn- load-monolith!
+  "Helper function to make a common pattern more succinct."
+  [project]
+  (let [monolith (config/find-monolith! project)
+        subprojects (config/read-subprojects! monolith)]
+    [monolith subprojects]))
+
+
 (defn- create-symlink!
   "Creates a link from the given source path to the given target."
   [source target]
@@ -134,8 +142,7 @@
     :bare          Only print the project names and dependent versions, one per line"
   [project args]
   (let [[opts args] (parse-kw-args {:bare 0} args)
-        monolith (config/find-monolith! project)
-        subprojects (config/read-subprojects! monolith)
+        [monolith subprojects] (load-monolith! project)
         dep-map (dep/dependency-map subprojects)]
     (doseq [dep-name (if (seq args)
                        (map read-string args)
@@ -160,8 +167,7 @@
     :transitive    Include transitive dependencies in addition to direct ones"
   [project args]
   (let [[opts args] (parse-kw-args {:bare 0, :transitive 0} args)
-        monolith (config/find-monolith! project)
-        subprojects (config/read-subprojects! monolith)
+        [monolith subprojects] (load-monolith! project)
         dep-map (dep/dependency-map subprojects)]
     (doseq [project-name (if (seq args)
                            (map read-string args)
@@ -191,8 +197,7 @@
   [project]
   (require 'rhizome.viz)
   (let [visualize! (ns-resolve 'rhizome.viz 'save-graph)
-        monolith (config/find-monolith! project)
-        subprojects (config/read-subprojects! monolith)
+        [monolith subprojects] (load-monolith! project)
         dependencies (dep/dependency-map subprojects)
         graph-file (jio/file (:target-path monolith) "project-hierarchy.png")
         path-prefix (inc (count (:root monolith)))]
@@ -220,8 +225,7 @@
   [project task & args]
   (when (empty? task)
     (lein/abort "Cannot run with-all without task argument!"))
-  (let [metaproject (config/find-monolith! project)
-        subprojects (config/read-subprojects! metaproject)
+  (let [[monolith subprojects] (load-monolith! project)
         profile (plugin/merged-profile subprojects)]
     (lein/apply-task
       task
@@ -251,8 +255,7 @@
   (let [[opts task] (parse-kw-args {:subtree 0, :start 1} args)]
     (when (empty? task)
       (lein/abort "Cannot run each without task argument!"))
-    (let [monolith (config/find-monolith! project)
-          subprojects (config/read-subprojects! monolith)
+    (let [[monolith subprojects] (load-monolith! project)
           start-from (some-> (:start opts) ffirst read-string)
           relevant-subprojects (cond-> (dep/dependency-map subprojects)
                                  (:subtree opts)
@@ -306,8 +309,7 @@
   (when (:monolith project)
     (lein/abort "The 'link' task does not need to be run for the monolith project!"))
   (let [[opts _] (parse-kw-args {:force 0} args)
-        monolith (config/find-monolith! project)
-        subprojects (config/read-subprojects! monolith)
+        [monolith subprojects] (load-monolith! project)
         checkouts-dir (jio/file (:root project) "checkouts")]
     ; Create checkouts directory if needed.
     (when-not (.exists checkouts-dir)
