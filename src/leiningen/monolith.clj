@@ -300,7 +300,11 @@
                           (plugin/inherited-profile monolith inherited))
                 subproject)
               (config/debug-profile "init-subproject"
-                (project/init-project subproject [:default :monolith/inherited]))
+                (project/init-project
+                  subproject
+                  (if (get-in subproject [:profiles :monolith/inherited])
+                    [:default :monolith/inherited]
+                    [:default])))
               (lein/apply-task (first task) subproject (rest task))))
           (catch Exception ex
             ; TODO: report number skipped, number succeeded, number remaining?
