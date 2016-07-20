@@ -7,6 +7,10 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 
+...
+
+## [0.2.0] - 2016-07-20
+
 This release contains a **breaking change** in how the plugin is configured! All
 options are now contained in a required metaproject at the repository root
 instead of a separate `monolith.clj` file.
@@ -28,6 +32,7 @@ instead of loading them all before running any commands.
 - New `lint` subtask runs the dependency conflict checks which previously ran
   during every merged profile task.
 - Added unit tests and continuous-integration via CircleCI.
+- `each` task supports `:skip <project>` and `:select <filter>` options.
 
 ### Removed
 - Setting the `:monolith` key in a project no longer automatically includes the
@@ -45,5 +50,6 @@ instead of loading them all before running any commands.
 
 Initial project release
 
-[Unreleased]: https://github.com/amperity/lein-monolith/compare/0.1.1...HEAD
+[Unreleased]: https://github.com/amperity/lein-monolith/compare/0.2.0...HEAD
+[0.2.0]: https://github.com/amperity/lein-monolith/compare/0.1.1...0.2.0
 [0.1.1]: https://github.com/amperity/lein-monolith/compare/0.1.0...0.1.1
