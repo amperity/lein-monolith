@@ -261,6 +261,7 @@
   Options:
     :subtree            Only iterate over transitive dependencies of the current project
     :select <key>       Use a selector from the config to filter projects
+    :skip <project>     Omit one or more projects from the iteration (may occur multiple times)
     :start <project>    Provide a starting point for the subproject iteration
 
   Examples:
@@ -272,6 +273,7 @@
   [project & args]
   (let [[opts task] (parse-kw-args {:subtree 0
                                     :select 1
+                                    :skip 1
                                     :start 1}
                                    args)]
     (when (empty? task)
@@ -279,6 +281,7 @@
     (let [[monolith subprojects] (load-monolith! project)
           selector (some->> (:select opts) ffirst read-string
                             (config/get-selector monolith))
+          skippable (some->> (:skip opts) (map (comp read-string first)) set)
           start-from (some-> (:start opts) ffirst read-string)
           candidates (-> (dep/dependency-map subprojects)
                          (cond->
@@ -286,6 +289,8 @@
                              (dep/subtree-from (dep/project-name project)))
                          (dep/topological-sort)
                          (cond->>
+                           skippable
+                             (remove skippable)
                            selector
                              (filter (comp selector subprojects))))
           targets (-> (map-indexed vector candidates)
