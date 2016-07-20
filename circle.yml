@@ -14,3 +14,4 @@ test:
     # clojure.lang.ArityException: Wrong number of args (2) passed to: reader/read
     # Possibly due to wrong clojure version (1.4.0?) getting pulled in
     #- lein cloverage
+    - ./test/example-tests.sh
