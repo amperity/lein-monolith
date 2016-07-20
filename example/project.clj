@@ -2,7 +2,8 @@
   :description "Overarching example project."
 
   :plugins
-  [[lein-monolith "0.2.0"]]
+  [[lein-monolith "0.2.0-SNAPSHOT"]
+   [lein-cprint "1.2.0"]]
 
   :dependencies
   [[org.clojure/clojure "1.8.0"]]

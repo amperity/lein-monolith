@@ -1,6 +1,8 @@
 lein-monolith
 =============
 
+[![CircleCI](https://circleci.com/gh/amperity/lein-monolith.svg?style=svg&circle-token=e57a92e79aa9113f1950498cbeeb0880c3f587d3)](https://circleci.com/gh/amperity/lein-monolith/tree/master)
+
 `lein-monolith` is a Leiningen plugin to work with multiple projects inside a monorepo.
 For an introduction to the project and some motivation, see this
 [2016 Seajure presentation](https://docs.google.com/presentation/d/1jqYG2N2YalWdVG4oDqs1mua4hOyxVD_nejANrg6h8to/present).
@@ -24,26 +26,8 @@ root and must contain a value for the `:monolith` project key. Create a
 top-level [`project.clj`](example/project.clj) file and add the plugin and
 monolith entries.
 
-### Subproject Locations
-
-The `:project-dirs` key tells monolith where to find the projects inside the
-repo by giving a vector of relative paths. Each entry should point to either a
-direct subproject directory (containing a `project.clj` file) such as
-`apps/app-a`, or end with a wildcard `*` to indicate that all child directories
-should be searched for projects, like `libs/*`. Note that this only works with a
-single level of wildcard matching at the end of the path.
-
-### Config Inheritance
-
-In order to share common project definition entries, you can also set the
-`:inherit` key to a vector of attributes which should be inherited by
-subprojects. In each subproject where you want this behavior, add a
-`:monolith/inherit` key.
-
-A value of `true` will merge in a profile with the attributes set in the
-metaproject. Alternately, you can provide a vector of additional keys to merge
-from the metaproject. Attaching `^:replace` metadata will cause the vector to
-override the attributes set in the metaproject.
+See the [configuration docs](doc/config.md) for more details about the available
+options.
 
 ## Usage
 

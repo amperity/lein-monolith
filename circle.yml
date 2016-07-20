@@ -1,0 +1,17 @@
+general:
+  artifacts:
+    #- target/coverage
+
+dependencies:
+  post:
+    - "lein deps :tree"
+
+test:
+  override:
+    - lein check
+    - lein test
+    # Currently fails in CI with:
+    # clojure.lang.ArityException: Wrong number of args (2) passed to: reader/read
+    # Possibly due to wrong clojure version (1.4.0?) getting pulled in
+    #- lein cloverage
+    - ./test/example-tests.sh
