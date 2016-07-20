@@ -15,4 +15,4 @@
   :profiles
   {:dev
    {:plugins [[rfkm/lein-cloverage "1.0.8"]]
-    :dependencies [[org.clojure/clojure "1.8.0"]]}})
+    :dependencies [#_[org.clojure/clojure "1.8.0"]]}})
