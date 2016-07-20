@@ -1,6 +1,8 @@
 lein-monolith
 =============
 
+[![CircleCI](https://circleci.com/gh/amperity/lein-monolith.svg?style=svg&circle-token=e57a92e79aa9113f1950498cbeeb0880c3f587d3)](https://circleci.com/gh/amperity/lein-monolith/tree/master)
+
 `lein-monolith` is a Leiningen plugin to work with multiple projects inside a monorepo.
 For an introduction to the project and some motivation, see this
 [2016 Seajure presentation](https://docs.google.com/presentation/d/1jqYG2N2YalWdVG4oDqs1mua4hOyxVD_nejANrg6h8to/present).
