@@ -1,9 +1,23 @@
 (defproject example/all "MONOLITH"
   :description "Overarching example project."
-  :monolith true
 
   :plugins
-  [[lein-monolith "0.1.0"]]
+  [[lein-monolith "0.2.0"]]
 
   :dependencies
-  [[org.clojure/clojure "1.8.0"]])
+  [[org.clojure/clojure "1.8.0"]]
+
+  :test-selectors
+  {:unit (complement :integration)
+   :integration :integration}
+
+  :monolith
+  {:inherit
+   [:repositories
+    :test-selectors
+    :managed-dependencies]
+
+   :project-dirs
+   ["apps/app-a"
+    "libs/*"
+    "not-found"]})

@@ -4,59 +4,70 @@
     (leiningen.core
       [main :as lein]
       [project :as project])
-    [lein-monolith.util :as u])
+    [lein-monolith.dependency :as dep])
   (:import
-    (java.io
-      File
-      PushbackReader)
-    (java.nio.file
-      Files
-      LinkOption
-      Paths)))
+    java.io.File))
+
+
+(defmacro debug-profile
+  "Measure the time to compute the value in `body`, printing out a debug
+  message with the total elapsed time."
+  [message & body]
+  `(let [start# (System/nanoTime)
+         message# ~message
+         value# (do ~@body)
+         elapsed# (/ (- (System/nanoTime) start#) 1000000.0)]
+     (lein/debug "Elapsed:" message# (format "=> %.3f ms" elapsed#))
+     value#))
+
 
 
 ;; ## General Configuration
 
-(def config-name "monolith.clj")
+(defn- find-up
+  "Searches upward from the given root directory, locating files with the given
+  name. Returns a sequence of `File` objects in the order they occur in the
+  parents of `root`."
+  [root file-name]
+  (when root
+    (lazy-seq
+      (let [dir (jio/file root)
+            file (jio/file dir file-name)
+            next-files (find-up (.getParentFile dir) file-name)]
+        (if (.exists file)
+          (cons file next-files)
+          next-files)))))
 
 
-(defn- read-clj
-  "Reads the first data structure in a clojure file."
-  [file]
-  (-> (jio/file file)
-      (jio/reader)
-      (PushbackReader.)
-      (read)))
+(defn find-monolith
+  "Returns the loaded project map for the monolith metaproject, or nil if not
+  found.
+
+  If the given project already has the `:monolith` key, it's returned directly.
+  Otherwise, parent directories are searched using `find-up` and any projects
+  are loaded to check for the `:monolith` entry."
+  [project]
+  (if (:monolith project)
+    project
+    (some (fn check-project
+            [file]
+            (lein/debug "Reading candidate project file" (str file))
+            (let [super (project/read-raw (str file))]
+              (when (:monolith super)
+                super)))
+          (find-up (:root project) "project.clj"))))
 
 
-(defn- find-config
-  "Searches upward from the project root until it finds a configuration file.
-  Returns the `File` object if found, or nil if no matching file could be
-  located in the parent directories."
-  ^java.io.File
-  [dir]
-  (when dir
-    (let [dir (jio/file dir)
-          file (jio/file dir config-name)]
-      (if (.exists file)
-        file
-        (recur (.getParent dir))))))
-
-
-(defn read!
-  "Reads the monolith configuration file and returns the contained data
-  structure. Aborts with an error if the file is not found.
-
-  Note that this function does *not* load the subproject definitions."
-  ([]
-   (read! (System/getProperty "user.dir")))
-  ([dir]
-   (let [file (find-config dir)]
-     (when-not file
-       (lein/abort "Could not find configuration file" config-name "in any parent directory of" dir))
-     (assoc (read-clj file)
-            :config-path (str file)
-            :mono-root (str (.getParent file))))))
+(defn find-monolith!
+  "Returns the loaded project map for the monolith metaproject. Aborts with an
+  error if not found."
+  [project]
+  (let [monolith (debug-profile "find-monolith" (find-monolith project))]
+    (when-not monolith
+      (lein/abort "Could not find monolith project in any parent directory of"
+                  (:root project)))
+    (lein/debug "Found monolith project rooted at" (:root monolith))
+    monolith))
 
 
 
@@ -78,25 +89,27 @@
     :else
       nil))
 
-(defn- read-project!
+
+(defn- read-subproject
   "Reads a leiningen project definition from the given directory and returns
   the loaded project map, or nil if the directory does not contain a valid
   `project.clj` file."
   [dir]
   (let [project-file (jio/file dir "project.clj")]
     (when (.exists project-file)
-      (lein/debug "Reading subproject definiton from" (str project-file))
-      (project/read (str project-file)))))
+      (lein/debug "Reading subproject definition from" (str project-file))
+      (project/read-raw (str project-file)))))
 
 
-(defn load-subprojects!
-  "Returns a map of (condensed) project names to loaded leiningen project
+(defn read-subprojects!
+  "Returns a map of (condensed) project names to raw leiningen project
   definitions for all the subprojects in the repo."
-  [config]
+  [monolith]
   (->>
-    (:project-dirs config)
-    (map (partial jio/file (:mono-root config)))
+    (get-in monolith [:monolith :project-dirs])
+    (map (partial jio/file (:root monolith)))
     (mapcat pick-directories)
-    (keep read-project!)
-    (map (juxt u/project-name identity))
-    (into {})))
+    (keep read-subproject)
+    (map (juxt dep/project-name identity))
+    (into {})
+    (debug-profile "read-subprojects!")))
