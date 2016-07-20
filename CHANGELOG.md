@@ -7,6 +7,32 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 
+This release contains a **breaking change** in how the plugin is configured! All
+options are now contained in a required metaproject at the repository root
+instead of a separate `monolith.clj` file.
+
+This should also be much faster to run due to lazily initializing subprojects
+instead of loading them all before running any commands.
+
+### Changed
+- Moved monolith configuration into metaproject definition.
+- Subprojects are loaded lazily, resulting in dramatically reduced latency
+  before plugin tasks are executed.
+- The merged profile now includes `:resource-paths` from each subproject.
+- The merged profile no longer merges all dependencies; instead, each subproject
+  is included in the profile and dependencies are resolved transitively.
+
+### Added
+- Metaproject configuration may be inherited using the `:monolith/inherit` key
+  in subprojects and `:monolith {:inherit [...]}` in the metaproject.
+- New `lint` subtask runs the dependency conflict checks which previously ran
+  during every merged profile task.
+- Added unit tests and continuous-integration via CircleCI.
+
+### Removed
+- Setting the `:monolith` key in a project no longer automatically includes the
+  merged profile; instead, it is used for general plugin configuration.
+
 ## [0.1.1] - 2016-07-08
 
 ### Fixed
