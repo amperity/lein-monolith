@@ -3,7 +3,7 @@ general:
     - target/coverage
 
 test:
-  pre:
+  override:
     - lein check
-  post:
+    - lein test
     - lein cloverage
