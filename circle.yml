@@ -1,0 +1,9 @@
+general:
+  artifacts:
+    - target/coverage
+
+test:
+  pre:
+    - lein check
+  post:
+    - lein cloverage

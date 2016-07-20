@@ -10,4 +10,9 @@
 
   :dependencies
   [[mvxcvi/puget "1.0.0"]
-   [rhizome "0.2.7"]])
+   [rhizome "0.2.7"]]
+
+  :profiles
+  {:dev
+   {:plugins [[rfkm/lein-cloverage "1.0.8"]]
+    :dependencies [[org.clojure/clojure "1.8.0"]]}})
