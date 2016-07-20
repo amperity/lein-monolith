@@ -18,6 +18,10 @@
     :test-selectors
     :managed-dependencies]
 
+   :project-selectors
+   {:deployable :deployable
+    :unstable #(= (first (:version %)) \0)}
+
    :project-dirs
    ["apps/app-a"
     "libs/*"

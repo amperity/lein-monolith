@@ -260,29 +260,46 @@
 
   Options:
     :subtree            Only iterate over transitive dependencies of the current project
+    :select <key>       Use a selector from the config to filter projects
+    :skip <project>     Omit one or more projects from the iteration (may occur multiple times)
     :start <project>    Provide a starting point for the subproject iteration
 
   Examples:
 
       lein monolith each check
       lein monolith each :subtree install
+      lein monolith each :select :deployable uberjar
       lein monolith each :start my/lib-a test"
   [project & args]
-  (let [[opts task] (parse-kw-args {:subtree 0, :start 1} args)]
+  (let [[opts task] (parse-kw-args {:subtree 0
+                                    :select 1
+                                    :skip 1
+                                    :start 1}
+                                   args)]
     (when (empty? task)
       (lein/abort "Cannot run each without task argument!"))
     (let [[monolith subprojects] (load-monolith! project)
+          selector (some->> (:select opts) ffirst read-string
+                            (config/get-selector monolith))
+          skippable (some->> (:skip opts) (map (comp read-string first)) set)
           start-from (some-> (:start opts) ffirst read-string)
-          relevant-subprojects (cond-> (dep/dependency-map subprojects)
-                                 (:subtree opts)
-                                 (dep/subtree-from (dep/project-name project)))
-          targets (-> relevant-subprojects
-                      (dep/topological-sort)
-                      (->> (map-indexed vector))
+          candidates (-> (dep/dependency-map subprojects)
+                         (cond->
+                           (:subtree opts)
+                             (dep/subtree-from (dep/project-name project)))
+                         (dep/topological-sort)
+                         (cond->>
+                           skippable
+                             (remove skippable)
+                           selector
+                             (filter (comp selector subprojects))))
+          targets (-> (map-indexed vector candidates)
                       (cond->>
                         start-from
                           (drop-while (comp (partial not= start-from) second))))
           start-time (System/nanoTime)]
+      (when (empty? targets)
+        (lein/abort "Iteration selection matched zero subprojects!"))
       (lein/info "Applying"
                  (ansi/sgr (str/join " " task) :bold :cyan)
                  "to" (ansi/sgr (count targets) :cyan)
@@ -293,7 +310,7 @@
             (lein/info (format "\nApplying to %s (%s/%s)"
                                (ansi/sgr subproject-name :bold :yellow)
                                (ansi/sgr (inc i) :cyan)
-                               (ansi/sgr (count relevant-subprojects) :cyan)))
+                               (ansi/sgr (count candidates) :cyan)))
             (as-> (get subprojects subproject-name) subproject
               (if-let [inherited (:monolith/inherit subproject)]
                 (assoc-in subproject [:profiles :monolith/inherited]
