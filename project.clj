@@ -9,10 +9,9 @@
   :eval-in-leiningen true
 
   :dependencies
-  [[mvxcvi/puget "1.0.0"]
+  [[org.clojure/clojure "1.8.0"]
+   [mvxcvi/puget "1.0.0"]
    [rhizome "0.2.7"]]
 
   :profiles
-  {:dev
-   {:plugins [[rfkm/lein-cloverage "1.0.8"]]
-    :dependencies [#_[org.clojure/clojure "1.8.0"]]}})
+  {:dev {:plugins [[rfkm/lein-cloverage "1.0.8"]]}})
