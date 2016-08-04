@@ -13,9 +13,10 @@
       [plugin :as plugin])
     (lein-monolith.task
       [checkouts :as checkouts]
+      [each :as each]
       [graph :as graph]
       [info :as info]
-      [util :refer [parse-kw-args load-monolith!]])
+      [util :as u])
     [puget.printer :as puget]
     [puget.color.ansi :as ansi]))
 
@@ -74,12 +75,12 @@
   For example:
 
       lein monolith with-all test"
-  [project task & args]
+  [project [task & args]]
   (when (empty? task)
     (lein/abort "Cannot run with-all without task argument!"))
   (when-not (:monolith project)
     (lein/warn "WARN: Running with-all in a subproject is not recommended! Beware of dependency ordering differences."))
-  (let [[monolith subprojects] (load-monolith! project)
+  (let [[monolith subprojects] (u/load-monolith! project)
         profile (plugin/merged-profile subprojects)]
     (lein/apply-task
       task
@@ -108,70 +109,12 @@
       lein monolith each :subtree install
       lein monolith each :select :deployable uberjar
       lein monolith each :start my/lib-a test"
-  [project & args]
-  (let [[opts task] (parse-kw-args {:subtree 0
-                                    :select 1
-                                    :skip 1
-                                    :start 1}
-                                   args)]
+  [project args]
+  (let [[opts task] (u/parse-kw-args each/task-opts args)]
     (when (empty? task)
-      (lein/abort "Cannot run each without task argument!"))
-    (let [[monolith subprojects] (load-monolith! project)
-          selector (some->> (:select opts) ffirst read-string
-                            (config/get-selector monolith))
-          skippable (some->> (:skip opts) (map (comp read-string first)) set)
-          start-from (some-> (:start opts) ffirst read-string)
-          candidates (-> (dep/dependency-map subprojects)
-                         (cond->
-                           (:subtree opts)
-                             (dep/subtree-from (dep/project-name project)))
-                         (dep/topological-sort)
-                         (cond->>
-                           skippable
-                             (remove skippable)
-                           selector
-                             (filter (comp selector subprojects))))
-          targets (-> (map-indexed vector candidates)
-                      (cond->>
-                        start-from
-                          (drop-while (comp (partial not= start-from) second))))
-          start-time (System/nanoTime)]
-      (when (empty? targets)
-        (lein/abort "Iteration selection matched zero subprojects!"))
-      (lein/info "Applying"
-                 (ansi/sgr (str/join " " task) :bold :cyan)
-                 "to" (ansi/sgr (count targets) :cyan)
-                 "subprojects...")
-      (doseq [[i subproject-name] targets]
-        (try
-          (binding [lein/*exit-process?* false]
-            (lein/info (format "\nApplying to %s (%s/%s)"
-                               (ansi/sgr subproject-name :bold :yellow)
-                               (ansi/sgr (inc i) :cyan)
-                               (ansi/sgr (count candidates) :cyan)))
-            (as-> (get subprojects subproject-name) subproject
-              (if-let [inherited (:monolith/inherit subproject)]
-                (assoc-in subproject [:profiles :monolith/inherited]
-                          (plugin/inherited-profile monolith inherited))
-                subproject)
-              (config/debug-profile "init-subproject"
-                (project/init-project
-                  subproject
-                  (if (get-in subproject [:profiles :monolith/inherited])
-                    [:default :monolith/inherited]
-                    [:default])))
-              (lein/apply-task (first task) subproject (rest task))))
-          (catch Exception ex
-            ; TODO: report number skipped, number succeeded, number remaining?
-            (lein/warn (format "\n%s lein monolith each :start %s %s\n"
-                               (ansi/sgr "Resume with:" :bold :red)
-                               subproject-name (str/join " " task)))
-            (throw ex))))
-      (lein/info (format "\n%s: Applied %s to %s projects in %.3f seconds"
-                         (ansi/sgr "SUCCESS" :bold :green)
-                         (ansi/sgr (str/join " " task) :bold :cyan)
-                         (ansi/sgr (count targets) :cyan)
-                         (/ (- (System/nanoTime) start-time) 1000000000.0M))))))
+      (lein/abort "Cannot run each without a task argument!"))
+    (each/run-projects project opts task)))
+
 
 (defn link
   "Create symlinks in the checkouts directory pointing to all internal
@@ -198,8 +141,7 @@
 (defn monolith
   "Tasks for working with Leiningen projects inside a monorepo."
   {:subtasks [#'info #'lint #'deps-on #'deps-of #'graph
-              #'with-all #'each
-              #'link #'unlink]}
+              #'with-all #'each #'link #'unlink]}
   [project command & args]
   (case command
     "info"       (info project args)
@@ -207,8 +149,8 @@
     "deps-on"    (deps-on project args)
     "deps-of"    (deps-of project args)
     "graph"      (graph project)
-    "with-all"   (apply with-all project args)
-    "each"       (apply each project args)
+    "with-all"   (with-all project args)
+    "each"       (each project args)
     "link"       (link project args)
     "unlink"     (unlink project)
     (lein/abort (pr-str command) "is not a valid monolith command! Try: lein help monolith"))
