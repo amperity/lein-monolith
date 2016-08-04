@@ -335,27 +335,33 @@
                          (ansi/sgr (count targets) :cyan)
                          (/ (- (System/nanoTime) start-time) 1000000000.0M))))))
 
-
 (defn link
   "Create symlinks in the checkouts directory pointing to all internal
   dependencies in the current project.
 
   Options:
-    :force       Override any existing checkout links with conflicting names"
+    :force       Override any existing checkout links with conflicting names
+    :deep        Link all subprojects this project transitively depends on"
   [project args]
   (when (:monolith project)
     (lein/abort "The 'link' task does not need to be run for the monolith project!"))
-  (let [[opts _] (parse-kw-args {:force 0} args)
+  (let [[opts _] (parse-kw-args {:force 0 :deep 0} args)
         [monolith subprojects] (load-monolith! project)
+        dep-map (dep/dependency-map subprojects)
+        projects-to-link (as-> (:dependencies project) deps
+                           (map (comp dep/condense-name first) deps)
+                           (if (:deep opts)
+                             (set (mapcat (comp keys (partial dep/subtree-from dep-map)) deps))
+                             deps)
+                           (keep subprojects deps))
         checkouts-dir (jio/file (:root project) "checkouts")]
     ; Create checkouts directory if needed.
     (when-not (.exists checkouts-dir)
       (lein/info "Creating checkout directory" (str checkouts-dir))
       (.mkdir checkouts-dir))
     ; Check each dependency for internal projects.
-    (doseq [spec (:dependencies project)]
-      (when-let [subproject (get subprojects (dep/condense-name (first spec)))]
-        (link-checkout! checkouts-dir subproject (:force opts))))))
+    (doseq [subproject projects-to-link]
+      (link-checkout! checkouts-dir subproject (:force opts)))))
 
 
 (defn unlink
