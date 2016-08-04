@@ -348,17 +348,12 @@
   (let [[opts _] (parse-kw-args {:force 0 :deep 0} args)
         [monolith subprojects] (load-monolith! project)
         dep-map (dep/dependency-map subprojects)
-        projects-to-link (if (:deep opts)
-                           (->> (:dependencies project)
-                                (map (comp dep/condense-name first))
-                                (map (partial dep/subtree-from dep-map))
-                                (apply merge)
-                                keys
-                                (map (partial get subprojects)))
-                           (->> (:dependencies project)
-                                (map (comp dep/condense-name first))
-                                (filter (partial contains? subprojects))
-                                (map (partial get subprojects))))
+        projects-to-link (as-> (:dependencies project) deps
+                           (map (comp dep/condense-name first) deps)
+                           (if (:deep opts)
+                             (set (mapcat (comp keys (partial dep/subtree-from dep-map)) deps))
+                             deps)
+                           (keep subprojects deps))
         checkouts-dir (jio/file (:root project) "checkouts")]
     ; Create checkouts directory if needed.
     (when-not (.exists checkouts-dir)
