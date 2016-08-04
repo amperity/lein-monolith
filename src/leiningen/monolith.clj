@@ -113,7 +113,7 @@
   (let [[opts task] (u/parse-kw-args each/task-opts args)]
     (when (empty? task)
       (lein/abort "Cannot run each without a task argument!"))
-    (each/run-projects project opts task)))
+    (each/run-tasks project opts task)))
 
 
 (defn link
