@@ -13,6 +13,7 @@
       [plugin :as plugin])
     (lein-monolith.task
       [checkouts :as checkouts]
+      [graph :as graph]
       [info :as info]
       [util :refer [parse-kw-args load-monolith!]])
     [puget.printer :as puget]
@@ -63,24 +64,7 @@
 (defn graph
   "Generate a graph of subprojects and their interdependencies."
   [project]
-  (require 'rhizome.viz)
-  (let [visualize! (ns-resolve 'rhizome.viz 'save-graph)
-        [monolith subprojects] (load-monolith! project)
-        dependencies (dep/dependency-map subprojects)
-        graph-file (jio/file (:target-path monolith) "project-hierarchy.png")
-        path-prefix (inc (count (:root monolith)))]
-    (.mkdir (.getParentFile graph-file))
-    (visualize!
-      (keys dependencies)
-      dependencies
-      :vertical? false
-      :node->descriptor #(array-map :label (name %))
-      :node->cluster (fn [id]
-                       (when-let [root (get-in subprojects [id :root])]
-                         (str/join "/" (butlast (str/split root #"/")))))
-      :cluster->descriptor #(array-map :label (subs (str %) path-prefix))
-      :filename (str graph-file))
-    (lein/info "Generated dependency graph in" (str graph-file))))
+  (graph/graph project))
 
 
 (defn ^:higher-order with-all
