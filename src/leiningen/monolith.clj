@@ -209,6 +209,8 @@
   [project task & args]
   (when (empty? task)
     (lein/abort "Cannot run with-all without task argument!"))
+  (when-not (:monolith project)
+    (lein/warn "WARN: Running with-all in a subproject is not recommended! Beware of dependency ordering differences."))
   (let [[monolith subprojects] (load-monolith! project)
         profile (plugin/merged-profile subprojects)]
     (lein/apply-task
