@@ -12,61 +12,13 @@
       [dependency :as dep]
       [plugin :as plugin])
     (lein-monolith.task
+      [checkouts :as checkouts]
       [util :refer [parse-kw-args load-monolith!]])
     [puget.printer :as puget]
-    [puget.color.ansi :as ansi])
-  (:import
-    (java.io
-      File)
-    (java.nio.file
-      Files
-      LinkOption
-      Paths)))
+    [puget.color.ansi :as ansi]))
 
 
-
-(defn- create-symlink!
-  "Creates a link from the given source path to the given target."
-  [source target]
-  (Files/createSymbolicLink
-    source target
-    (make-array java.nio.file.attribute.FileAttribute 0)))
-
-
-(defn- link-checkout!
-  "Creates a checkout dependency link to the given subproject."
-  [^File checkouts-dir subproject force?]
-  (let [dep-root (jio/file (:root subproject))
-        dep-name (dep/project-name subproject)
-        link-name (if (namespace dep-name)
-                    (str (namespace dep-name) "~" (name dep-name))
-                    (name dep-name))
-        link-path (.toPath (jio/file checkouts-dir link-name))
-        target-path (.relativize (.toPath checkouts-dir) (.toPath dep-root))]
-    (if (Files/exists link-path (into-array LinkOption [LinkOption/NOFOLLOW_LINKS]))
-      ; Link file exists.
-      (let [actual-target (Files/readSymbolicLink link-path)]
-        (if (and (Files/isSymbolicLink link-path)
-                 (= target-path actual-target))
-          ; Link exists and points to target already.
-          (lein/info "Link for" dep-name "is correct")
-          ; Link exists but points somewhere else.
-          (if force?
-            ; Recreate link since force is set.
-            (do (lein/warn "Relinking" dep-name "from"
-                           (str actual-target) "to" (str target-path))
-                (Files/delete link-path)
-                (create-symlink! link-path target-path))
-            ; Otherwise print a warning.
-            (lein/warn "WARN:" dep-name "links to" (str actual-target)
-                       "instead of" (str target-path)))))
-      ; Link does not exist, so create it.
-      (do (lein/info "Linking" dep-name "to" (str target-path))
-          (create-symlink! link-path target-path)))))
-
-
-
-;; ## Subtask Implementations
+;; ## Subtask Vars
 
 (defn info
   "Show information about the monorepo configuration.
@@ -315,35 +267,13 @@
   [project args]
   (when (:monolith project)
     (lein/abort "The 'link' task does not need to be run for the monolith project!"))
-  (let [[opts _] (parse-kw-args {:force 0 :deep 0} args)
-        [monolith subprojects] (load-monolith! project)
-        dep-map (dep/dependency-map subprojects)
-        projects-to-link (as-> (:dependencies project) deps
-                           (map (comp dep/condense-name first) deps)
-                           (if (:deep opts)
-                             (set (mapcat (comp keys (partial dep/subtree-from dep-map)) deps))
-                             deps)
-                           (keep subprojects deps))
-        checkouts-dir (jio/file (:root project) "checkouts")]
-    ; Create checkouts directory if needed.
-    (when-not (.exists checkouts-dir)
-      (lein/info "Creating checkout directory" (str checkouts-dir))
-      (.mkdir checkouts-dir))
-    ; Check each dependency for internal projects.
-    (doseq [subproject projects-to-link]
-      (link-checkout! checkouts-dir subproject (:force opts)))))
+  (checkouts/link project args))
 
 
 (defn unlink
   "Remove the checkout directory from a project."
   [project]
-  (when-let [checkouts-dir (some-> (:root project) (jio/file "checkouts"))]
-    (when (.exists checkouts-dir)
-      (lein/info "Removing checkout directory" (str checkouts-dir))
-      (doseq [link (.listFiles checkouts-dir)]
-        (lein/debug "Removing checkout link" (str link))
-        (.delete ^File link))
-      (.delete checkouts-dir))))
+  (checkouts/unlink project))
 
 
 
