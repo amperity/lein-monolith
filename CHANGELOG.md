@@ -9,6 +9,21 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 
 ...
 
+## [0.2.1] - 2016-08-05
+
+### Changed
+- Split up subtasks into separate namespaces to improve code readability.
+
+### Fixed
+- Fix bug where options to `each` weren't output in the continuation command.
+
+### Added
+- Add `:deep` option to the `link` task to link checkouts for all transitive
+  dependencies.
+- Add explicit request for garbage-collection before running subproject tasks in
+  `each` iteration.
+- Warn when `with-all` is used in a subproject.
+
 ## [0.2.0] - 2016-07-20
 
 This release contains a **breaking change** in how the plugin is configured! All
@@ -50,6 +65,7 @@ instead of loading them all before running any commands.
 
 Initial project release
 
-[Unreleased]: https://github.com/amperity/lein-monolith/compare/0.2.0...HEAD
+[Unreleased]: https://github.com/amperity/lein-monolith/compare/0.2.1...HEAD
+[0.2.1]: https://github.com/amperity/lein-monolith/compare/0.2.0...0.2.1
 [0.2.0]: https://github.com/amperity/lein-monolith/compare/0.1.1...0.2.0
 [0.1.1]: https://github.com/amperity/lein-monolith/compare/0.1.0...0.1.1
