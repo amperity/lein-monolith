@@ -19,6 +19,21 @@
    :start 1})
 
 
+(defn- opts->args
+  "Converts a set of options back into the arguments that created them. Returns
+  a sequence of keywords and strings."
+  [opts]
+  (concat
+    (when (:subtree opts)
+      [:subtree])
+    (when-let [selector (ffirst (:select opts))]
+      [:select selector])
+    (when-let [skips (seq (map first (:skip opts)))]
+      (mapcat (partial vector :skip) skips))
+    (when-let [start (ffirst (:start opts))]
+      [:start start])))
+
+
 (defn- select-projects
   "Returns a vector of pairs of index numbers and symbols naming the selected
   subprojects."
@@ -67,10 +82,6 @@
   "Iterate over each subproject in the monolith and apply the given task."
   [project opts task]
   (let [[monolith subprojects] (u/load-monolith! project)
-        selector (some->> (:select opts) ffirst read-string
-                          (config/get-selector monolith))
-        skippable (some->> (:skip opts) (map (comp read-string first)) set)
-        start-from (some-> (:start opts) ffirst read-string)
         targets (select-projects monolith subprojects (dep/project-name project) opts)
         n (inc (first (last targets)))
         start-time (System/nanoTime)]
@@ -89,11 +100,14 @@
                            (ansi/sgr n :cyan)))
         (apply-subproject-task monolith (get subprojects subproject-name) task)
         (catch Exception ex
-          ; TODO: report number skipped, number succeeded, number remaining?
-          ; TODO: need to insert additional opts provided
-          (lein/warn (format "\n%s lein monolith each :start %s %s\n"
-                             (ansi/sgr "Resume with:" :bold :red)
-                             subproject-name (str/join " " task)))
+          (let [resume-args (concat
+                              ["lein monolith each"]
+                              (opts->args (dissoc opts :start))
+                              [:start subproject-name]
+                              task)]
+            (lein/warn (format "\n%s %s\n"
+                               (ansi/sgr "Resume with:" :bold :red)
+                               (str/join " " resume-args))))
           (throw ex))))
     (lein/info (format "\n%s: Applied %s to %s projects in %.3f seconds"
                        (ansi/sgr "SUCCESS" :bold :green)
