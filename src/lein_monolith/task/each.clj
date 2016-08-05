@@ -92,7 +92,8 @@
                "to" (ansi/sgr (count targets) :cyan)
                "subprojects...")
     (doseq [[i subproject-name] targets]
-      ; TODO: try garbage collection?
+      ; Try to reclaim some memory before running the task.
+      (System/gc)
       (try
         (lein/info (format "\nApplying to %s (%s/%s)"
                            (ansi/sgr subproject-name :bold :yellow)
