@@ -13,7 +13,7 @@ EXAMPLE_DIR="${REPO_ROOT}/example"
 cd $EXAMPLE_DIR
 echo
 echo "Updating example project to use lein-monolith version $PLUGIN_VERSION..."
-sed -i '' -e "s/lein-monolith \"[^\"]*\"/lein-monolith $PLUGIN_VERSION/" project.clj
+sed -i'.bak' -e "s/lein-monolith \"[^\"]*\"/lein-monolith $PLUGIN_VERSION/" project.clj
 
 echo
 echo "Running tests against example projects in $EXAMPLE_DIR"
