@@ -4,14 +4,19 @@
 set -e
 
 REPO_ROOT="$(cd $(dirname "${BASH_SOURCE[0]}")/.. && pwd)"
-echo "Installing lein-monolith from source..."
+PLUGIN_VERSION="$(head -1 project.clj | cut -d ' ' -f 3)"
+echo "Installing lein-monolith $PLUGIN_VERSION from source..."
 cd $REPO_ROOT
 lein install
 
 EXAMPLE_DIR="${REPO_ROOT}/example"
+cd $EXAMPLE_DIR
+echo
+echo "Updating example project to use lein-monolith version $PLUGIN_VERSION..."
+sed -i '' -e "s/lein-monolith \"[^\"]*\"/lein-monolith $PLUGIN_VERSION/" project.clj
+
 echo
 echo "Running tests against example projects in $EXAMPLE_DIR"
-cd $EXAMPLE_DIR
 
 test_monolith() {
     echo
