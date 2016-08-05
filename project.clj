@@ -1,4 +1,4 @@
-(defproject lein-monolith "0.2.1"
+(defproject lein-monolith "0.2.2-SNAPSHOT"
   :description "Leiningen plugin for managing subrojects within a monorepo."
   :url "https://github.com/amperity/lein-monolith"
   :license {:name "Apache License 2.0"
