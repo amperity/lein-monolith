@@ -43,21 +43,29 @@
         skippable (some->> (:skip opts) (map (comp read-string first)) set)
         start-from (some-> (:start opts) ffirst read-string)]
     (->
+      ; Convert subproject map into {project-sym [dep-syms]} map
       (dep/dependency-map subprojects)
       (cond->
-        (:subtree opts)
-          (dep/subtree-from project-name))
+        ; If subtree is set, prune dependency map down to transitive dep
+        ; closure of the current project.
+        (:subtree opts) (dep/subtree-from project-name))
+      ; Sort project names by dependency order into [project-sym ...]
       (dep/topological-sort)
       (cond->>
-        skippable
-          (remove skippable)
-         selector
-          (filter (comp selector subprojects)))
+        ; Remove the set of project names to skip, if any.
+        skippable (remove skippable))
+      (cond->
+        ; If selector is present, filter candidates by providing the project
+        ; map with an extra index key for selection logic.
+        selector (->> (map-indexed (fn [i p] [p (assoc (subprojects p) :monolith/index i)]))
+                      (filter (comp selector second))
+                      (map first)))
       (->>
+        ; Pair each selected project name up with an index [[i project-sym] ...]
         (map-indexed vector))
       (cond->>
-        start-from
-          (drop-while (comp (partial not= start-from) second))))))
+        ; Skip projects until the starting project, if provided.
+        start-from (drop-while (comp (partial not= start-from) second))))))
 
 
 (defn- apply-subproject-task

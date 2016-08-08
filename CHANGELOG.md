@@ -7,7 +7,9 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 
-...
+### Added
+- The `each` task now adds a `:monolith/index` key to project maps passed to
+  the project-selector function to enable mod-distribution logic.
 
 ## [0.2.1] - 2016-08-05
 
