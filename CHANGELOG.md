@@ -7,6 +7,10 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 
+...
+
+## [0.2.2] - 2016-08-08
+
 ### Added
 - The `each` task now adds a `:monolith/index` key to project maps passed to
   the project-selector function to enable mod-distribution logic.
@@ -67,7 +71,8 @@ instead of loading them all before running any commands.
 
 Initial project release
 
-[Unreleased]: https://github.com/amperity/lein-monolith/compare/0.2.1...HEAD
+[Unreleased]: https://github.com/amperity/lein-monolith/compare/0.2.2...HEAD
+[0.2.2]: https://github.com/amperity/lein-monolith/compare/0.2.1...0.2.2
 [0.2.1]: https://github.com/amperity/lein-monolith/compare/0.2.0...0.2.1
 [0.2.0]: https://github.com/amperity/lein-monolith/compare/0.1.1...0.2.0
 [0.1.1]: https://github.com/amperity/lein-monolith/compare/0.1.0...0.1.1
