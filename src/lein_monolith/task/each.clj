@@ -91,7 +91,7 @@
   [project opts task]
   (let [[monolith subprojects] (u/load-monolith! project)
         targets (select-projects monolith subprojects (dep/project-name project) opts)
-        n (inc (first (last targets)))
+        n (inc (or (first (last targets)) -1))
         start-time (System/nanoTime)]
     (when (empty? targets)
       (lein/abort "Iteration selection matched zero subprojects!"))
