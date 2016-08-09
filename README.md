@@ -97,11 +97,13 @@ symlinks to all the internal packages that this project depends on. The plugin
 also includes an `unlink` task as a convenience method for removing checkout
 dependencies.
 
+To link checkouts for all transitive dependencies, you can pass the `:deep` option.
+
 If you have existing checkout links which conflict, you'll get warnings. To
 override them, you can pass the `:force` option.
 
 ```
-lein monolith link [:force]
+lein monolith link [:deep :force]
 lein monolith unlink
 ```
 
