@@ -13,7 +13,8 @@
 
 
 (def task-opts
-  {:subtree 0
+  {:endure 0
+   :subtree 0
    :select 1
    :skip 1
    :start 1})
@@ -24,6 +25,8 @@
   a sequence of keywords and strings."
   [opts]
   (concat
+    (when (:endure opts)
+      [:endure])
     (when (:subtree opts)
       [:subtree])
     (when-let [selector (ffirst (:select opts))]
@@ -92,7 +95,8 @@
   (let [[monolith subprojects] (u/load-monolith! project)
         targets (select-projects monolith subprojects (dep/project-name project) opts)
         n (inc (or (first (last targets)) -1))
-        start-time (System/nanoTime)]
+        start-time (System/nanoTime)
+        failures (atom #{})]
     (when (empty? targets)
       (lein/abort "Iteration selection matched zero subprojects!"))
     (lein/info "Applying"
@@ -109,6 +113,7 @@
                            (ansi/sgr n :cyan)))
         (apply-subproject-task monolith (get subprojects subproject-name) task)
         (catch Exception ex
+          (swap! failures conj subproject-name)
           (let [resume-args (concat
                               ["lein monolith each"]
                               (opts->args (dissoc opts :start))
@@ -117,9 +122,18 @@
             (lein/warn (format "\n%s %s\n"
                                (ansi/sgr "Resume with:" :bold :red)
                                (str/join " " resume-args))))
-          (throw ex))))
-    (lein/info (format "\n%s: Applied %s to %s projects in %.3f seconds"
-                       (ansi/sgr "SUCCESS" :bold :green)
-                       (ansi/sgr (str/join " " task) :bold :cyan)
-                       (ansi/sgr (count targets) :cyan)
-                       (/ (- (System/nanoTime) start-time) 1000000000.0M)))))
+          (when-not (:endure opts)
+            (throw ex)))))
+    (if (seq @failures)
+      (lein/abort (format "\n%s: Applied %s to %s projects in %.3f seconds with %d failures: %s"
+                          (ansi/sgr "FAILURE" :bold :red)
+                          (ansi/sgr (str/join " " task) :bold :cyan)
+                          (ansi/sgr (count targets) :cyan)
+                          (/ (- (System/nanoTime) start-time) 1000000000.0M)
+                          (count @failures)
+                          (str/join " " @failures)))
+      (lein/info (format "\n%s: Applied %s to %s projects in %.3f seconds"
+                         (ansi/sgr "SUCCESS" :bold :green)
+                         (ansi/sgr (str/join " " task) :bold :cyan)
+                         (ansi/sgr (count targets) :cyan)
+                         (/ (- (System/nanoTime) start-time) 1000000000.0M))))))
