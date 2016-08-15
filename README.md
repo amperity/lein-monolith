@@ -74,7 +74,24 @@ things like:
 lein monolith each check
 lein monolith each :subtree install
 lein monolith each :start my-lib/foo do check, test
+lein monolith each :select :deployable uberjar
 ```
+
+Valid options to `each` include:
+
+- `:subtree` only iterate over subprojects which are direct or transitive
+  dependencies of the current project.
+- `:start` begin iterating at the given project instead of the beginning of the
+  list. Useful for resuming halted iterations.
+- `:select` apply a _project selector_ from the monolith configuration to filter
+  the list of projects iterated. A project selector is much like a test
+  selector: a predicate that runs on the subproject's definition map.
+- `:skip` remove the named project from the list before iterating. May be
+  provided multiple times.
+- `:endure` continue applying the task to every subproject, even if one fails.
+  If any projects fail, the command will still exit with a failure status. This
+  is useful in situations such as CI tests, where you don't want a failure to
+  halt iteration.
 
 ### Merged Source Profile
 
