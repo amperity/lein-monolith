@@ -9,6 +9,12 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 
 ...
 
+## [0.2.3] - 2016-08-15
+
+### Added
+- The `each` task supports an `:endure` option to continue iteration in the
+  event of subproject failures. This supports better CI usage for testing.
+
 ## [0.2.2] - 2016-08-08
 
 ### Added
@@ -71,7 +77,8 @@ instead of loading them all before running any commands.
 
 Initial project release
 
-[Unreleased]: https://github.com/amperity/lein-monolith/compare/0.2.2...HEAD
+[Unreleased]: https://github.com/amperity/lein-monolith/compare/0.2.3...HEAD
+[0.2.3]: https://github.com/amperity/lein-monolith/compare/0.2.2...0.2.3
 [0.2.2]: https://github.com/amperity/lein-monolith/compare/0.2.1...0.2.2
 [0.2.1]: https://github.com/amperity/lein-monolith/compare/0.2.0...0.2.1
 [0.2.0]: https://github.com/amperity/lein-monolith/compare/0.1.1...0.2.0
