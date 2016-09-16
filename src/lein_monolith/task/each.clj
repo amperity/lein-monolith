@@ -44,6 +44,34 @@
       [:start start])))
 
 
+(defn- print-report
+  "Reports information about the tasks given a results map."
+  [results elapsed]
+  (let [task-time (reduce + (keep :elapsed results))
+        speedup (/ task-time elapsed)]
+    (lein/info (format "\n%s  %7.3f seconds"
+                       (ansi/sgr "Run time:" :bold :cyan)
+                       (/ elapsed 1000)))
+    (lein/info (format "%s %7.3f seconds"
+                       (ansi/sgr "Task time:" :bold :cyan)
+                       (/ task-time 1000)))
+    (lein/info (format "%s   %7.1f"
+                       (ansi/sgr "Speedup:" :bold :cyan)
+                       speedup))
+    (lein/info (->> results
+                    (sort-by :elapsed)
+                    (reverse)
+                    (take 8)
+                    (map #(format "%-40s %s %.3f seconds"
+                                  (ansi/sgr (:name %) :bold :yellow)
+                                  (if (:success %) " " "!")
+                                  (/ (:elapsed %) 1000)))
+                    (str/join "\n")
+                    (str \newline
+                         (ansi/sgr "Slowest projects:" :bold :cyan)
+                         \newline)))))
+
+
 (defn- select-projects
   "Returns a vector of pairs of index numbers and symbols naming the selected
   subprojects."
@@ -185,22 +213,20 @@
                :opts opts}
           results (if (:parallel opts)
                     (run-parallel! ctx targets)
-                    (run-linear! ctx targets))]
+                    (run-linear! ctx targets))
+          elapsed (/ (- (System/nanoTime) start-time) 1000000.0)]
       (when (:report opts)
-        (require 'puget.printer)
-        (newline)
-        (puget.printer/cprint results)
-        (lein/info (format "Total time: %.3f seconds" (/ (reduce + (keep :elapsed results)) 1000.0))))
+        (print-report results elapsed))
       (if-let [failures (seq (map :name (remove :success results)))]
         (lein/abort (format "\n%s: Applied %s to %s projects in %.3f seconds with %d failures: %s"
                             (ansi/sgr "FAILURE" :bold :red)
                             (ansi/sgr (str/join " " task) :bold :cyan)
                             (ansi/sgr (count targets) :cyan)
-                            (/ (- (System/nanoTime) start-time) 1000000000.0M)
+                            (/ elapsed 1000.0)
                             (count failures)
                             (str/join " " failures)))
         (lein/info (format "\n%s: Applied %s to %s projects in %.3f seconds"
                            (ansi/sgr "SUCCESS" :bold :green)
                            (ansi/sgr (str/join " " task) :bold :cyan)
                            (ansi/sgr (count targets) :cyan)
-                           (/ (- (System/nanoTime) start-time) 1000000000.0M)))))))
+                           (/ elapsed 1000.0)))))))

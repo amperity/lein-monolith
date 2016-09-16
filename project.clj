@@ -10,7 +10,7 @@
 
   :dependencies
   [[manifold "0.1.5"]
-   [mvxcvi/puget "1.0.0"]
+   [mvxcvi/puget "1.0.1"]
    [rhizome "0.2.7"]]
 
   :profiles
