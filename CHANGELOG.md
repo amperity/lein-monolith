@@ -9,6 +9,19 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 
 ...
 
+## [0.3.0] - 2016-09-16
+
+### Added
+- Add `:report` option to the `each` task to print out detailed timing once
+  `each` completes.
+- Add `each :parallel <threads>` option to run tasks on subprojects
+  concurrently. Tasks still run in dependency order, but mutually independent
+  projects are run simultaneously on a fixed-size thread pool.
+
+### Changed
+- Modify `each` to print a completion message after subproject tasks finish
+  running. This improves output during parallel execution.
+
 ## [0.2.3] - 2016-08-15
 
 ### Added
@@ -77,7 +90,8 @@ instead of loading them all before running any commands.
 
 Initial project release
 
-[Unreleased]: https://github.com/amperity/lein-monolith/compare/0.2.3...HEAD
+[Unreleased]: https://github.com/amperity/lein-monolith/compare/0.3.0...HEAD
+[0.3.0]: https://github.com/amperity/lein-monolith/compare/0.2.3...0.3.0
 [0.2.3]: https://github.com/amperity/lein-monolith/compare/0.2.2...0.2.3
 [0.2.2]: https://github.com/amperity/lein-monolith/compare/0.2.1...0.2.2
 [0.2.1]: https://github.com/amperity/lein-monolith/compare/0.2.0...0.2.1

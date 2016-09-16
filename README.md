@@ -81,6 +81,9 @@ Valid options to `each` include:
 
 - `:subtree` only iterate over subprojects which are direct or transitive
   dependencies of the current project.
+- `:report` show a detailed timing report after the tasks finish executing.
+- `:parallel` run subproject tasks concurrently, up to the number of specified
+  threads.
 - `:start` begin iterating at the given project instead of the beginning of the
   list. Useful for resuming halted iterations.
 - `:select` apply a _project selector_ from the monolith configuration to filter
