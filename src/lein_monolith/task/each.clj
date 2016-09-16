@@ -95,40 +95,50 @@
 
 
 (defn- run-task!
-  [monolith subproject subproject-name i n task opts failures]
+  "Runs the given task, returning a map of information about the run."
+  [monolith subproject subproject-name i n task opts]
   ; Try to reclaim some memory before running the task.
   (System/gc)
-  (try
-    (lein/info (format "\nApplying to %s (%s/%s)"
-                       (ansi/sgr subproject-name :bold :yellow)
-                       (ansi/sgr (inc i) :cyan)
-                       (ansi/sgr n :cyan)))
-    (apply-subproject-task monolith subproject task)
-    (catch Exception ex
-      (swap! failures conj subproject-name)
-      (when-not (:parallel opts)
-        (let [resume-args (concat
-                            ["lein monolith each"]
-                            (opts->args (dissoc opts :start))
-                            [:start subproject-name]
-                            task)]
-          (lein/warn (format "\n%s %s\n"
-                             (ansi/sgr "Resume with:" :bold :red)
-                             (str/join " " resume-args)))))
-      (when-not (:endure opts)
-        (throw ex)))))
+  (let [start (System/nanoTime)]
+    (try
+      (lein/info (format "\nApplying to %s (%s/%s)"
+                         (ansi/sgr subproject-name :bold :yellow)
+                         (ansi/sgr (inc i) :cyan)
+                         (ansi/sgr n :cyan)))
+      (apply-subproject-task monolith subproject task)
+      {:success true
+       :elapsed (/ (- (System/nanoTime) start) 1000000.0)}
+      (catch Exception ex
+        (when-not (:parallel opts)
+          (let [resume-args (concat
+                              ["lein monolith each"]
+                              (opts->args (dissoc opts :start))
+                              [:start subproject-name]
+                              task)]
+            (lein/warn (format "\n%s %s\n"
+                               (ansi/sgr "Resume with:" :bold :red)
+                               (str/join " " resume-args)))))
+        (when-not (:endure opts)
+          (throw ex))
+        {:success false
+         :elapsed (/ (- (System/nanoTime) start) 1000000.0)
+         :error ex}))))
 
 
 (defn- run-linear!
-  [monolith subprojects n targets task opts failures]
-  (doseq [[i subproject-name] targets]
-    (run-task! monolith
-               (get subprojects subproject-name)
-               i n task opts failures)))
+  "Runs the task for each target in a linear (single-threaded) fashion."
+  [monolith subprojects n targets task opts]
+  (reduce
+    (fn [results [i subproject-name]]
+      (let [result (run-task! monolith
+                              (get subprojects subproject-name)
+                              i n task opts)]
+        (assoc results subproject-name (assoc result :index i))))
+    {} targets))
 
 
 (defn- run-parallel!
-  [monolith subprojects n targets task opts failures]
+  [monolith subprojects n targets task opts]
   (let [deps (dep/dependency-map subprojects)
         computations (reduce
                        (fn [computations [i target]]
@@ -148,8 +158,7 @@
                                                    target
                                                    i n
                                                    task
-                                                   opts
-                                                   failures)))))))
+                                                   opts)))))))
                        {} targets)]
     (doseq [[subproject-name computation] computations]
       (println "Waiting on" subproject-name)
@@ -162,27 +171,26 @@
   (let [[monolith subprojects] (u/load-monolith! project)
         targets (select-projects monolith subprojects (dep/project-name project) opts)
         n (inc (or (first (last targets)) -1))
-        start-time (System/nanoTime)
-        failures (atom #{})]
+        start-time (System/nanoTime)]
     (when (empty? targets)
       (lein/abort "Iteration selection matched zero subprojects!"))
     (lein/info "Applying"
                (ansi/sgr (str/join " " task) :bold :cyan)
                "to" (ansi/sgr (count targets) :cyan)
                "subprojects...")
-    (if (:parallel opts)
-      (run-parallel! monolith subprojects n targets task opts failures)
-      (run-linear! monolith subprojects n targets task opts failures))
-    (if (seq @failures)
-      (lein/abort (format "\n%s: Applied %s to %s projects in %.3f seconds with %d failures: %s"
-                          (ansi/sgr "FAILURE" :bold :red)
-                          (ansi/sgr (str/join " " task) :bold :cyan)
-                          (ansi/sgr (count targets) :cyan)
-                          (/ (- (System/nanoTime) start-time) 1000000000.0M)
-                          (count @failures)
-                          (str/join " " @failures)))
-      (lein/info (format "\n%s: Applied %s to %s projects in %.3f seconds"
-                         (ansi/sgr "SUCCESS" :bold :green)
-                         (ansi/sgr (str/join " " task) :bold :cyan)
-                         (ansi/sgr (count targets) :cyan)
-                         (/ (- (System/nanoTime) start-time) 1000000000.0M))))))
+    (let [results (if (:parallel opts)
+                    (run-parallel! monolith subprojects n targets task opts)
+                    (run-linear! monolith subprojects n targets task opts))]
+      (if-let [failures (seq (map key (remove (comp :success val) results)))]
+        (lein/abort (format "\n%s: Applied %s to %s projects in %.3f seconds with %d failures: %s"
+                            (ansi/sgr "FAILURE" :bold :red)
+                            (ansi/sgr (str/join " " task) :bold :cyan)
+                            (ansi/sgr (count targets) :cyan)
+                            (/ (- (System/nanoTime) start-time) 1000000000.0M)
+                            (count failures)
+                            (str/join " " failures)))
+        (lein/info (format "\n%s: Applied %s to %s projects in %.3f seconds"
+                           (ansi/sgr "SUCCESS" :bold :green)
+                           (ansi/sgr (str/join " " task) :bold :cyan)
+                           (ansi/sgr (count targets) :cyan)
+                           (/ (- (System/nanoTime) start-time) 1000000000.0M)))))))
