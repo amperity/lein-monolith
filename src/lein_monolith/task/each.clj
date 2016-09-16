@@ -91,7 +91,7 @@
             [:default :monolith/inherited]
             [:default])))
       (config/debug-profile "apply-task"
-        (lein/apply-task (first task) subproject (rest task))))))
+        (lein/resolve-and-apply subproject task)))))
 
 
 (defn- run-task!
