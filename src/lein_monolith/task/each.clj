@@ -138,31 +138,34 @@
 
 
 (defn- run-parallel!
+  "Runs the tasks for targets in multiple worker threads, chained by dependency
+  order."
   [monolith subprojects n targets task opts]
-  (let [deps (dep/dependency-map subprojects)
-        computations (reduce
-                       (fn [computations [i target]]
-                         (let [subproject (get subprojects target)
-                               dependencies (->> (deps target)
-                                                 (map (juxt identity computations))
-                                                 (remove (comp nil? second))
-                                                 (into {}))]
-                           (assoc computations
-                                  target
-                                  (d/chain
-                                    (apply d/zip (vals dependencies))
-                                    (fn [dependency-results]
-                                      (d/future
-                                        (run-task! monolith
-                                                   subproject
-                                                   target
-                                                   i n
-                                                   task
-                                                   opts)))))))
-                       {} targets)]
-    (doseq [[subproject-name computation] computations]
-      (println "Waiting on" subproject-name)
-      @computation)))
+  (let [deps (dep/dependency-map subprojects)]
+    (->
+      (reduce
+        (fn [computations [i target]]
+          (let [subproject (get subprojects target)
+                dependencies (->> (deps target)
+                                  (keep computations)
+                                  (apply d/zip))]
+            (assoc computations
+                   target
+                   (d/chain
+                     dependencies
+                     (fn [dependency-results]
+                       (d/future
+                         (run-task! monolith
+                                    subproject
+                                    target
+                                    i n
+                                    task
+                                    opts)))))))
+        {})
+      (reduce
+        (fn [results [subproject-name computation]]
+          (assoc results subproject-name @computation))
+        {}))))
 
 
 (defn run-tasks
