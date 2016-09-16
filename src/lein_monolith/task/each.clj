@@ -165,7 +165,7 @@
   "Runs the task for each target in a linear (single-threaded) fashion. Returns
   a vector of result maps in the order the tasks were executed."
   [ctx targets]
-  (mapv (comp (partial apply run-task! ctx) second) targets))
+  (mapv (comp (partial run-task! ctx) second) targets))
 
 
 (defn- run-parallel!
@@ -218,7 +218,7 @@
                :num-targets n
                :task task
                :opts opts}
-          results (if-let [threads (read-string (ffirst (:parallel opts)))]
+          results (if-let [threads (some-> (:parallel opts) ffirst read-string)]
                     (run-parallel! ctx threads targets)
                     (run-linear! ctx targets))
           elapsed (/ (- (System/nanoTime) start-time) 1000000.0)]
