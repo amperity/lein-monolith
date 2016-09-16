@@ -116,7 +116,7 @@
       (apply-subproject-task (:monolith ctx) subproject (:task ctx))
       (assoc @results :success true)
       (catch Exception ex
-        (when-not (:parallel opts)
+        (when-not (or (:parallel opts) (:endure opts))
           (let [resume-args (concat
                               ["lein monolith each"]
                               (opts->args (dissoc opts :start))
