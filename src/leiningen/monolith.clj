@@ -99,6 +99,7 @@
 
   Options:
     :subtree            Only iterate over transitive dependencies of the current project
+    :parallel           Run tasks in parallel (in dependency order)
     :select <key>       Use a selector from the config to filter projects
     :skip <project>     Omit one or more projects from the iteration (may occur multiple times)
     :start <project>    Provide a starting point for the subproject iteration

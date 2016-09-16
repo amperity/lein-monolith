@@ -15,6 +15,7 @@
 (def task-opts
   {:endure 0
    :subtree 0
+   :parallel 0
    :select 1
    :skip 1
    :start 1})
@@ -29,6 +30,8 @@
       [:endure])
     (when (:subtree opts)
       [:subtree])
+    (when (:parallel opts)
+      [:parallel])
     (when-let [selector (ffirst (:select opts))]
       [:select selector])
     (when-let [skips (seq (map first (:skip opts)))]

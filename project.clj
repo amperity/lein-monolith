@@ -9,7 +9,8 @@
   :eval-in-leiningen true
 
   :dependencies
-  [[mvxcvi/puget "1.0.0"]
+  [[manifold "0.1.5"]
+   [mvxcvi/puget "1.0.0"]
    [rhizome "0.2.7"]]
 
   :profiles
