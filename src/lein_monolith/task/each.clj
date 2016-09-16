@@ -128,20 +128,16 @@
 
 (defn- run-task!
   "Runs the given task, returning a map of information about the run."
-  [ctx i target]
+  [ctx target]
   ; Try to reclaim some memory before running the task.
   (System/gc)
   (let [start (System/nanoTime)
         opts (:opts ctx)
         subproject (get-in ctx [:subprojects target])
         results (delay {:name target
-                        :index i
                         :elapsed (/ (- (System/nanoTime) start) 1000000.0)})]
     (try
-      (lein/info (format "\nApplying to %s (%s/%s)"
-                         (ansi/sgr target :bold :yellow)
-                         (ansi/sgr (inc i) :cyan)
-                         (ansi/sgr (:num-targets ctx) :cyan)))
+      (lein/info (format "\nApplying to %s" (ansi/sgr target :bold :yellow)))
       (apply-subproject-task (:monolith ctx) subproject (:task ctx))
       (assoc @results :success true)
       (catch Exception ex
@@ -156,14 +152,20 @@
                                (str/join " " resume-args)))))
         (when-not (:endure opts)
           (throw ex))
-        (assoc @results :success false, :error ex)))))
+        (assoc @results :success false, :error ex))
+      (finally
+        (lein/info (format "Completed %s (%s/%s) in %s"
+                           (ansi/sgr target :bold :yellow)
+                           (ansi/sgr (swap! (:completions ctx) inc) :cyan)
+                           (ansi/sgr (:num-targets ctx) :cyan)
+                           (ansi/sgr (u/human-duration (:elapsed @results)) :bold :cyan)))))))
 
 
 (defn- run-linear!
   "Runs the task for each target in a linear (single-threaded) fashion. Returns
   a vector of result maps in the order the tasks were executed."
   [ctx targets]
-  (mapv (partial apply run-task! ctx) targets))
+  (mapv (comp (partial apply run-task! ctx) second) targets))
 
 
 (defn- run-parallel!
@@ -185,7 +187,7 @@
                               [dependency-results]
                               (d/future-with thread-pool
                                 (lein/debug "Starting project" target)
-                                (run-task! ctx i target)))
+                                (run-task! ctx target)))
                 task-future (if (seq dependencies)
                               (d/chain (apply d/zip dependencies) task-runner)
                               (task-runner nil))]
@@ -202,16 +204,17 @@
         targets (select-projects monolith subprojects (dep/project-name project) opts)
         n (inc (or (first (last targets)) -1))
         start-time (System/nanoTime)]
-    (when (empty? targets)
-      (lein/abort "Iteration selection matched zero subprojects!"))
     (when (and (:start opts) (:parallel opts))
       (lein/abort "The :parallel and :start options are not compatible"))
+    (when (empty? targets)
+      (lein/abort "Iteration selection matched zero subprojects!"))
     (lein/info "Applying"
                (ansi/sgr (str/join " " task) :bold :cyan)
                "to" (ansi/sgr (count targets) :cyan)
                "subprojects...")
     (let [ctx {:monolith monolith
                :subprojects subprojects
+               :completions (atom (ffirst targets))
                :num-targets n
                :task task
                :opts opts}
