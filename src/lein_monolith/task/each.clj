@@ -9,6 +9,7 @@
       [dependency :as dep]
       [plugin :as plugin])
     [lein-monolith.task.util :as u]
+    [manifold.deferred :as d]
     [puget.color.ansi :as ansi]))
 
 
@@ -89,7 +90,70 @@
           (if (get-in subproject [:profiles :monolith/inherited])
             [:default :monolith/inherited]
             [:default])))
-      (lein/apply-task (first task) subproject (rest task)))))
+      (config/debug-profile "apply-task"
+        (lein/apply-task (first task) subproject (rest task))))))
+
+
+(defn- run-task!
+  [monolith subproject subproject-name i n task opts failures]
+  ; Try to reclaim some memory before running the task.
+  (System/gc)
+  (try
+    (lein/info (format "\nApplying to %s (%s/%s)"
+                       (ansi/sgr subproject-name :bold :yellow)
+                       (ansi/sgr (inc i) :cyan)
+                       (ansi/sgr n :cyan)))
+    (apply-subproject-task monolith subproject task)
+    (catch Exception ex
+      (swap! failures conj subproject-name)
+      (when-not (:parallel opts)
+        (let [resume-args (concat
+                            ["lein monolith each"]
+                            (opts->args (dissoc opts :start))
+                            [:start subproject-name]
+                            task)]
+          (lein/warn (format "\n%s %s\n"
+                             (ansi/sgr "Resume with:" :bold :red)
+                             (str/join " " resume-args)))))
+      (when-not (:endure opts)
+        (throw ex)))))
+
+
+(defn- run-linear!
+  [monolith subprojects n targets task opts failures]
+  (doseq [[i subproject-name] targets]
+    (run-task! monolith
+               (get subprojects subproject-name)
+               i n task opts failures)))
+
+
+(defn- run-parallel!
+  [monolith subprojects n targets task opts failures]
+  (let [deps (dep/dependency-map subprojects)
+        computations (reduce
+                       (fn [computations [i target]]
+                         (let [subproject (get subprojects target)
+                               dependencies (->> (deps target)
+                                                 (map (juxt identity computations))
+                                                 (remove (comp nil? second))
+                                                 (into {}))]
+                           (assoc computations
+                                  target
+                                  (d/chain
+                                    (apply d/zip (vals dependencies))
+                                    (fn [dependency-results]
+                                      (d/future
+                                        (run-task! monolith
+                                                   subproject
+                                                   target
+                                                   i n
+                                                   task
+                                                   opts
+                                                   failures)))))))
+                       {} targets)]
+    (doseq [[subproject-name computation] computations]
+      (println "Waiting on" subproject-name)
+      @computation)))
 
 
 (defn run-tasks
@@ -106,27 +170,9 @@
                (ansi/sgr (str/join " " task) :bold :cyan)
                "to" (ansi/sgr (count targets) :cyan)
                "subprojects...")
-    (doseq [[i subproject-name] targets]
-      ; Try to reclaim some memory before running the task.
-      (System/gc)
-      (try
-        (lein/info (format "\nApplying to %s (%s/%s)"
-                           (ansi/sgr subproject-name :bold :yellow)
-                           (ansi/sgr (inc i) :cyan)
-                           (ansi/sgr n :cyan)))
-        (apply-subproject-task monolith (get subprojects subproject-name) task)
-        (catch Exception ex
-          (swap! failures conj subproject-name)
-          (let [resume-args (concat
-                              ["lein monolith each"]
-                              (opts->args (dissoc opts :start))
-                              [:start subproject-name]
-                              task)]
-            (lein/warn (format "\n%s %s\n"
-                               (ansi/sgr "Resume with:" :bold :red)
-                               (str/join " " resume-args))))
-          (when-not (:endure opts)
-            (throw ex)))))
+    (if (:parallel opts)
+      (run-parallel! monolith subprojects n targets task opts failures)
+      (run-linear! monolith subprojects n targets task opts failures))
     (if (seq @failures)
       (lein/abort (format "\n%s: Applied %s to %s projects in %.3f seconds with %d failures: %s"
                           (ansi/sgr "FAILURE" :bold :red)
