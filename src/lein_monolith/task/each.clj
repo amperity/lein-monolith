@@ -204,6 +204,8 @@
         start-time (System/nanoTime)]
     (when (empty? targets)
       (lein/abort "Iteration selection matched zero subprojects!"))
+    (when (and (:start opts) (:parallel opts))
+      (lein/abort "The :parallel and :start options are not compatible"))
     (lein/info "Applying"
                (ansi/sgr (str/join " " task) :bold :cyan)
                "to" (ansi/sgr (count targets) :cyan)
