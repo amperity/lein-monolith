@@ -49,23 +49,23 @@
   [results elapsed]
   (let [task-time (reduce + (keep :elapsed results))
         speedup (/ task-time elapsed)]
-    (lein/info (format "\n%s  %7.3f seconds"
+    (lein/info (format "\n%s  %11s"
                        (ansi/sgr "Run time:" :bold :cyan)
-                       (/ elapsed 1000)))
-    (lein/info (format "%s %7.3f seconds"
+                       (u/human-duration elapsed)))
+    (lein/info (format "%s %11s"
                        (ansi/sgr "Task time:" :bold :cyan)
-                       (/ task-time 1000)))
-    (lein/info (format "%s   %7.1f"
+                       (u/human-duration task-time)))
+    (lein/info (format "%s   %11.1f"
                        (ansi/sgr "Speedup:" :bold :cyan)
                        speedup))
     (lein/info (->> results
                     (sort-by :elapsed)
                     (reverse)
                     (take 8)
-                    (map #(format "%-40s %s %.3f seconds"
+                    (map #(format "%-45s %s %11s"
                                   (ansi/sgr (:name %) :bold :yellow)
                                   (if (:success %) " " "!")
-                                  (/ (:elapsed %) 1000)))
+                                  (u/human-duration (:elapsed %))))
                     (str/join "\n")
                     (str \newline
                          (ansi/sgr "Slowest projects:" :bold :cyan)
@@ -218,15 +218,15 @@
       (when (:report opts)
         (print-report results elapsed))
       (if-let [failures (seq (map :name (remove :success results)))]
-        (lein/abort (format "\n%s: Applied %s to %s projects in %.3f seconds with %d failures: %s"
+        (lein/abort (format "\n%s: Applied %s to %s projects in %s with %d failures: %s"
                             (ansi/sgr "FAILURE" :bold :red)
                             (ansi/sgr (str/join " " task) :bold :cyan)
                             (ansi/sgr (count targets) :cyan)
-                            (/ elapsed 1000.0)
+                            (u/human-duration elapsed)
                             (count failures)
                             (str/join " " failures)))
-        (lein/info (format "\n%s: Applied %s to %s projects in %.3f seconds"
+        (lein/info (format "\n%s: Applied %s to %s projects in %s"
                            (ansi/sgr "SUCCESS" :bold :green)
                            (ansi/sgr (str/join " " task) :bold :cyan)
                            (ansi/sgr (count targets) :cyan)
-                           (/ elapsed 1000.0)))))))
+                           (u/human-duration elapsed)))))))
