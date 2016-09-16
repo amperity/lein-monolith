@@ -99,8 +99,8 @@
 
   Options:
     :subtree            Only iterate over transitive dependencies of the current project
-    :parallel           Run tasks in parallel (in dependency order)
     :report             Print a detailed timing report after running tasks
+    :parallel <threads> Run tasks in parallel across a fixed thread pool (in dependency order)
     :select <key>       Use a selector from the config to filter projects
     :skip <project>     Omit one or more projects from the iteration (may occur multiple times)
     :start <project>    Provide a starting point for the subproject iteration
@@ -108,9 +108,9 @@
   Examples:
 
       lein monolith each check
-      lein monolith each :subtree install
+      lein monolith each :subtree :parallel 4 install
       lein monolith each :select :deployable uberjar
-      lein monolith each :start my/lib-a test"
+      lein monolith each :report :start my/lib-a test"
   [project args]
   (let [[opts task] (u/parse-kw-args each/task-opts args)]
     (when (empty? task)

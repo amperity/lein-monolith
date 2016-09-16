@@ -10,13 +10,14 @@
       [plugin :as plugin])
     [lein-monolith.task.util :as u]
     [manifold.deferred :as d]
+    [manifold.executor :as executor]
     [puget.color.ansi :as ansi]))
 
 
 (def task-opts
   {:endure 0
    :subtree 0
-   :parallel 0
+   :parallel 1
    :report 0
    :select 1
    :skip 1
@@ -32,8 +33,8 @@
       [:endure])
     (when (:subtree opts)
       [:subtree])
-    (when (:parallel opts)
-      [:parallel])
+    (when-let [threads (ffirst (:parallel opts))]
+      [:parallel threads])
     (when (:report opts)
       [:report])
     (when-let [selector (ffirst (:select opts))]
@@ -168,26 +169,27 @@
 (defn- run-parallel!
   "Runs the tasks for targets in multiple worker threads, chained by dependency
   order. Returns a vector of result maps in the order the tasks finished executing."
-  [ctx targets]
+  [ctx threads targets]
   (let [task-name (first (:task ctx))
-        deps (dep/dependency-map (:subprojects ctx))]
+        deps (dep/dependency-map (:subprojects ctx))
+        thread-pool (executor/fixed-thread-executor threads)]
     ; Perform an initial resolution of the task to prevent metadata-related
     ; arglist errors when namespaces are loaded in parallel.
     (lein/resolve-task (first (:task ctx)))
     (->
       (reduce
-        (fn [computations [i target]]
-          (let [dependencies (->> (deps target)
-                                  (keep computations)
-                                  (apply d/zip))]
-            (assoc computations
-                   target
-                   (d/chain
-                     dependencies
-                     (fn [dependency-results]
-                       (d/future
-                         (lein/debug "Starting project" target)
-                         (run-task! ctx i target)))))))
+        (fn future-builder
+          [computations [i target]]
+          (let [dependencies (keep computations (deps target))
+                task-runner (fn task-runner
+                              [dependency-results]
+                              (d/future-with thread-pool
+                                (lein/debug "Starting project" target)
+                                (run-task! ctx i target)))
+                task-future (if (seq dependencies)
+                              (d/chain (apply d/zip dependencies) task-runner)
+                              (task-runner nil))]
+            (assoc computations target task-future)))
         {} targets)
       (as-> computations
         (mapv (comp deref computations second) targets)))))
@@ -211,8 +213,8 @@
                :num-targets n
                :task task
                :opts opts}
-          results (if (:parallel opts)
-                    (run-parallel! ctx targets)
+          results (if-let [threads (read-string (ffirst (:parallel opts)))]
+                    (run-parallel! ctx threads targets)
                     (run-linear! ctx targets))
           elapsed (/ (- (System/nanoTime) start-time) 1000000.0)]
       (when (:report opts)
