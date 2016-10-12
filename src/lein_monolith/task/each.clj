@@ -33,7 +33,8 @@
       [:endure])
     (when (:subtree opts)
       [:subtree])
-    (when-let [threads (ffirst (:parallel opts))]
+    (when-let [threads (or (ffirst (:parallel opts))
+                           (System/getProperty "MONOLITH_CPU_COUNT"))]
       [:parallel threads])
     (when (:report opts)
       [:report])
