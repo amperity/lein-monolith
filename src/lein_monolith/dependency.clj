@@ -56,7 +56,7 @@
 
 (defn dependency-map
   "Converts a map of project names to definitions into a map of project names
-  to sets of project-names that node depends on."
+  to sets of projects that node depends on."
   [projects]
   (->>
     (vals projects)
@@ -142,22 +142,3 @@
                              (str/join " " (sort projects)))))
         (lein/warn "")
         default-choice))))
-
-
-(defn dedupe-dependencies
-  "Given a vector of dependency coordinates, deduplicate and ensure there are no
-  conflicting versions found."
-  [dependencies]
-  (let [error-flag (atom false)
-        chosen-deps
-        (reduce-kv
-          (fn [current dep-name specs]
-            (if-let [choice (select-dependency dep-name specs)]
-              (conj current choice)
-              (do (reset! error-flag true)
-                  current)))
-          []
-          (group-by first dependencies))]
-    (when @error-flag
-      (lein/abort "Unresolvable dependency conflicts!"))
-    chosen-deps))
