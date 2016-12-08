@@ -38,3 +38,21 @@
          (dep/subtree-from {:a [], :b [:a], :c [:a]} :b)))
   (is (= {:a #{}, :b #{:a :x}}
          (dep/subtree-from {:a [], :b [:a :x], :c [:a]} :b))))
+
+
+(deftest upstream-dependency-closure
+  (let [deps {:a #{}, :b #{:a}, :c #{:a :b} :x #{:b} :y #{:c}}]
+    (is (= #{:a} (dep/upstream-keys deps :a)))
+    (is (= #{:a :b} (dep/upstream-keys deps :b)))
+    (is (= #{:a :b :c} (dep/upstream-keys deps :c)))
+    (is (= #{:a :b :x} (dep/upstream-keys deps :x)))
+    (is (= #{:a :b :c :y} (dep/upstream-keys deps :y)))))
+
+
+(deftest downstream-dependency-closure
+  (let [deps {:a #{}, :b #{:a}, :c #{:a :b} :x #{:b} :y #{:c}}]
+    (is (= #{:a :b :c :x :y} (dep/downstream-keys deps :a)))
+    (is (= #{:b :c :x :y} (dep/downstream-keys deps :b)))
+    (is (= #{:c :y} (dep/downstream-keys deps :c)))
+    (is (= #{:x} (dep/downstream-keys deps :x)))
+    (is (= #{:y} (dep/downstream-keys deps :y)))))

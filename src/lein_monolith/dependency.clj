@@ -65,6 +65,53 @@
     (zipmap (keys projects))))
 
 
+(defn upstream-keys
+  "Returns a set of the keys which are upstream of a given node in the
+  dependency map. Includes the root value itself."
+  [dependencies root]
+  (loop [result #{}
+         queue (conj (clojure.lang.PersistentQueue/EMPTY) root)]
+    (cond
+      ; Nothing left to process.
+      (empty? queue) result
+
+      ; Already seen this node.
+      (contains? result (peek queue))
+      (recur result (pop queue))
+
+      ; Add next set of dependencies.
+      :else
+      (let [node (peek queue)
+            deps (dependencies node)]
+        (recur (conj result node)
+               (into (pop queue) (set/difference deps result)))))))
+
+
+(defn downstream-keys
+  "Returns a set of the keys which are downstream of a given node in the
+  dependency map. Includes the root value itself."
+  [dependencies root]
+  (let [deps-on (fn deps-on [n]
+                  (set (keep (fn [[k deps]] (when (deps n) k))
+                             dependencies)))]
+    (loop [result #{}
+           queue (conj (clojure.lang.PersistentQueue/EMPTY) root)]
+      (cond
+        ; Nothing left to process.
+        (empty? queue) result
+
+        ; Already seen this node, deps are either present or already queued.
+        (contains? result (peek queue))
+        (recur result (pop queue))
+
+        ; Add next set of dependencies.
+        :else
+        (let [node (peek queue)
+              consumers (deps-on node)]
+          (recur (conj result node)
+                 (into (pop queue) (set/difference consumers result))))))))
+
+
 (defn topological-sort
   "Returns a sequence of the keys in the map `m`, ordered such that no key `k1`
   appearing before `k2` satisfies `(contains? (get m k1) k2)`. In other words,
@@ -81,6 +128,7 @@
               (sort roots)))))
 
 
+; TODO: deprecate this
 (defn subtree-from
   "Takes a map of node keys to sets of dependent nodes and a root node to start
   from. Returns the same dependency map containing only keys in the transitive
