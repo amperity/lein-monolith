@@ -13,6 +13,14 @@
     (is (nil? (dep/project-name nil)))
     (is (= 'foo (dep/project-name {:group "foo", :name "foo"})))
     (is (= 'example/bar (dep/project-name {:group "example", :name "bar"}))))
+  (testing "resolve-name"
+    (let [projects '[foo baz/foo example/bar example/baz]]
+      (is (nil? (dep/resolve-name projects 'qux)))
+      (is (nil? (dep/resolve-name projects 'example/qux)))
+      (is (= 'foo (dep/resolve-name projects 'foo)))
+      (is (= 'example/bar (dep/resolve-name projects 'bar)))
+      (is (= 'baz/foo (dep/resolve-name projects 'baz/foo)))
+      (is (= 'example/baz (dep/resolve-name projects 'baz)))))
   (testing "unscope-coord"
     (is (= '[example/foo "1.0"] (dep/unscope-coord '[example/foo "1.0"])))
     (is (= '[example/bar "0.5.0" :exclusions [foo]]

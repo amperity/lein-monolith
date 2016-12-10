@@ -27,6 +27,21 @@
     (condense-name (symbol (:group project) (:name project)))))
 
 
+(defn resolve-name
+  "Given a set of valid project names, determine the match for the named
+  project. This can be used to resolve the short name (meaning, no namespace)
+  to a fully-qualified project name. Returns a resolved key from
+  `project-names`, or nil if the resolution fails."
+  [project-names sym]
+  (let [valid-keys (set project-names)]
+    (cond
+      (valid-keys sym) sym
+      (valid-keys (condense-name sym)) (condense-name sym)
+      (nil? (namespace sym))
+        (first (filter #(= (name %) (name sym)) valid-keys))
+      :else nil)))
+
+
 (defn unscope-coord
   "Removes the `:scope` entry from a leiningen dependency coordinate vector,
   if it is present. Preserves any metadata on the coordinate."
