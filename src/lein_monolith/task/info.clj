@@ -3,7 +3,8 @@
     [leiningen.core.main :as lein]
     (lein-monolith
       [config :as config]
-      [dependency :as dep])
+      [dependency :as dep]
+      [target :as target])
     [lein-monolith.task.util :as u]
     [puget.printer :as puget]
     [puget.color.ansi :as ansi]))
@@ -12,7 +13,7 @@
 (defn info
   "Show information about the monorepo configuration."
   [project args]
-  (let [[opts _] (u/parse-kw-args {:bare 0} args)
+  (let [[opts _] (u/parse-kw-args (merge target/selection-opts {:bare 0}) args)
         monolith (config/find-monolith! project)]
     (when-not (:bare opts)
       (println "Monolith root:" (:root monolith))
@@ -26,11 +27,12 @@
         (puget/cprint dirs)
         (println)))
     (let [subprojects (config/read-subprojects! monolith)
-          targets (dep/topological-sort (dep/dependency-map subprojects))
+          dependencies (dep/dependency-map subprojects)
+          targets (target/select monolith subprojects (dep/project-name project) opts)
           prefix-len (inc (count (:root monolith)))]
       (when-not (:bare opts)
         (printf "Internal projects (%d):\n" (count targets)))
-      (doseq [subproject-name targets
+      (doseq [subproject-name (dep/topological-sort dependencies targets)
               :let [{:keys [version root]} (get subprojects subproject-name)
                     relative-path (subs (str root) prefix-len)]]
         (if (:bare opts)
