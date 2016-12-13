@@ -173,7 +173,7 @@
   order. Returns a vector of result maps in the order the tasks finished executing."
   [ctx threads targets]
   (let [task-name (first (:task ctx))
-        deps (dep/dependency-map (:subprojects ctx))
+        deps (partial dep/upstream-keys (dep/dependency-map (:subprojects ctx)))
         thread-pool (executor/fixed-thread-executor threads)]
     ; Perform an initial resolution of the task to prevent metadata-related
     ; arglist errors when namespaces are loaded in parallel.
@@ -182,14 +182,14 @@
       (reduce
         (fn future-builder
           [computations [i target]]
-          (let [dependencies (keep computations (deps target))
+          (let [upstream-futures (keep computations (deps target))
                 task-runner (fn task-runner
                               [dependency-results]
                               (d/future-with thread-pool
                                 (lein/debug "Starting project" target)
                                 (run-task! ctx target)))
-                task-future (if (seq dependencies)
-                              (d/chain (apply d/zip dependencies) task-runner)
+                task-future (if (seq upstream-futures)
+                              (d/chain (apply d/zip upstream-futures) task-runner)
                               (task-runner nil))]
             (assoc computations target task-future)))
         {} targets)
