@@ -129,18 +129,20 @@
 
 (defn topological-sort
   "Returns a sequence of the keys in the map `m`, ordered such that no key `k1`
-  appearing before `k2` satisfies `(contains? (get m k1) k2)`. In other words,
-  earlier keys do not 'depend on' later keys."
-  [m]
-  (when (seq m)
-    ; Note that 'roots' here are keys which no other keys depend on, hence
-    ; should appear *later* in the sequence.
-    (let [roots (apply set/difference (set (keys m)) (map set (vals m)))]
-      (when (empty? roots)
-        (throw (ex-info "Cannot sort the keys in the given map, cycle detected!"
-                        {:input m})))
-      (concat (topological-sort (apply dissoc m roots))
-              (sort roots)))))
+  appearing before `k2` satisfies `(contains? (upstream-keys m k1) k2)`. In
+  other words, earlier keys do not transitively depend on any later keys."
+  ([m]
+   (when (seq m)
+     ; Note that 'roots' here are keys which no other keys depend on, hence
+     ; should appear *later* in the sequence.
+     (let [roots (apply set/difference (set (keys m)) (map set (vals m)))]
+       (when (empty? roots)
+         (throw (ex-info "Cannot sort the keys in the given map, cycle detected!"
+                         {:input m})))
+       (concat (topological-sort (apply dissoc m roots))
+               (sort roots)))))
+  ([m ks]
+   (filter (set ks) (topological-sort m))))
 
 
 ; TODO: deprecate this
