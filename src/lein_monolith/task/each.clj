@@ -20,7 +20,7 @@
    :parallel 1
    :report 0
    :select 1
-   :skip 1
+   :skip* 1
    :start 1})
 
 
@@ -33,15 +33,15 @@
       [:endure])
     (when (:subtree opts)
       [:subtree])
-    (when-let [threads (ffirst (:parallel opts))]
+    (when-let [threads (:parallel opts)]
       [:parallel threads])
     (when (:report opts)
       [:report])
-    (when-let [selector (ffirst (:select opts))]
+    (when-let [selector (:select opts)]
       [:select selector])
-    (when-let [skips (seq (map first (:skip opts)))]
+    (when-let [skips (seq (:skip opts))]
       (mapcat (partial vector :skip) skips))
-    (when-let [start (ffirst (:start opts))]
+    (when-let [start (:start opts)]
       [:start start])))
 
 
@@ -77,10 +77,10 @@
   "Returns a vector of pairs of index numbers and symbols naming the selected
   subprojects."
   [monolith subprojects project-name opts]
-  (let [selector (some->> (:select opts) ffirst read-string
+  (let [selector (some->> (:select opts) read-string
                           (config/get-selector monolith))
-        skippable (some->> (:skip opts) (map (comp read-string first)) set)
-        start-from (some-> (:start opts) ffirst read-string)]
+        skippable (some->> (:skip opts) (map read-string) set)
+        start-from (some-> (:start opts) read-string)]
     (->
       ; Convert subproject map into {project-sym #{dep-syms}} map
       (dep/dependency-map subprojects)
