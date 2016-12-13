@@ -28,7 +28,7 @@
         (println)))
     (let [subprojects (config/read-subprojects! monolith)
           dependencies (dep/dependency-map subprojects)
-          targets (target/select monolith subprojects (dep/project-name project) opts)
+          targets (target/select monolith subprojects opts)
           prefix-len (inc (count (:root monolith)))]
       (when-not (:bare opts)
         (printf "Internal projects (%d):\n" (count targets)))

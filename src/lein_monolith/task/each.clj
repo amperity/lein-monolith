@@ -7,7 +7,8 @@
     (lein-monolith
       [config :as config]
       [dependency :as dep]
-      [plugin :as plugin])
+      [plugin :as plugin]
+      [target :as target])
     [lein-monolith.task.util :as u]
     [manifold.deferred :as d]
     [manifold.executor :as executor]
@@ -15,13 +16,15 @@
 
 
 (def task-opts
-  {:endure 0
-   :subtree 0
-   :parallel 1
-   :report 0
-   :select 1
-   :skip* 1
-   :start 1})
+  (merge
+    target/selection-opts
+    {:parallel 1
+     :endure 0
+     :report 0
+     :subtree 0 ; deprecated in favor of :upstream
+     :upstream 0
+     :downstream 0
+     :start 1}))
 
 
 (defn- opts->args
@@ -29,18 +32,26 @@
   a sequence of keywords and strings."
   [opts]
   (concat
-    (when (:endure opts)
-      [:endure])
-    (when (:subtree opts)
-      [:subtree])
     (when-let [threads (:parallel opts)]
       [:parallel threads])
+    (when (:endure opts)
+      [:endure])
     (when (:report opts)
       [:report])
-    (when-let [selector (:select opts)]
-      [:select selector])
+    (when-let [in (seq (:in opts))]
+      [:in (str/join "," in)])
+    (when (or (:subtree opts) (:upstream opts))
+      [:upstream])
+    (when-let [uof (seq (:upstream-of opts))]
+      [:upstream-of (str/join "," uof)])
+    (when (:downstream opts)
+      [:downstream])
+    (when-let [dof (seq (:downstream-of opts))]
+      [:downstream-of (str/join "," dof)])
+    (when-let [selectors (seq (:select opts))]
+      (mapcat (partial vector :select) selectors))
     (when-let [skips (seq (:skip opts))]
-      (mapcat (partial vector :skip) skips))
+      [:skip (str/join "," skips)])
     (when-let [start (:start opts)]
       [:start start])))
 
@@ -77,34 +88,23 @@
   "Returns a vector of pairs of index numbers and symbols naming the selected
   subprojects."
   [monolith subprojects project-name opts]
-  (let [selector (some->> (:select opts) read-string
-                          (config/get-selector monolith))
-        skippable (some->> (:skip opts) (map read-string) set)
+  (when (:subtree opts)
+    (lein/warn "The :subtree option is deprecated, use :upstream instead"))
+  (let [dependencies (dep/dependency-map subprojects)
+        opts' (cond-> opts
+                (or (:subtree opts) (:upstream opts))
+                  (update :upstream-of conj (str project-name))
+                (:downstream opts)
+                  (update :downstream-of conj (str project-name)))
+        targets (target/select monolith subprojects opts')
         start-from (some-> (:start opts) read-string)]
     (->
-      ; Convert subproject map into {project-sym #{dep-syms}} map
-      (dep/dependency-map subprojects)
-      (cond->
-        ; If subtree is set, prune dependency map down to transitive dep
-        ; closure of the current project.
-        (:subtree opts) (dep/subtree-from project-name))
-      ; Sort project names by dependency order into [project-sym ...]
-      (dep/topological-sort)
-      (cond->>
-        ; Remove the set of project names to skip, if any.
-        skippable (remove skippable))
-      (cond->
-        ; If selector is present, filter candidates by providing the project
-        ; map with an extra index key for selection logic.
-        selector (->> (map-indexed (fn [i p] [p (assoc (subprojects p) :monolith/index i)]))
-                      (filter (comp selector second))
-                      (map first)))
-      (->>
-        ; Pair each selected project name up with an index [[i project-sym] ...]
-        (map-indexed vector))
-      (cond->>
-        ; Skip projects until the starting project, if provided.
-        start-from (drop-while (comp (partial not= start-from) second))))))
+      ; Sort project names by dependency order.
+      (dep/topological-sort dependencies targets)
+      ; Skip projects until the starting project, if provided.
+      (cond->> start-from (drop-while (partial not= start-from)))
+      ; Pair names up with an index [[i project-sym] ...]
+      (->> (map-indexed vector)))))
 
 
 (defn- apply-subproject-task
