@@ -55,16 +55,16 @@
     (map first)))
 
 
-(defn select-targets
+(defn select
   "Returns a set of canonical project names selected by the given options."
   [monolith subprojects project-name opts]
   (let [dependencies (dep/dependency-map subprojects)
-        upstream-of (cond-> (resolve-projects subprojects (:upstream-of opts)
-                      (:upstream opts) (conj project-name)))
-        downstream-of (cond-> (resolve-projects subprojects (:downstream-of opts)
-                        (:downstream opts) (conj project-name)))
+        upstream-of (cond-> (resolve-projects subprojects (:upstream-of opts))
+                      (:upstream opts) (conj project-name))
+        downstream-of (cond-> (resolve-projects subprojects (:downstream-of opts))
+                        (:downstream opts) (conj project-name))
         skippable (resolve-projects subprojects (:skip opts))
-        selector (resolve-selectors (:select opts))]
+        selector (resolve-selectors monolith (:select opts))]
     (->
       ; Start with explicitly-specified 'in' targets.
       (resolve-projects subprojects (:in opts))
@@ -74,10 +74,10 @@
         ; Merge all targeted downstream dependencies.
         (reduce set/union targets (map (partial dep/downstream-keys dependencies) downstream-of))
         ; If target set empty, replace with full set.
-        (if (empty? targets) (set (keys subprojects)) targets)
-        ; Exclude all 'skip' targets.
-        (remove skippable targets))
+        (if (empty? targets) (set (keys subprojects)) targets))
       (cond->>
+        ; Exclude all 'skip' targets.
+        skippable (remove skippable)
         ; Filter using the selector, if any.
         selector (filter-selected subprojects selector))
       (set))))
