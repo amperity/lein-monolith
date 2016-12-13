@@ -57,7 +57,7 @@
   "Create symlinks in the checkouts directory pointing to all internal
   dependencies in the current project."
   [project args]
-  (let [[opts _] (u/parse-kw-args {:force 0 :deep 0} args)
+  (let [[opts _] (u/parse-kw-args {:force 0, :deep 0} args)
         [monolith subprojects] (u/load-monolith! project)
         dep-map (dep/dependency-map subprojects)
         projects-to-link (as-> (:dependencies project) deps
