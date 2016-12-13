@@ -82,7 +82,7 @@
         skippable (some->> (:skip opts) (map (comp read-string first)) set)
         start-from (some-> (:start opts) ffirst read-string)]
     (->
-      ; Convert subproject map into {project-sym [dep-syms]} map
+      ; Convert subproject map into {project-sym #{dep-syms}} map
       (dep/dependency-map subprojects)
       (cond->
         ; If subtree is set, prune dependency map down to transitive dep

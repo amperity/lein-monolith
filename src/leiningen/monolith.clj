@@ -89,21 +89,38 @@
 
 
 (defn ^:higher-order each
-  "Iterate over each subproject in the monolith and apply the given task.
-  Projects are iterated in dependency order; that is, later projects may depend
-  on earlier ones.
+  "Iterate over a target set of subprojects in the monolith and apply the given
+  task. Projects are iterated in dependency order; that is, later projects may
+  depend on earlier ones.
+
+  By default, all projects are included in the set of iteration targets. If you
+  provide the `:in`, `:upstream[-of]`, or `:downstream[-of]` options then the
+  resulting set of projects will be composed only of the additive targets of
+  each of the options specified. The `:skip` option can be used to exclude
+  specific projects from the set. Specifying `:select` will use a configured
+  `:project-selector` to filter the final set.
 
   If the iteration fails on a subproject, you can continue where you left off
   by providing the `:start` option as the first argument, giving the name of the
   project to resume from.
 
-  Options:
-    :subtree            Only iterate over transitive dependencies of the current project
-    :report             Print a detailed timing report after running tasks
-    :parallel <threads> Run tasks in parallel across a fixed thread pool (in dependency order)
-    :select <key>       Use a selector from the config to filter projects
-    :skip <project>     Omit one or more projects from the iteration (may occur multiple times)
-    :start <project>    Provide a starting point for the subproject iteration
+  General Options:
+    :parallel <threads>        Run tasks in parallel across a fixed thread pool.
+    :endure                    Continue executing the task even if some subprojects fail.
+    :report                    Print a detailed timing report after running tasks.
+
+  Targeting Options:
+    :in <names>             Add the named projects directly to the targets.
+    :upstream               Add the transitive dependencies of the current project to the targets.
+    :upstream-of <names>    Add the transitive dependencies of the named projects to the targets.
+    :downstream             Add the transitive consumers of the current project to the targets.
+    :downstream-of <names>  Add the transitive consumers of the named projects to the targets.
+    :select <key>           Use a selector from the config to filter target projects.
+    :skip <names>           Exclude one or more projects from the target set.
+    :start <names>          Provide a starting point for the subproject iteration
+
+  Each <names> argument can contain multiple comma-separated project names, and
+  all the targeting options except `:start` may be provided multiple times.
 
   Examples:
 
