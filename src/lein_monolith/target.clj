@@ -49,7 +49,7 @@
   projects to produce a final sequence of projects."
   [subprojects selector targets]
   (->>
-    targets
+    (sort targets)
     (map-indexed (fn [i p] [p (assoc (subprojects p) :monolith/index i)]))
     (filter (comp selector second))
     (map first)))
