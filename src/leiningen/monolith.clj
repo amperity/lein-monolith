@@ -56,7 +56,7 @@
   Options:
     :deps        Check for conflicting dependency versions"
   [project args]
-  (info/lint project (opts-only {:deps 0} args)))
+  (info/lint project (if (seq args) (opts-only {:deps 0} args) {:deps true})))
 
 
 (defn deps-on
