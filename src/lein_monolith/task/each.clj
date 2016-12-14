@@ -214,7 +214,7 @@
                :task task
                :opts opts}
           results (if-let [threads (:parallel opts)]
-                    (run-parallel! ctx threads targets)
+                    (run-parallel! ctx (Integer/parseInt threads) targets)
                     (run-linear! ctx targets))
           elapsed (/ (- (System/nanoTime) start-time) 1000000.0)]
       (when (:report opts)
