@@ -7,6 +7,10 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 
+...
+
+## [0.3.1] - 2016-12-14
+
 ### Added
 - Options taking a subproject name now support omitting the namespace component
   if only one project has that name.
@@ -105,7 +109,8 @@ instead of loading them all before running any commands.
 
 Initial project release
 
-[Unreleased]: https://github.com/amperity/lein-monolith/compare/0.3.0...HEAD
+[Unreleased]: https://github.com/amperity/lein-monolith/compare/0.3.1...HEAD
+[0.3.1]: https://github.com/amperity/lein-monolith/compare/0.3.0...0.3.1
 [0.3.0]: https://github.com/amperity/lein-monolith/compare/0.2.3...0.3.0
 [0.2.3]: https://github.com/amperity/lein-monolith/compare/0.2.2...0.2.3
 [0.2.2]: https://github.com/amperity/lein-monolith/compare/0.2.1...0.2.2
