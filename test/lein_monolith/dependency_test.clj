@@ -18,6 +18,7 @@
       (is (nil? (dep/resolve-name projects 'qux)))
       (is (nil? (dep/resolve-name projects 'example/qux)))
       (is (= 'foo (dep/resolve-name projects 'foo)))
+      (is (= 'foo (dep/resolve-name projects 'foo/foo)))
       (is (= 'example/bar (dep/resolve-name projects 'bar)))
       (is (= 'baz/foo (dep/resolve-name projects 'baz/foo)))
       (is (= 'example/baz (dep/resolve-name projects 'baz)))))
@@ -35,6 +36,16 @@
     (is (= 'example/bar (dep/dep-source (dep/with-source [:foo "123"] 'example/bar))))))
 
 
+(deftest dependency-mapping
+  (let [projects '{foo/a {:dependencies []}
+                   foo/b {:dependencies [[foo/a "1.0.0"]]}
+                   foo/c {:dependencies [[foo/a "1.0.0"]]}
+                   foo/d {:dependencies [[foo/b "1.0.0"]
+                                         [foo/c "1.0.0"]]}}]
+    (is (= '{foo/a #{}, foo/b #{foo/a}, foo/c #{foo/a}, foo/d #{foo/b foo/c}}
+           (dep/dependency-map projects)))))
+
+
 (deftest upstream-dependency-closure
   (let [deps {:a #{}, :b #{:a}, :c #{:a :b} :x #{:b} :y #{:c}}]
     (is (= #{:a} (dep/upstream-keys deps :a)))
@@ -50,4 +61,15 @@
     (is (= #{:b :c :x :y} (dep/downstream-keys deps :b)))
     (is (= #{:c :y} (dep/downstream-keys deps :c)))
     (is (= #{:x} (dep/downstream-keys deps :x)))
-    (is (= #{:y} (dep/downstream-keys deps :y)))))
+    (is (= #{:y} (dep/downstream-keys deps :y))))
+  (let [deps {:a #{}, :b #{:a}, :c #{:a}, :d #{:b :c}}]
+    (is (= #{:a :b :c :d} (dep/downstream-keys deps :a)))))
+
+
+(deftest topological-sorting
+  (let [deps {:a #{}, :b #{:a}, :c #{:a :b} :x #{:b} :y #{:c}}]
+    (is (= [:a :b :c :x :y] (dep/topological-sort deps)))
+    (is (= [:b :c :x] (dep/topological-sort deps [:x :c :b]))))
+  (let [deps {:a #{:b}, :b #{:c}, :c #{:a}}]
+    (is (thrown-with-msg? Exception #"cycle detected"
+          (dep/topological-sort deps)))))
