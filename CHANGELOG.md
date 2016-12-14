@@ -7,7 +7,22 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 
-...
+### Added
+- Options taking a subproject name now support omitting the namespace component
+  if only one project has that name.
+- The `each` task supports additional dependency closure selection options,
+  including `:in <projects>`, `:upstream`, `:upstream-of <projects>`,
+  `:downstream`, and `:downstream-of <projects>`.
+- Multiple `:project-selectors` can be provided to `each` in order to chain the
+  filters applied to the targeted projects.
+
+### Changed
+- Option parsing is handled more uniformly within the plugin.
+- The `:subtree` option to `each` is deprecated.
+
+### Fixed
+- Resolved a potential issue where filtering the targeted subprojects could
+  result in invalid parallel execution order.
 
 ## [0.3.0] - 2016-09-16
 
