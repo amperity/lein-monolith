@@ -113,19 +113,3 @@
     (map (juxt dep/project-name identity))
     (into {})
     (debug-profile "read-subprojects!")))
-
-
-
-;; ## Misc Configuration
-
-(defn get-selector
-  "Looks up the subproject selector from the configuration map. Aborts if a
-  selector is specified but does not exist."
-  [monolith selector-key]
-  (when selector-key
-    (let [selectors (get-in monolith [:monolith :project-selectors])
-          selector (get selectors selector-key)]
-      (when-not selector
-        (lein/abort (format "Project selector %s is not configured in %s"
-                            selector-key (keys selectors))))
-      (eval selector))))

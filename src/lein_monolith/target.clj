@@ -29,7 +29,20 @@
     (set)))
 
 
-(defn- resolve-selectors
+(defn- resolve-selector
+  "Looks up the subproject selector from the configuration map. Aborts if a
+  selector is specified but does not exist."
+  [monolith selector-key]
+  (when selector-key
+    (let [selectors (get-in monolith [:monolith :project-selectors])
+          selector (get selectors selector-key)]
+      (when-not selector
+        (lein/abort (format "Project selector %s is not configured in %s"
+                            selector-key (keys selectors))))
+      (eval selector))))
+
+
+(defn- combine-selectors
   "Returns a selection function to filter projects based on the `:select`
   options passed. Multiple selection functions apply cumulative layers of
   filtering, meaning a project must pass _every_ selector to be included.
@@ -38,7 +51,7 @@
   (some->>
     (seq select-args)
     (map read-string)
-    (map (partial config/get-selector monolith))
+    (keep (partial resolve-selector monolith))
     (apply every-pred)))
 
 
@@ -58,7 +71,7 @@
   [monolith subprojects opts]
   (let [dependencies (dep/dependency-map subprojects)
         skippable (resolve-projects subprojects (:skip opts))
-        selector (resolve-selectors monolith (:select opts))]
+        selector (combine-selectors monolith (:select opts))]
     (->
       ; Start with explicitly-specified 'in' targets.
       (resolve-projects subprojects (:in opts))
