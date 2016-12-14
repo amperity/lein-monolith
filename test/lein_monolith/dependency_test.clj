@@ -17,6 +17,7 @@
     (let [projects '[foo baz/foo example/bar example/baz]]
       (is (nil? (dep/resolve-name projects 'qux)))
       (is (nil? (dep/resolve-name projects 'example/qux)))
+      (is (= '[foo/baz bar/baz] (dep/resolve-name '[foo/baz bar/baz bar/qux] 'baz)))
       (is (= 'foo (dep/resolve-name projects 'foo)))
       (is (= 'foo (dep/resolve-name projects 'foo/foo)))
       (is (= 'example/bar (dep/resolve-name projects 'bar)))

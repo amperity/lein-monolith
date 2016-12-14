@@ -31,15 +31,33 @@
   "Given a set of valid project names, determine the match for the named
   project. This can be used to resolve the short name (meaning, no namespace)
   to a fully-qualified project name. Returns a resolved key from
-  `project-names`, or nil if the resolution fails."
+  `project-names`, a collection of multiple matching keys, or nil if the
+  resolution fails."
   [project-names sym]
   (let [valid-keys (set project-names)]
     (cond
       (valid-keys sym) sym
       (valid-keys (condense-name sym)) (condense-name sym)
       (nil? (namespace sym))
-        (first (filter #(= (name %) (name sym)) valid-keys))
+        (let [candidates (filter #(= (name %) (name sym)) valid-keys)]
+          (if (= 1 (count candidates))
+            (first candidates)
+            (seq candidates)))
       :else nil)))
+
+
+(defn resolve-name!
+  "Resolves a symbol to a single project name, or calls abort if no or multiple
+  projects match."
+  [project-names sym]
+  (let [result (resolve-name project-names sym)]
+    (cond
+      (nil? result)
+        (lein/abort "Could not resolve" sym "to any monolith subproject!")
+      (coll? result)
+        (lein/abort "Name" sym "resolves to multiple monolith subprojects:"
+                    (str/join " " (sort result)))
+      :else result)))
 
 
 (defn unscope-coord

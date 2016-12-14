@@ -60,7 +60,7 @@
   [project opts project-names]
   (let [[monolith subprojects] (u/load-monolith! project)
         dep-map (dep/dependency-map subprojects)
-        resolved-names (map (partial dep/resolve-name (keys dep-map))
+        resolved-names (map (partial dep/resolve-name! (keys dep-map))
                             project-names)]
     (doseq [dep-name resolved-names]
       (when-not (:bare opts)
@@ -80,7 +80,7 @@
   [project opts project-names]
   (let [[monolith subprojects] (u/load-monolith! project)
         dep-map (dep/dependency-map subprojects)
-        resolved-names (map (partial dep/resolve-name (keys dep-map))
+        resolved-names (map (partial dep/resolve-name! (keys dep-map))
                             project-names)]
     (doseq [project-name resolved-names]
       (when-not (get dep-map project-name)

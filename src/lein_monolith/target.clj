@@ -25,7 +25,7 @@
     (seq name-args)
     (mapcat #(str/split % #"\s*,\s*"))
     (map read-string)
-    (keep (partial dep/resolve-name (keys subprojects)))
+    (map (partial dep/resolve-name! (keys subprojects)))
     (set)))
 
 
