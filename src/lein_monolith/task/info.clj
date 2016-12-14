@@ -59,8 +59,10 @@
   to the current project if none are provided."
   [project opts project-names]
   (let [[monolith subprojects] (u/load-monolith! project)
-        dep-map (dep/dependency-map subprojects)]
-    (doseq [dep-name project-names]
+        dep-map (dep/dependency-map subprojects)
+        resolved-names (map (partial dep/resolve-name (keys dep-map))
+                            project-names)]
+    (doseq [dep-name resolved-names]
       (when-not (:bare opts)
         (lein/info "\nSubprojects which depend on" (ansi/sgr dep-name :bold :yellow)))
       (doseq [subproject-name (dep/topological-sort dep-map)
@@ -77,8 +79,10 @@
   the current project if none are provided."
   [project opts project-names]
   (let [[monolith subprojects] (u/load-monolith! project)
-        dep-map (dep/dependency-map subprojects)]
-    (doseq [project-name project-names]
+        dep-map (dep/dependency-map subprojects)
+        resolved-names (map (partial dep/resolve-name (keys dep-map))
+                            project-names)]
+    (doseq [project-name resolved-names]
       (when-not (get dep-map project-name)
         (lein/abort project-name "is not a valid subproject!"))
       (when-not (:bare opts)
