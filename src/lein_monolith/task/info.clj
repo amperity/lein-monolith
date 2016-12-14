@@ -1,5 +1,6 @@
 (ns lein-monolith.task.info
   (:require
+    [clojure.string :as str]
     [leiningen.core.main :as lein]
     (lein-monolith
       [config :as config]
@@ -13,8 +14,10 @@
 (defn info
   "Show information about the monorepo configuration."
   [project args]
-  (let [[opts _] (u/parse-kw-args (merge target/selection-opts {:bare 0}) args)
+  (let [[opts args] (u/parse-kw-args (merge target/selection-opts {:bare 0}) args)
         monolith (config/find-monolith! project)]
+    (when (seq args)
+      (lein/abort "Unknown args:" (str/join " " args)))
     (when-not (:bare opts)
       (println "Monolith root:" (:root monolith))
       (println)
