@@ -10,7 +10,8 @@
     (lein-monolith
       [config :as config]
       [dependency :as dep]
-      [plugin :as plugin])
+      [plugin :as plugin]
+      [target :as target])
     (lein-monolith.task
       [checkouts :as checkouts]
       [each :as each]
@@ -21,6 +22,23 @@
     [puget.color.ansi :as ansi]))
 
 
+(defn- opts-only
+  [expected args]
+  (let [[opts more] (u/parse-kw-args expected args)]
+    (when (seq more)
+      (lein/abort "Unknown args:" (str/join " " more)))
+    opts))
+
+
+(defn- opts+projects
+  [expected project args]
+  (let [[opts more] (u/parse-kw-args expected args)
+        project-names (or (seq (map read-string more))
+                          [(dep/project-name project)])]
+    [opts project-names]))
+
+
+
 ;; ## Subtask Vars
 
 (defn info
@@ -29,7 +47,7 @@
   Options:
     :bare        Only print the project names and directories, one per line"
   [project args]
-  (info/info project args))
+  (info/info project (opts-only (merge target/selection-opts {:bare 0}) args)))
 
 
 (defn lint
@@ -38,7 +56,7 @@
   Options:
     :deps        Check for conflicting dependency versions"
   [project args]
-  (info/lint project args))
+  (info/lint project (opts-only {:deps 0} args)))
 
 
 (defn deps-on
@@ -48,7 +66,8 @@
   Options:
     :bare          Only print the project names and dependent versions, one per line"
   [project args]
-  (info/deps-on project args))
+  (let [[opts project-names] (opts+projects {:bare 0} project args)]
+    (info/deps-on project opts project-names)))
 
 
 (defn deps-of
@@ -59,7 +78,8 @@
     :bare          Only print the project names and dependent versions, one per line
     :transitive    Include transitive dependencies in addition to direct ones"
   [project args]
-  (info/deps-of project args))
+  (let [[opts project-names] (opts+projects {:bare 0} project args)]
+    (info/deps-of project opts project-names)))
 
 
 (defn graph
@@ -145,7 +165,7 @@
   [project args]
   (when (:monolith project)
     (lein/abort "The 'link' task does not need to be run for the monolith project!"))
-  (checkouts/link project args))
+  (checkouts/link project (opts-only {:force 0, :deep 0} args)))
 
 
 (defn unlink

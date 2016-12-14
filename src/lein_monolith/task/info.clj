@@ -13,11 +13,8 @@
 
 (defn info
   "Show information about the monorepo configuration."
-  [project args]
-  (let [[opts args] (u/parse-kw-args (merge target/selection-opts {:bare 0}) args)
-        monolith (config/find-monolith! project)]
-    (when (seq args)
-      (lein/abort "Unknown args:" (str/join " " args)))
+  [project opts]
+  (let [monolith (config/find-monolith! project)]
     (when-not (:bare opts)
       (println "Monolith root:" (:root monolith))
       (println)
@@ -47,11 +44,10 @@
 
 (defn lint
   "Check various aspects of the monolith and warn about possible problems."
-  [project args]
-  (let [flags (set (or (seq args) [":deps"]))
-        [monolith subprojects] (u/load-monolith! project)]
+  [project opts]
+  (let [[monolith subprojects] (u/load-monolith! project)]
     ; TODO: lack of :pedantic? :abort
-    (when (flags ":deps")
+    (when (:deps opts)
       (doseq [[dep-name coords] (->> (vals subprojects)
                                      (mapcat dep/sourced-dependencies)
                                      (group-by first))]
@@ -61,13 +57,10 @@
 (defn deps-on
   "Print a list of subprojects which depend on the given package(s). Defaults
   to the current project if none are provided."
-  [project args]
-  (let [[opts args] (u/parse-kw-args {:bare 0} args)
-        [monolith subprojects] (u/load-monolith! project)
+  [project opts project-names]
+  (let [[monolith subprojects] (u/load-monolith! project)
         dep-map (dep/dependency-map subprojects)]
-    (doseq [dep-name (if (seq args)
-                       (map read-string args)
-                       [(dep/project-name project)])]
+    (doseq [dep-name project-names]
       (when-not (:bare opts)
         (lein/info "\nSubprojects which depend on" (ansi/sgr dep-name :bold :yellow)))
       (doseq [subproject-name (dep/topological-sort dep-map)
@@ -82,13 +75,10 @@
 (defn deps-of
   "Print a list of subprojects which given package(s) depend on. Defaults to
   the current project if none are provided."
-  [project args]
-  (let [[opts args] (u/parse-kw-args {:bare 0, :transitive 0} args)
-        [monolith subprojects] (u/load-monolith! project)
+  [project opts project-names]
+  (let [[monolith subprojects] (u/load-monolith! project)
         dep-map (dep/dependency-map subprojects)]
-    (doseq [project-name (if (seq args)
-                           (map read-string args)
-                           [(dep/project-name project)])]
+    (doseq [project-name project-names]
       (when-not (get dep-map project-name)
         (lein/abort project-name "is not a valid subproject!"))
       (when-not (:bare opts)
