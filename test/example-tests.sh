@@ -34,4 +34,4 @@ test_monolith each cprint :version
 test_monolith each :in lib-a cprint :root
 test_monolith each :upstream-of lib-b cprint :version
 test_monolith each :downstream-of lib-a cprint :name
-test_monolith each :parallel 3 :report :endure check
+test_monolith each :parallel 3 :report :endure cprint :group
