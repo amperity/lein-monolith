@@ -145,30 +145,6 @@
    (filter (set ks) (topological-sort m))))
 
 
-; TODO: deprecate this
-(defn subtree-from
-  "Takes a map of node keys to sets of dependent nodes and a root node to start
-  from. Returns the same dependency map containing only keys in the transitive
-  subtree of the root."
-  [m root]
-  (loop [result {}
-         front [root]]
-    (if-let [node (first front)]
-      (if (contains? m node)
-        ; Node is part of the internal tree.
-        (let [deps (set (get m node))
-              new-front (set/difference deps (set (keys result)))]
-          (recur
-            ; Add the node to the result map.
-            (assoc result node deps)
-            ; Add any unprocessed dependencies to the front.
-            (concat (next front) (set/difference deps (set (keys result))))))
-        ; Node is not internal, so ignore.
-        (recur result (next front)))
-      ; No more nodes to process.
-      result)))
-
-
 
 ;; ## Dependency Resolution
 

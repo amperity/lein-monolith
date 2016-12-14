@@ -63,7 +63,7 @@
         projects-to-link (as-> (:dependencies project) deps
                            (map (comp dep/condense-name first) deps)
                            (if (:deep opts)
-                             (set (mapcat (comp keys (partial dep/subtree-from dep-map)) deps))
+                             (set (mapcat (partial dep/upstream-keys dep-map) deps))
                              deps)
                            (keep subprojects deps))
         checkouts-dir (io/file (:root project) "checkouts")]

@@ -97,12 +97,10 @@
                      "transitively depends on"
                      "depends on")))
       (doseq [dep (if (:transitive opts)
-                    (-> (dep/subtree-from dep-map project-name)
-                        (dissoc project-name)
-                        (dep/topological-sort))
-                    (->> (get-in subprojects [project-name :dependencies])
-                         (map first)
-                         (filter subprojects)))]
+                    (-> (dep/upstream-keys dep-map project-name)
+                        (disj project-name)
+                        (->> (dep/topological-sort dep-map)))
+                    (dep-map project-name))]
         (if (:bare opts)
           (println project-name dep)
           (println "  " (puget/cprint-str project-name)
