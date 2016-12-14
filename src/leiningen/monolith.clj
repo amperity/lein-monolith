@@ -10,7 +10,8 @@
     (lein-monolith
       [config :as config]
       [dependency :as dep]
-      [plugin :as plugin])
+      [plugin :as plugin]
+      [target :as target])
     (lein-monolith.task
       [checkouts :as checkouts]
       [each :as each]
@@ -21,6 +22,23 @@
     [puget.color.ansi :as ansi]))
 
 
+(defn- opts-only
+  [expected args]
+  (let [[opts more] (u/parse-kw-args expected args)]
+    (when (seq more)
+      (lein/abort "Unknown args:" (str/join " " more)))
+    opts))
+
+
+(defn- opts+projects
+  [expected project args]
+  (let [[opts more] (u/parse-kw-args expected args)
+        project-names (or (seq (map read-string more))
+                          [(dep/project-name project)])]
+    [opts project-names]))
+
+
+
 ;; ## Subtask Vars
 
 (defn info
@@ -29,7 +47,7 @@
   Options:
     :bare        Only print the project names and directories, one per line"
   [project args]
-  (info/info project args))
+  (info/info project (opts-only (merge target/selection-opts {:bare 0}) args)))
 
 
 (defn lint
@@ -38,7 +56,7 @@
   Options:
     :deps        Check for conflicting dependency versions"
   [project args]
-  (info/lint project args))
+  (info/lint project (if (seq args) (opts-only {:deps 0} args) {:deps true})))
 
 
 (defn deps-on
@@ -48,7 +66,8 @@
   Options:
     :bare          Only print the project names and dependent versions, one per line"
   [project args]
-  (info/deps-on project args))
+  (let [[opts project-names] (opts+projects {:bare 0} project args)]
+    (info/deps-on project opts project-names)))
 
 
 (defn deps-of
@@ -59,7 +78,8 @@
     :bare          Only print the project names and dependent versions, one per line
     :transitive    Include transitive dependencies in addition to direct ones"
   [project args]
-  (info/deps-of project args))
+  (let [[opts project-names] (opts+projects {:bare 0} project args)]
+    (info/deps-of project opts project-names)))
 
 
 (defn graph
@@ -89,32 +109,57 @@
 
 
 (defn ^:higher-order each
-  "Iterate over each subproject in the monolith and apply the given task.
-  Projects are iterated in dependency order; that is, later projects may depend
-  on earlier ones.
+  "Iterate over a target set of subprojects in the monolith and apply the given
+  task. Projects are iterated in dependency order; that is, later projects may
+  depend on earlier ones.
+
+  By default, all projects are included in the set of iteration targets. If you
+  provide the `:in`, `:upstream[-of]`, or `:downstream[-of]` options then the
+  resulting set of projects will be composed only of the additive targets of
+  each of the options specified. The `:skip` option can be used to exclude
+  specific projects from the set. Specifying `:select` will use a configured
+  `:project-selector` to filter the final set.
 
   If the iteration fails on a subproject, you can continue where you left off
   by providing the `:start` option as the first argument, giving the name of the
   project to resume from.
 
-  Options:
-    :subtree            Only iterate over transitive dependencies of the current project
-    :report             Print a detailed timing report after running tasks
-    :parallel <threads> Run tasks in parallel across a fixed thread pool (in dependency order)
-    :select <key>       Use a selector from the config to filter projects
-    :skip <project>     Omit one or more projects from the iteration (may occur multiple times)
-    :start <project>    Provide a starting point for the subproject iteration
+  General Options:
+    :parallel <threads>        Run tasks in parallel across a fixed thread pool.
+    :endure                    Continue executing the task even if some subprojects fail.
+    :report                    Print a detailed timing report after running tasks.
+
+  Targeting Options:
+    :in <names>             Add the named projects directly to the targets.
+    :upstream               Add the transitive dependencies of the current project to the targets.
+    :upstream-of <names>    Add the transitive dependencies of the named projects to the targets.
+    :downstream             Add the transitive consumers of the current project to the targets.
+    :downstream-of <names>  Add the transitive consumers of the named projects to the targets.
+    :select <key>           Use a selector from the config to filter target projects.
+    :skip <names>           Exclude one or more projects from the target set.
+    :start <name>           Provide a starting point for the subproject iteration
+
+  Each <names> argument can contain multiple comma-separated project names, and
+  all the targeting options except `:start` may be provided multiple times.
 
   Examples:
 
       lein monolith each check
-      lein monolith each :subtree :parallel 4 install
+      lein monolith each :upstream :parallel 4 install
       lein monolith each :select :deployable uberjar
       lein monolith each :report :start my/lib-a test"
   [project args]
-  (let [[opts task] (u/parse-kw-args each/task-opts args)]
+  (let [expected (assoc each/task-opts :subtree 0)
+        [opts task] (u/parse-kw-args each/task-opts args)
+        opts (cond-> opts (:subtree opts) (assoc :upstream true))]
     (when (empty? task)
       (lein/abort "Cannot run each without a task argument!"))
+    (when (and (:start opts) (:parallel opts))
+      (lein/abort "The :parallel and :start options are not compatible!"))
+    (when (and (:monolith project) (or (:upstream opts) (:downstream opts)))
+      (lein/warn "The :upstream and :downstream options have no meaning in the monolith project."))
+    (when (:subtree opts)
+      (lein/warn "The :subtree option is deprecated, use :upstream instead."))
     (each/run-tasks project opts task)))
 
 
@@ -128,7 +173,7 @@
   [project args]
   (when (:monolith project)
     (lein/abort "The 'link' task does not need to be run for the monolith project!"))
-  (checkouts/link project args))
+  (checkouts/link project (opts-only {:force 0, :deep 0} args)))
 
 
 (defn unlink

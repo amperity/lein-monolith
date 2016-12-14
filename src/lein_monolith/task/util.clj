@@ -11,24 +11,35 @@
   [expected args]
   (loop [opts {}
          args args]
-    (let [kw (and (first args)
-                  (.startsWith ^String (first args) ":")
-                  (keyword (subs (first args) 1)))
-          arg-count (get expected kw)]
-      (cond
-        ; Not an expected kw arg
-        (nil? arg-count)
-          [opts args]
+    (if-not (and (first args) (.startsWith (str (first args)) ":"))
+      ; No more arguments to process, or not a keyword arg.
+      [opts args]
+      ; Parse keyword option arg.
+      (let [kw (keyword (subs (first args) 1))
+            multi-arg-count (get expected (keyword (str (name kw) \*)))
+            arg-count (get expected kw multi-arg-count)]
+        (cond
+          ; Unexpected option, halt parsing.
+          (nil? arg-count)
+            [opts args]
 
-        ; Flag keyword
-        (zero? arg-count)
-          (recur (assoc opts kw true) (rest args))
+          ; Flag option.
+          (zero? arg-count)
+            (recur (assoc opts kw true) (rest args))
 
-        ; Multi-arg keyword
-        :else
-          (recur
-            (update opts kw (fnil conj []) (vec (take arg-count (rest args))))
-            (drop (inc arg-count) args))))))
+          ; Single-valued option.
+          (and (= 1 arg-count) (nil? multi-arg-count))
+            (recur (assoc opts kw (first (rest args))) (drop 2 args))
+
+          ; Multi-spec option, join value list.
+          multi-arg-count
+            (recur (update opts kw (fnil into []) (take arg-count (rest args)))
+                   (drop (inc arg-count) args))
+
+          ; Multi-arg (but not spec) option.
+          :else
+            (recur (assoc opts kw (vec (take arg-count (rest args))))
+                   (drop (inc arg-count) args)))))))
 
 
 (defn human-duration

@@ -1,9 +1,11 @@
 (ns lein-monolith.task.info
   (:require
+    [clojure.string :as str]
     [leiningen.core.main :as lein]
     (lein-monolith
       [config :as config]
-      [dependency :as dep])
+      [dependency :as dep]
+      [target :as target])
     [lein-monolith.task.util :as u]
     [puget.printer :as puget]
     [puget.color.ansi :as ansi]))
@@ -11,9 +13,8 @@
 
 (defn info
   "Show information about the monorepo configuration."
-  [project args]
-  (let [[opts _] (u/parse-kw-args {:bare 0} args)
-        monolith (config/find-monolith! project)]
+  [project opts]
+  (let [monolith (config/find-monolith! project)]
     (when-not (:bare opts)
       (println "Monolith root:" (:root monolith))
       (println)
@@ -26,11 +27,12 @@
         (puget/cprint dirs)
         (println)))
     (let [subprojects (config/read-subprojects! monolith)
-          targets (dep/topological-sort (dep/dependency-map subprojects))
+          dependencies (dep/dependency-map subprojects)
+          targets (target/select monolith subprojects opts)
           prefix-len (inc (count (:root monolith)))]
       (when-not (:bare opts)
         (printf "Internal projects (%d):\n" (count targets)))
-      (doseq [subproject-name targets
+      (doseq [subproject-name (dep/topological-sort dependencies targets)
               :let [{:keys [version root]} (get subprojects subproject-name)
                     relative-path (subs (str root) prefix-len)]]
         (if (:bare opts)
@@ -42,11 +44,10 @@
 
 (defn lint
   "Check various aspects of the monolith and warn about possible problems."
-  [project args]
-  (let [flags (set (or (seq args) [":deps"]))
-        [monolith subprojects] (u/load-monolith! project)]
+  [project opts]
+  (let [[monolith subprojects] (u/load-monolith! project)]
     ; TODO: lack of :pedantic? :abort
-    (when (flags ":deps")
+    (when (:deps opts)
       (doseq [[dep-name coords] (->> (vals subprojects)
                                      (mapcat dep/sourced-dependencies)
                                      (group-by first))]
@@ -56,13 +57,12 @@
 (defn deps-on
   "Print a list of subprojects which depend on the given package(s). Defaults
   to the current project if none are provided."
-  [project args]
-  (let [[opts args] (u/parse-kw-args {:bare 0} args)
-        [monolith subprojects] (u/load-monolith! project)
-        dep-map (dep/dependency-map subprojects)]
-    (doseq [dep-name (if (seq args)
-                       (map read-string args)
-                       [(dep/project-name project)])]
+  [project opts project-names]
+  (let [[monolith subprojects] (u/load-monolith! project)
+        dep-map (dep/dependency-map subprojects)
+        resolved-names (map (partial dep/resolve-name! (keys dep-map))
+                            project-names)]
+    (doseq [dep-name resolved-names]
       (when-not (:bare opts)
         (lein/info "\nSubprojects which depend on" (ansi/sgr dep-name :bold :yellow)))
       (doseq [subproject-name (dep/topological-sort dep-map)
@@ -77,13 +77,12 @@
 (defn deps-of
   "Print a list of subprojects which given package(s) depend on. Defaults to
   the current project if none are provided."
-  [project args]
-  (let [[opts args] (u/parse-kw-args {:bare 0, :transitive 0} args)
-        [monolith subprojects] (u/load-monolith! project)
-        dep-map (dep/dependency-map subprojects)]
-    (doseq [project-name (if (seq args)
-                           (map read-string args)
-                           [(dep/project-name project)])]
+  [project opts project-names]
+  (let [[monolith subprojects] (u/load-monolith! project)
+        dep-map (dep/dependency-map subprojects)
+        resolved-names (map (partial dep/resolve-name! (keys dep-map))
+                            project-names)]
+    (doseq [project-name resolved-names]
       (when-not (get dep-map project-name)
         (lein/abort project-name "is not a valid subproject!"))
       (when-not (:bare opts)
@@ -92,12 +91,10 @@
                      "transitively depends on"
                      "depends on")))
       (doseq [dep (if (:transitive opts)
-                    (-> (dep/subtree-from dep-map project-name)
-                        (dissoc project-name)
-                        (dep/topological-sort))
-                    (->> (get-in subprojects [project-name :dependencies])
-                         (map first)
-                         (filter subprojects)))]
+                    (-> (dep/upstream-keys dep-map project-name)
+                        (disj project-name)
+                        (->> (dep/topological-sort dep-map)))
+                    (dep-map project-name))]
         (if (:bare opts)
           (println project-name dep)
           (println "  " (puget/cprint-str project-name)

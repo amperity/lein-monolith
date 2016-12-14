@@ -5,19 +5,37 @@
 
 
 (deftest kw-arg-parsing
-  (is (= [{} []]
-         (u/parse-kw-args {} [])))
-  (is (= [{} []]
-         (u/parse-kw-args {:foo 0} [])))
-  (is (= [{:foo true} []]
-         (u/parse-kw-args {:foo 0} [":foo"])))
-  (is (= [{:foo true} ["bar"]]
-         (u/parse-kw-args {:foo 0} [":foo" "bar"])))
-  (is (= [{:abc [["xyz"]]} ["123"]]
-         (u/parse-kw-args {:abc 1} [":abc" "xyz" "123"])))
-  (is (= [{} ["%" ":abc" "123"]]
-         (u/parse-kw-args {:abc 1} ["%" ":abc" "123"])))
-  (is (= [{:missing [["abc"]]} []]
-         (u/parse-kw-args {:missing 2} [":missing" "abc"])))
-  (is (= [{:foo [["1"]], :bar true} ["xyz"]]
-         (u/parse-kw-args {:foo 1, :bar 0} [":foo" "1" ":bar" "xyz"]))))
+  (testing "empty arguments"
+    (is (= [{} []]
+           (u/parse-kw-args {} [])))
+    (is (= [{} []]
+           (u/parse-kw-args {:foo 0} []))))
+  (testing "flag options"
+    (is (= [{:foo true} []]
+           (u/parse-kw-args {:foo 0} [":foo"])))
+    (is (= [{:foo true} ["bar"]]
+           (u/parse-kw-args {:foo 0} [":foo" "bar"]))))
+  (testing "single-value options"
+    (is (= [{:abc "xyz"} ["123"]]
+           (u/parse-kw-args {:abc 1} [":abc" "xyz" "123"])))
+    (is (= [{} ["%" ":abc" "123"]]
+           (u/parse-kw-args {:abc 1} ["%" ":abc" "123"]))))
+  (testing "multi-arg options"
+    (is (= [{:tri-arg ["1" "2" "3"]} ["abc"]]
+           (u/parse-kw-args {:tri-arg 3} [":tri-arg" "1" "2" "3" "abc"])))
+    (is (= [{:missing ["abc"]} []]
+           (u/parse-kw-args {:missing 2} [":missing" "abc"])))
+    (is (= [{:foo ["x" "y"]} ["bar"]]
+           (u/parse-kw-args {:foo 2} [":foo" "a" "b" ":foo" "x" "y" "bar"]))
+        "should overwrite prior option"))
+  (testing "multi-value options"
+    (is (= [{:foo ["a"]} []]
+           (u/parse-kw-args {:foo* 1} [":foo" "a"])))
+    (is (= [{:foo ["a" "b"], :bar true} []]
+           (u/parse-kw-args {:foo* 1, :bar 0} [":foo" "a" ":bar" ":foo" "b"]))))
+  (testing "combo args"
+    (is (= [{:foo "1", :bar true} ["xyz"]]
+           (u/parse-kw-args {:foo 1, :bar 0} [":foo" "1" ":bar" "xyz"])))
+    (is (= [{:foo "x"} [":bar" "123" ":foo" "y"]]
+           (u/parse-kw-args {:foo 1} [":foo" "x" ":bar" "123" ":foo" "y"]))
+        "unknown arg should halt parsing")))
