@@ -155,9 +155,11 @@
     (when (empty? task)
       (lein/abort "Cannot run each without a task argument!"))
     (when (and (:start opts) (:parallel opts))
-      (lein/abort "The :parallel and :start options are not compatible"))
+      (lein/abort "The :parallel and :start options are not compatible!"))
+    (when (and (:monolith project) (or (:upstream opts) (:downstream opts)))
+      (lein/warn "The :upstream and :downstream options have no meaning in the monolith project."))
     (when (:subtree opts)
-      (lein/warn "The :subtree option is deprecated, use :upstream instead"))
+      (lein/warn "The :subtree option is deprecated, use :upstream instead."))
     (each/run-tasks project opts task)))
 
 
