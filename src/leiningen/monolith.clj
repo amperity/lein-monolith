@@ -145,13 +145,19 @@
   Examples:
 
       lein monolith each check
-      lein monolith each :subtree :parallel 4 install
+      lein monolith each :upstream :parallel 4 install
       lein monolith each :select :deployable uberjar
       lein monolith each :report :start my/lib-a test"
   [project args]
-  (let [[opts task] (u/parse-kw-args each/task-opts args)]
+  (let [expected (assoc each/task-opts :subtree 0)
+        [opts task] (u/parse-kw-args each/task-opts args)
+        opts (cond-> opts (:subtree opts) (assoc :upstream true))]
     (when (empty? task)
       (lein/abort "Cannot run each without a task argument!"))
+    (when (and (:start opts) (:parallel opts))
+      (lein/abort "The :parallel and :start options are not compatible"))
+    (when (:subtree opts)
+      (lein/warn "The :subtree option is deprecated, use :upstream instead"))
     (each/run-tasks project opts task)))
 
 

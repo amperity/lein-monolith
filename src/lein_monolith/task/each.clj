@@ -21,7 +21,6 @@
     {:parallel 1
      :endure 0
      :report 0
-     :subtree 0 ; deprecated in favor of :upstream
      :upstream 0
      :downstream 0
      :start 1}))
@@ -40,7 +39,7 @@
       [:report])
     (when-let [in (seq (:in opts))]
       [:in (str/join "," in)])
-    (when (or (:subtree opts) (:upstream opts))
+    (when (:upstream opts)
       [:upstream])
     (when-let [uof (seq (:upstream-of opts))]
       [:upstream-of (str/join "," uof)])
@@ -88,11 +87,9 @@
   "Returns a vector of pairs of index numbers and symbols naming the selected
   subprojects."
   [monolith subprojects project-name opts]
-  (when (:subtree opts)
-    (lein/warn "The :subtree option is deprecated, use :upstream instead"))
   (let [dependencies (dep/dependency-map subprojects)
         opts' (cond-> opts
-                (or (:subtree opts) (:upstream opts))
+                (:upstream opts)
                   (update :upstream-of conj (str project-name))
                 (:downstream opts)
                   (update :downstream-of conj (str project-name)))
@@ -204,8 +201,6 @@
         targets (select-projects monolith subprojects (dep/project-name project) opts)
         n (inc (or (first (last targets)) -1))
         start-time (System/nanoTime)]
-    (when (and (:start opts) (:parallel opts))
-      (lein/abort "The :parallel and :start options are not compatible"))
     (when (empty? targets)
       (lein/abort "Iteration selection matched zero subprojects!"))
     (lein/info "Applying"
@@ -218,7 +213,7 @@
                :num-targets n
                :task task
                :opts opts}
-          results (if-let [threads (some-> (:parallel opts) ffirst read-string)]
+          results (if-let [threads (:parallel opts)]
                     (run-parallel! ctx threads targets)
                     (run-linear! ctx targets))
           elapsed (/ (- (System/nanoTime) start-time) 1000000.0)]
