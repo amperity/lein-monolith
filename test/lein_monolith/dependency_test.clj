@@ -35,19 +35,6 @@
     (is (= 'example/bar (dep/dep-source (dep/with-source [:foo "123"] 'example/bar))))))
 
 
-(deftest subtree-resolution
-  (is (= {}
-         (dep/subtree-from {} nil)))
-  (is (= {}
-         (dep/subtree-from {:a [], :b [:a]} nil)))
-  (is (= {:a #{}}
-         (dep/subtree-from {:a [], :b [:a]} :a)))
-  (is (= {:a #{}, :b #{:a}}
-         (dep/subtree-from {:a [], :b [:a], :c [:a]} :b)))
-  (is (= {:a #{}, :b #{:a :x}}
-         (dep/subtree-from {:a [], :b [:a :x], :c [:a]} :b))))
-
-
 (deftest upstream-dependency-closure
   (let [deps {:a #{}, :b #{:a}, :c #{:a :b} :x #{:b} :y #{:c}}]
     (is (= #{:a} (dep/upstream-keys deps :a)))
