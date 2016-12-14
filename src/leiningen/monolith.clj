@@ -137,7 +137,7 @@
     :downstream-of <names>  Add the transitive consumers of the named projects to the targets.
     :select <key>           Use a selector from the config to filter target projects.
     :skip <names>           Exclude one or more projects from the target set.
-    :start <names>          Provide a starting point for the subproject iteration
+    :start <name>           Provide a starting point for the subproject iteration
 
   Each <names> argument can contain multiple comma-separated project names, and
   all the targeting options except `:start` may be provided multiple times.

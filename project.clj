@@ -13,6 +13,12 @@
    [mvxcvi/puget "1.0.1"]
    [rhizome "0.2.7"]]
 
+  :hiera
+  {:vertical false
+   :show-external true
+   :cluster-depth 1
+   :ignore-ns #{clojure puget manifold}}
+
   :profiles
   {:dev {:plugins [[rfkm/lein-cloverage "1.0.8"]]
          :dependencies [[org.clojure/clojure "1.8.0"]]}})

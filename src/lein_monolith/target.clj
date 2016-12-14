@@ -3,9 +3,8 @@
   (:require
     [clojure.set :as set]
     [clojure.string :as str]
-    (lein-monolith
-      [config :as config]
-      [dependency :as dep])))
+    [lein-monolith.dependency :as dep]
+    [leiningen.core.main :as lein]))
 
 
 (def selection-opts
