@@ -94,7 +94,9 @@
                 (:downstream opts)
                   (update :downstream-of conj (str project-name)))
         targets (target/select monolith subprojects opts')
-        start-from (some-> (:start opts) read-string)]
+        start-from (some->> (:start opts)
+                            (read-string)
+                            (dep/resolve-name! (keys subprojects)))]
     (->
       ; Sort project names by dependency order.
       (dep/topological-sort dependencies targets)
@@ -202,7 +204,7 @@
         n (inc (or (first (last targets)) -1))
         start-time (System/nanoTime)]
     (when (empty? targets)
-      (lein/abort "Iteration selection matched zero subprojects!"))
+      (lein/abort "Target selection matched zero subprojects!"))
     (lein/info "Applying"
                (ansi/sgr (str/join " " task) :bold :cyan)
                "to" (ansi/sgr (count targets) :cyan)
