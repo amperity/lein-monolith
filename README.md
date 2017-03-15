@@ -72,7 +72,7 @@ things like:
 
 ```
 lein monolith each check
-lein monolith each :subtree install
+lein monolith each :upstream :parallel 4 install
 lein monolith each :start my-lib/foo do check, test
 lein monolith each :select :deployable uberjar
 ```
