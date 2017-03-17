@@ -150,7 +150,7 @@
       lein monolith each :report :start my/lib-a test"
   [project args]
   (let [expected (assoc each/task-opts :subtree 0)
-        [opts task] (u/parse-kw-args each/task-opts args)
+        [opts task] (u/parse-kw-args expected args)
         opts (cond-> opts (:subtree opts) (assoc :upstream true))]
     (when (empty? task)
       (lein/abort "Cannot run each without a task argument!"))
