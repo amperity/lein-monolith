@@ -35,13 +35,29 @@ options.
 or you can use it from the repository root to operate on all the subprojects
 together.
 
+### Targeting Options
+
+Many tasks which operate on multiple projects accept targeting options, which
+generally select or filter the command to a subset of the subprojects.
+
+- `:in <names>`             Add the named projects directly to the targets.
+- `:upstream`               Add the transitive dependencies of the current project to the targets.
+- `:upstream-of <names>`    Add the transitive dependencies of the named projects to the targets.
+- `:downstream`             Add the transitive consumers of the current project to the targets.
+- `:downstream-of <names>`  Add the transitive consumers of the named projects to the targets.
+- `:select <key>`           Use a selector from the config to filter target projects.
+- `:skip <names>`           Exclude one or more projects from the target set.
+
+Each `<names>` argument can contain multiple comma-separated project names, and
+all the targeting options may be provided multiple times.
+
 ### Subproject Info
 
 To see a list of all the projects that lein-monolith knows about, you can use
 the `info` task:
 
 ```
-lein monolith info [:bare]
+lein monolith info [:bare] [targets]
 ```
 
 This will print out the config file location, coordinates of every subproject
@@ -77,36 +93,28 @@ lein monolith each :start my-lib/foo do check, test
 lein monolith each :select :deployable uberjar
 ```
 
-Valid options to `each` include:
+In addition to targeting options, `each` accepts:
 
-- `:subtree` only iterate over subprojects which are direct or transitive
-  dependencies of the current project.
-- `:report` show a detailed timing report after the tasks finish executing.
+- `:start <name>` provide a starting point for the subproject iteration.
 - `:parallel` run subproject tasks concurrently, up to the number of specified
   threads.
-- `:start` begin iterating at the given project instead of the beginning of the
-  list. Useful for resuming halted iterations.
-- `:select` apply a _project selector_ from the monolith configuration to filter
-  the list of projects iterated. A project selector is much like a test
-  selector: a predicate that runs on the subproject's definition map.
-- `:skip` remove the named project from the list before iterating. May be
-  provided multiple times.
 - `:endure` continue applying the task to every subproject, even if one fails.
   If any projects fail, the command will still exit with a failure status. This
   is useful in situations such as CI tests, where you don't want a failure to
   halt iteration.
+- `:report` show a detailed timing report after the tasks finish executing.
 
 ### Merged Source Profile
 
-The plugin also creates a profile with `:resource-paths`, `:source-paths` and
-`:test-paths` updated to include the source and test files from all projects in
-the monorepo. The profile also sets `:dependencies` on each internal project,
-giving you a closure of all dependencies across all the subprojects.
+The plugin can create a profile with `:resource-paths`, `:source-paths` and
+`:test-paths` updated to include the source and test files from multiple
+projects in the monorepo. The profile also sets `:dependencies` on each internal
+project, giving you a closure of all dependencies across all the subprojects.
 
-This can be useful for running lint and tests on all the projects at once:
+This can be useful for running lint and tests on multiple subprojects at once:
 
 ```
-lein monolith with-all test
+lein monolith with-all [targeting] test
 ```
 
 ### Checkout Links

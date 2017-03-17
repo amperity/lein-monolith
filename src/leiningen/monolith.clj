@@ -95,13 +95,13 @@
   For example:
 
       lein monolith with-all test"
-  [project [task & args]]
-  (when (empty? task)
-    (lein/abort "Cannot run with-all without task argument!"))
+  [project args]
   (when-not (:monolith project)
     (lein/warn "WARN: Running with-all in a subproject is not recommended! Beware of dependency ordering differences."))
-  (let [[monolith subprojects] (u/load-monolith! project)
-        profile (plugin/merged-profile subprojects)]
+  (let [[opts [task & args]] (u/parse-kw-args target/selection-opts args)
+        [monolith subprojects] (u/load-monolith! project)
+        targets (target/select monolith subprojects opts)
+        profile (plugin/merged-profile (select-keys subprojects targets))]
     (lein/apply-task
       task
       (plugin/add-active-profile project :monolith/all profile)
