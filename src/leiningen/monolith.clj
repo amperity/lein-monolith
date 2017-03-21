@@ -149,17 +149,13 @@
       lein monolith each :select :deployable uberjar
       lein monolith each :report :start my/lib-a test"
   [project args]
-  (let [expected (assoc each/task-opts :subtree 0)
-        [opts task] (u/parse-kw-args each/task-opts args)
-        opts (cond-> opts (:subtree opts) (assoc :upstream true))]
+  (let [[opts task] (u/parse-kw-args each/task-opts args)]
     (when (empty? task)
       (lein/abort "Cannot run each without a task argument!"))
     (when (and (:start opts) (:parallel opts))
       (lein/abort "The :parallel and :start options are not compatible!"))
     (when (and (:monolith project) (or (:upstream opts) (:downstream opts)))
       (lein/warn "The :upstream and :downstream options have no meaning in the monolith project."))
-    (when (:subtree opts)
-      (lein/warn "The :subtree option is deprecated, use :upstream instead."))
     (each/run-tasks project opts task)))
 
 
