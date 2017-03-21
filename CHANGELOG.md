@@ -7,7 +7,15 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 
-...
+### Changed
+- Abstracted targeting options to generalize to multiple tasks.
+
+### Added
+- The `info` task supports targeting options.
+- The `with-all` task supports targeting options.
+
+### Removed
+- Drop deprecated `:subtree` targeting option.
 
 ## [0.3.1] - 2016-12-14
 
