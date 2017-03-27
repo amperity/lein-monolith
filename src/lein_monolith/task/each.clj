@@ -189,9 +189,12 @@
   [monolith subproject task]
   (binding [lein/*exit-process?* false]
     (as-> subproject subproject
-      (if-let [inherited (:monolith/inherit subproject)]
-        (assoc-in subproject [:profiles :monolith/inherited]
-                  (plugin/inherited-profile monolith inherited))
+      (if-let [inherited (plugin/inherited-profile
+                           monolith
+                           (:monolith/inherit subproject))]
+        (-> subproject
+            (merge (plugin/inherited-injections monolith inherited))
+            (assoc-in [:profiles :monolith/inherited] inherited))
         subproject)
       (config/debug-profile "init-subproject"
         (project/init-project

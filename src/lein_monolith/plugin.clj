@@ -1,7 +1,6 @@
 (ns lein-monolith.plugin
-  "This namespace runs inside of Leiningen on all projects and will
-  automatically activate the `with-all` task if the project map sets a truthy
-  value for the `:monolith` key."
+  "This namespace runs inside of Leiningen on all projects and handles profile
+  creation for `with-all` and `inherit` functionality."
   (:require
     [clojure.java.io :as jio]
     [clojure.string :as str]
@@ -13,6 +12,14 @@
       [dependency :as dep])
     [puget.color.ansi :as ansi]
     [puget.printer :as puget]))
+
+
+(def default-injections
+  "Set of default properties which, if inherited, are injected directly into
+  projects rather than being pulled in via a profile."
+  #{:repositories
+    :managed-dependencies})
+
 
 
 ;; ## Profile Generation
@@ -82,6 +89,16 @@
                         {:inherit inherit})))))
 
 
+(defn inherited-injections
+  "Constructs a map of project attributes which should be directly injected
+  into the subproject config."
+  [parent inherited]
+  (select-keys inherited
+               (get-in parent
+                       [:monolith :inherit/inject]
+                       default-injections)))
+
+
 
 ;; ## Profile Utilities
 
@@ -133,6 +150,8 @@
       ; Find monolith metaproject and generate profile.
       (let [metaproject (config/find-monolith! project)
             profile (inherited-profile metaproject (:monolith/inherit project))]
-        (add-active-profile project :monolith/inherited profile)))
+        (-> project
+            (merge (inherited-injections metaproject profile))
+            (add-active-profile :monolith/inherited profile))))
     ; Normal project, don't activate.
     project))
