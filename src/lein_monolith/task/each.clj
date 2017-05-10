@@ -1,9 +1,12 @@
 (ns lein-monolith.task.each
   (:require
+    [clojure.java.io :as io]
     [clojure.string :as str]
     (leiningen.core
+      [eval :as eval]
       [main :as lein]
-      [project :as project])
+      [project :as project]
+      [utils :refer [rebind-io!]])
     (lein-monolith
       [config :as config]
       [dependency :as dep]
@@ -12,7 +15,14 @@
     [lein-monolith.task.util :as u]
     [manifold.deferred :as d]
     [manifold.executor :as executor]
-    [puget.color.ansi :as ansi]))
+    [puget.color.ansi :as ansi])
+  (:import
+    (com.hypirion.io
+      ClosingPipe
+      Pipe
+      RevivableInputStream)
+    (java.io
+      OutputStream)))
 
 
 (def task-opts
@@ -109,6 +119,72 @@
       (->> (map-indexed vector)))))
 
 
+(defn- tee-output-stream
+  "Constructs a proxy of an OutputStream that will write a copy of the bytes
+  given to both A and B."
+  ^OutputStream
+  [^OutputStream out-a ^OutputStream out-b]
+  (proxy [OutputStream] []
+
+    (write
+      ([value]
+       (locking out-b
+         (if (integer? value)
+           (do (.write out-a (int value))
+               (.write out-b (int value)))
+           (do (.write out-a ^bytes value)
+               (.write out-b ^bytes value)))))
+      ([^bytes byte-arr off len]
+       (locking out-b
+         (.write out-a byte-arr off len)
+         (.write out-b byte-arr off len))))
+
+    (flush
+      []
+      (.flush out-a)
+      (.flush out-b))
+
+    (close
+      []
+      ; no-op
+      nil)))
+
+
+(def ^:dynamic *task-output-file* nil)
+
+
+(defn- run-with-output
+  "A version of `leiningen.core.eval/sh` that streams in/out/err, teeing output
+  to the given file."
+  [& cmd]
+  (when eval/*pump-in*
+    (rebind-io!))
+  (when-not *task-output-file*
+    (throw (IllegalStateException.
+             (str "Cannot run task without bound *task-output-file*: " (pr-str cmd)))))
+  (with-open [file-out (io/output-stream *task-output-file* :append true)]
+    (let [env (@#'eval/overridden-env eval/*env*)
+          ^Process proc (.exec (Runtime/getRuntime) (into-array String cmd) env (io/file eval/*dir*))]
+      (.addShutdownHook (Runtime/getRuntime)
+                        (Thread. (fn [] (.destroy proc))))
+      (with-open [out (.getInputStream proc)
+                  err (.getErrorStream proc)
+                  in (.getOutputStream proc)]
+        (let [pump-out (doto (Pipe. out (tee-output-stream System/out file-out)) .start)
+              pump-err (doto (Pipe. err (tee-output-stream System/err file-out)) .start)
+              pump-in (ClosingPipe. System/in in)]
+          (when eval/*pump-in* (.start pump-in))
+          (.join pump-out)
+          (.join pump-err)
+          (let [exit-value (.waitFor proc)]
+            (when eval/*pump-in*
+              (.kill ^RevivableInputStream System/in)
+              (.join pump-in)
+              (.resurrect ^RevivableInputStream System/in))
+            (.flush file-out)
+            exit-value))))))
+
+
 (defn- apply-subproject-task
   "Applies the task to the given subproject."
   [monolith subproject task]
@@ -140,7 +216,15 @@
                         :elapsed (/ (- (System/nanoTime) start) 1000000.0)})]
     (try
       (lein/info (format "\nApplying to %s" (ansi/sgr target :bold :yellow)))
-      (apply-subproject-task (:monolith ctx) subproject (:task ctx))
+      (if-let [out-dir (get-in ctx [:opts :output] )]
+        ; Capture output to file.
+        (let [out-file (io/file out-dir (:group subproject) (str (:name subproject) ".txt"))]
+          (io/make-parents out-file)
+          (with-redefs [leiningen.core.eval/sh run-with-output]
+            (binding [*task-output-file* out-file]
+              (apply-subproject-task (:monolith ctx) subproject (:task ctx)))))
+        ; Run without output capturing.
+        (apply-subproject-task (:monolith ctx) subproject (:task ctx)))
       (assoc @results :success true)
       (catch Exception ex
         (when-not (or (:parallel opts) (:endure opts))
