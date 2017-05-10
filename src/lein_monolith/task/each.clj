@@ -221,9 +221,19 @@
         ; Capture output to file.
         (let [out-file (io/file out-dir (:group subproject) (str (:name subproject) ".txt"))]
           (io/make-parents out-file)
-          (with-redefs [leiningen.core.eval/sh run-with-output]
-            (binding [*task-output-file* out-file]
-              (apply-subproject-task (:monolith ctx) subproject (:task ctx)))))
+          (spit out-file
+                (format "Applying task to %s: %s\n\n"
+                        target
+                        (str/join " " (:task ctx)))
+                :append true)
+          (try
+            (with-redefs [leiningen.core.eval/sh run-with-output]
+              (binding [*task-output-file* out-file]
+                (apply-subproject-task (:monolith ctx) subproject (:task ctx))))
+            (finally
+              (spit out-file
+                    (format "\nElapsed: %s\n" (u/human-duration (:elapsed @results)))
+                    :append true))))
         ; Run without output capturing.
         (apply-subproject-task (:monolith ctx) subproject (:task ctx)))
       (assoc @results :success true)
