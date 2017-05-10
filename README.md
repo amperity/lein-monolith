@@ -103,6 +103,7 @@ In addition to targeting options, `each` accepts:
   is useful in situations such as CI tests, where you don't want a failure to
   halt iteration.
 - `:report` show a detailed timing report after the tasks finish executing.
+- `:output` path to a directory to save individual build output in.
 
 ### Merged Source Profile
 

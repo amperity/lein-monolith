@@ -21,6 +21,7 @@
     {:parallel 1
      :endure 0
      :report 0
+     :output 1
      :upstream 0
      :downstream 0
      :start 1}))
@@ -37,6 +38,8 @@
       [:endure])
     (when (:report opts)
       [:report])
+    (when-let [out-dir (:output opts)]
+      [:output out-dir])
     (when-let [in (seq (:in opts))]
       [:in (str/join "," in)])
     (when (:upstream opts)
