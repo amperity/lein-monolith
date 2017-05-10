@@ -201,7 +201,8 @@
             [:default :monolith/inherited]
             [:default])))
       (config/debug-profile "apply-task"
-        (lein/resolve-and-apply subproject task)))))
+        (binding [eval/*dir* (:root subproject)]
+          (lein/resolve-and-apply subproject task))))))
 
 
 (defn- run-task!
