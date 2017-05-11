@@ -150,7 +150,7 @@
       nil)))
 
 
-(def ^:dynamic *task-output-file* nil)
+(def ^:dynamic *task-file-output* nil)
 
 
 (defn- run-with-output
@@ -159,30 +159,29 @@
   [& cmd]
   (when eval/*pump-in*
     (rebind-io!))
-  (when-not *task-output-file*
+  (when-not *task-file-output*
     (throw (IllegalStateException.
-             (str "Cannot run task without bound *task-output-file*: " (pr-str cmd)))))
-  (with-open [file-out (io/output-stream *task-output-file* :append true)]
-    (let [env (@#'eval/overridden-env eval/*env*)
-          ^Process proc (.exec (Runtime/getRuntime) (into-array String cmd) env (io/file eval/*dir*))]
-      (.addShutdownHook (Runtime/getRuntime)
-                        (Thread. (fn [] (.destroy proc))))
-      (with-open [out (.getInputStream proc)
-                  err (.getErrorStream proc)
-                  in (.getOutputStream proc)]
-        (let [pump-out (doto (Pipe. out (tee-output-stream System/out file-out)) .start)
-              pump-err (doto (Pipe. err (tee-output-stream System/err file-out)) .start)
-              pump-in (ClosingPipe. System/in in)]
-          (when eval/*pump-in* (.start pump-in))
-          (.join pump-out)
-          (.join pump-err)
-          (let [exit-value (.waitFor proc)]
-            (when eval/*pump-in*
-              (.kill ^RevivableInputStream System/in)
-              (.join pump-in)
-              (.resurrect ^RevivableInputStream System/in))
-            (.flush file-out)
-            exit-value))))))
+             (str "Cannot run task without bound *task-file-output*: " (pr-str cmd)))))
+  (let [env (@#'eval/overridden-env eval/*env*)
+        ^Process proc (.exec (Runtime/getRuntime) (into-array String cmd) env (io/file eval/*dir*))]
+    (.addShutdownHook (Runtime/getRuntime)
+                      (Thread. (fn [] (.destroy proc))))
+    (with-open [out (.getInputStream proc)
+                err (.getErrorStream proc)
+                in (.getOutputStream proc)]
+      (let [pump-out (doto (Pipe. out (tee-output-stream System/out *task-file-output*)) .start)
+            pump-err (doto (Pipe. err (tee-output-stream System/err *task-file-output*)) .start)
+            pump-in (ClosingPipe. System/in in)]
+        (when eval/*pump-in* (.start pump-in))
+        (.join pump-out)
+        (.join pump-err)
+        (let [exit-value (.waitFor proc)]
+          (when eval/*pump-in*
+            (.kill ^RevivableInputStream System/in)
+            (.join pump-in)
+            (.resurrect ^RevivableInputStream System/in))
+          (.flush ^OutputStream *task-file-output*)
+          exit-value)))))
 
 
 (defn- apply-subproject-task
@@ -205,6 +204,33 @@
           (lein/resolve-and-apply subproject task))))))
 
 
+(defn- apply-subproject-task-with-output
+  "Applies the task to the given subproject, writing the task output to a file
+  in the given directory."
+  [monolith subproject task out-dir results]
+  (let [out-file (io/file out-dir (:group subproject) (str (:name subproject) ".txt"))]
+    (io/make-parents out-file)
+    (with-open [file-output-stream (io/output-stream out-file :append true)]
+      ; Write task header
+      (.write file-output-stream
+              (.getBytes (format "[%s] Applying task to %s/%s: %s\n\n"
+                                 (java.util.Date.)
+                                 (:group subproject)
+                                 (:name subproject)
+                                 (str/join " " task))))
+      (try
+        ; Run task with output capturing.
+        (binding [*task-file-output* file-output-stream]
+          (with-redefs [leiningen.core.eval/sh run-with-output]
+            (apply-subproject-task monolith subproject task)))
+        (finally
+          ; Write task footer
+          (.write file-output-stream
+                  (.getBytes (format "\n[%s] Elapsed: %s\n"
+                                     (java.util.Date.)
+                                     (u/human-duration (:elapsed @results))))))))))
+
+
 (defn- run-task!
   "Runs the given task, returning a map of information about the run."
   [ctx target]
@@ -219,21 +245,7 @@
       (lein/info (format "\nApplying to %s" (ansi/sgr target :bold :yellow)))
       (if-let [out-dir (get-in ctx [:opts :output] )]
         ; Capture output to file.
-        (let [out-file (io/file out-dir (:group subproject) (str (:name subproject) ".txt"))]
-          (io/make-parents out-file)
-          (spit out-file
-                (format "Applying task to %s: %s\n\n"
-                        target
-                        (str/join " " (:task ctx)))
-                :append true)
-          (try
-            (with-redefs [leiningen.core.eval/sh run-with-output]
-              (binding [*task-output-file* out-file]
-                (apply-subproject-task (:monolith ctx) subproject (:task ctx))))
-            (finally
-              (spit out-file
-                    (format "\nElapsed: %s\n" (u/human-duration (:elapsed @results)))
-                    :append true))))
+        (apply-subproject-task-with-output (:monolith ctx) subproject (:task ctx) out-dir results)
         ; Run without output capturing.
         (apply-subproject-task (:monolith ctx) subproject (:task ctx)))
       (assoc @results :success true)
