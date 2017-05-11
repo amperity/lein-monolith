@@ -7,7 +7,13 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 
-...
+### Added
+- New `:output` option to `each` task allows saving individual subproject output
+  to separate files under the given directory.
+
+### Fixed
+- Tasks run with `each` now use the subproject's root as the working directory,
+  rather than the monolith root. [#21](https://github.com/amperity/lein-monolith/issues/21)
 
 ## [0.3.2] - 2017-03-21
 
