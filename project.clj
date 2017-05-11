@@ -1,4 +1,4 @@
-(defproject lein-monolith "0.3.3-SNAPSHOT"
+(defproject lein-monolith "1.0.0"
   :description "Leiningen plugin for managing subrojects within a monorepo."
   :url "https://github.com/amperity/lein-monolith"
   :license {:name "Apache License 2.0"
@@ -9,7 +9,7 @@
   :eval-in-leiningen true
 
   :dependencies
-  [[manifold "0.1.5"]
+  [[manifold "0.1.6"]
    [mvxcvi/puget "1.0.1"]
    [rhizome "0.2.7"]]
 

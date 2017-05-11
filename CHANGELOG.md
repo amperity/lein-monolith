@@ -7,6 +7,14 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 
+...
+
+## [1.0.0]
+
+This release marks the first stable major release of the plugin. Actual feature
+changes are small, but `lein-monolith` has seen enough production use to be
+considered a mature project.
+
 ### Added
 - New `:output` option to `each` task allows saving individual subproject output
   to separate files under the given directory.
@@ -127,7 +135,8 @@ instead of loading them all before running any commands.
 
 Initial project release
 
-[Unreleased]: https://github.com/amperity/lein-monolith/compare/0.3.2...HEAD
+[Unreleased]: https://github.com/amperity/lein-monolith/compare/1.0.0...HEAD
+[1.0.0]: https://github.com/amperity/lein-monolith/compare/0.3.2...1.0.0
 [0.3.2]: https://github.com/amperity/lein-monolith/compare/0.3.1...0.3.2
 [0.3.1]: https://github.com/amperity/lein-monolith/compare/0.3.0...0.3.1
 [0.3.0]: https://github.com/amperity/lein-monolith/compare/0.2.3...0.3.0
