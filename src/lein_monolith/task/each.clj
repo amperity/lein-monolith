@@ -188,23 +188,16 @@
   "Applies the task to the given subproject."
   [monolith subproject task]
   (binding [lein/*exit-process?* false]
-    (as-> subproject subproject
-      (if-let [inherited (plugin/inherited-profile
-                           monolith
-                           (:monolith/inherit subproject))]
-        (-> subproject
-            (merge (plugin/inherited-injections monolith inherited))
-            (assoc-in [:profiles :monolith/inherited] inherited))
-        subproject)
-      (config/debug-profile "init-subproject"
-        (project/init-project
-          subproject
-          (if (get-in subproject [:profiles :monolith/inherited])
-            [:default :monolith/inherited]
-            [:default])))
-      (config/debug-profile "apply-task"
-        (binding [eval/*dir* (:root subproject)]
-          (lein/resolve-and-apply subproject task))))))
+    (let [inherited (plugin/build-inherited-profiles monolith subproject)]
+      (as-> subproject subproject
+        (reduce-kv
+          (fn inject-profile [p k v] (assoc-in p [:profiles k] v))
+          subproject inherited)
+        (config/debug-profile "init-subproject"
+          (project/init-project subproject (cons :default (keys inherited))))
+        (config/debug-profile "apply-task"
+          (binding [eval/*dir* (:root subproject)]
+            (lein/resolve-and-apply subproject task)))))))
 
 
 (defn- apply-subproject-task-with-output
