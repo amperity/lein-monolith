@@ -7,7 +7,9 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 
-...
+### Added
+- Metaprojects can specify an `:inherit-leaky` vector to generate a leaky
+  profile for inclusion in subprojects' built artifacts.
 
 ## [1.0.0]
 
