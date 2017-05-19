@@ -17,15 +17,19 @@
   (let [monolith (config/find-monolith! project)]
     (when-not (:bare opts)
       (println "Monolith root:" (:root monolith))
-      (println)
+      (newline)
       (when-let [inherited (get-in monolith [:monolith :inherit])]
         (println "Inherited properties:")
         (puget/cprint inherited)
-        (println))
+        (newline))
+      (when-let [inherited (get-in monolith [:monolith :inherit-leaky])]
+        (println "Inherited (leaky) properties:")
+        (puget/cprint inherited)
+        (newline))
       (when-let [dirs (get-in monolith [:monolith :project-dirs])]
         (println "Subproject directories:")
         (puget/cprint dirs)
-        (println)))
+        (newline)))
     (let [subprojects (config/read-subprojects! monolith)
           dependencies (dep/dependency-map subprojects)
           targets (target/select monolith subprojects opts)
