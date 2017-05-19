@@ -14,14 +14,6 @@
     [puget.printer :as puget]))
 
 
-(def default-injections
-  "Set of default properties which, if inherited, are injected directly into
-  projects rather than being pulled in via a profile."
-  #{:repositories
-    :managed-dependencies})
-
-
-
 ;; ## Profile Generation
 
 (defn- subproject-dependencies
@@ -65,38 +57,43 @@
 (defn inherited-profile
   "Constructs a profile map containing the inherited properties from a parent
   project map."
-  [parent inherit]
-  (let [base-properties (get-in parent [:monolith :inherit])]
+  [monolith inherit-key setting]
+  (when-let [base-properties (get-in monolith [:monolith inherit-key])]
     (cond
       ; Don't inherit anything
-      (not inherit)
-        {}
+      (not setting)
+        nil
 
       ; Inherit the base properties specified in the parent.
-      (true? inherit)
+      (true? setting)
         ; TODO: instead of select-keys, could do reducing get-in/assoc-in
-        (select-keys parent base-properties)
+        (select-keys monolith base-properties)
 
       ; Provide additional properties to inherit, or replace if metadata is set.
-      (vector? inherit)
-        (->> (if (:replace (meta inherit))
-               inherit
-               (distinct (concat base-properties inherit)))
-             (select-keys parent))
+      (vector? setting)
+        (->> (if (:replace (meta setting))
+               setting
+               (distinct (concat base-properties setting)))
+             (select-keys monolith))
 
       :else
-        (throw (ex-info "Unknown value type for monolith inherit setting"
-                        {:inherit inherit})))))
+        (throw (ex-info (str "Unknown value type for monolith inherit setting: "
+                             (pr-str setting))
+                        {:inherit setting})))))
 
 
-(defn inherited-injections
-  "Constructs a map of project attributes which should be directly injected
-  into the subproject config."
-  [parent inherited]
-  (select-keys inherited
-               (get-in parent
-                       [:monolith :inherit/inject]
-                       default-injections)))
+(defn build-inherited-profiles
+  "Returns a map from profile keys to inherited profile maps."
+  [monolith subproject]
+  (let [inherit-profile (inherited-profile
+                          monolith :inherit
+                          (:monolith/inherit subproject))
+        leaky-profile (inherited-profile
+                        monolith :inherit-leaky
+                        (:monolith/leaky subproject (boolean (:monolith/inherit subproject))))]
+    (cond-> nil
+      inherit-profile (assoc :monolith/inherited inherit-profile)
+      leaky-profile (assoc :monolith/leaky (vary-meta leaky-profile assoc :leaky true)))))
 
 
 
@@ -144,14 +141,14 @@
   [project]
   (if (:monolith/inherit project)
     ; Monolith subproject, add inherited profile.
-    (if (profile-active? project :monolith/inherited)
-      ; Already active, return project.
-      project
+    (if (or (profile-active? project :monolith/inherited)
+            (profile-active? project :monolith/leaky))
+      ; Already activated, return project.
+      (do (lein/debug "One or both inherited profiles are already active!")
+          project)
       ; Find monolith metaproject and generate profile.
-      (let [metaproject (config/find-monolith! project)
-            profile (inherited-profile metaproject (:monolith/inherit project))]
-        (-> project
-            (merge (inherited-injections metaproject profile))
-            (add-active-profile :monolith/inherited profile))))
+      (let [monolith (config/find-monolith! project)
+            profiles (build-inherited-profiles monolith project)]
+        (reduce-kv add-active-profile project profiles)))
     ; Normal project, don't activate.
     project))
