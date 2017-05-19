@@ -2,7 +2,7 @@
   :description "Overarching example project."
 
   :plugins
-  [[lein-monolith "0.3.3-SNAPSHOT"]
+  [[lein-monolith "1.0.1-SNAPSHOT"]
    [lein-cprint "1.2.0"]]
 
   :dependencies
@@ -14,8 +14,11 @@
 
   :monolith
   {:inherit
+   [:test-selectors
+    :env]
+
+   :inherit-leaky
    [:repositories
-    :test-selectors
     :managed-dependencies]
 
    :project-selectors
@@ -25,4 +28,7 @@
    :project-dirs
    ["apps/app-a"
     "libs/*"
-    "not-found"]})
+    "not-found"]}
+
+  :env
+  {:foo "bar"})
