@@ -24,3 +24,10 @@ A value of `true` will merge in a profile with the attributes set in the
 metaproject. Alternately, you can provide a vector of additional keys to merge
 from the metaproject. Attaching `^:replace` metadata will cause the vector to
 override the attributes set in the metaproject.
+
+Some metaproject settings are only useful if they are still present in the
+generated build artifacts for the subprojects. The primary examples of these are
+`:repositories` and `:managed-dependencies`. For these, you can specify a second
+key in the metaproject called `:inherit-leaky`, which follows the format of
+`:inherit` above. Properties in this profile will be included in the built JAR
+and pom files for the subproject.

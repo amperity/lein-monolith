@@ -1,7 +1,6 @@
 (ns lein-monolith.plugin
-  "This namespace runs inside of Leiningen on all projects and will
-  automatically activate the `with-all` task if the project map sets a truthy
-  value for the `:monolith` key."
+  "This namespace runs inside of Leiningen on all projects and handles profile
+  creation for `with-all` and `inherit` functionality."
   (:require
     [clojure.java.io :as jio]
     [clojure.string :as str]
@@ -58,28 +57,43 @@
 (defn inherited-profile
   "Constructs a profile map containing the inherited properties from a parent
   project map."
-  [parent inherit]
-  (let [base-properties (get-in parent [:monolith :inherit])]
+  [monolith inherit-key setting]
+  (when-let [base-properties (get-in monolith [:monolith inherit-key])]
     (cond
       ; Don't inherit anything
-      (not inherit)
-        {}
+      (not setting)
+        nil
 
       ; Inherit the base properties specified in the parent.
-      (true? inherit)
+      (true? setting)
         ; TODO: instead of select-keys, could do reducing get-in/assoc-in
-        (select-keys parent base-properties)
+        (select-keys monolith base-properties)
 
       ; Provide additional properties to inherit, or replace if metadata is set.
-      (vector? inherit)
-        (->> (if (:replace (meta inherit))
-               inherit
-               (distinct (concat base-properties inherit)))
-             (select-keys parent))
+      (vector? setting)
+        (->> (if (:replace (meta setting))
+               setting
+               (distinct (concat base-properties setting)))
+             (select-keys monolith))
 
       :else
-        (throw (ex-info "Unknown value type for monolith inherit setting"
-                        {:inherit inherit})))))
+        (throw (ex-info (str "Unknown value type for monolith inherit setting: "
+                             (pr-str setting))
+                        {:inherit setting})))))
+
+
+(defn build-inherited-profiles
+  "Returns a map from profile keys to inherited profile maps."
+  [monolith subproject]
+  (let [inherit-profile (inherited-profile
+                          monolith :inherit
+                          (:monolith/inherit subproject))
+        leaky-profile (inherited-profile
+                        monolith :inherit-leaky
+                        (:monolith/leaky subproject (boolean (:monolith/inherit subproject))))]
+    (cond-> nil
+      inherit-profile (assoc :monolith/inherited inherit-profile)
+      leaky-profile (assoc :monolith/leaky (vary-meta leaky-profile assoc :leaky true)))))
 
 
 
@@ -127,12 +141,14 @@
   [project]
   (if (:monolith/inherit project)
     ; Monolith subproject, add inherited profile.
-    (if (profile-active? project :monolith/inherited)
-      ; Already active, return project.
-      project
+    (if (or (profile-active? project :monolith/inherited)
+            (profile-active? project :monolith/leaky))
+      ; Already activated, return project.
+      (do (lein/debug "One or both inherited profiles are already active!")
+          project)
       ; Find monolith metaproject and generate profile.
-      (let [metaproject (config/find-monolith! project)
-            profile (inherited-profile metaproject (:monolith/inherit project))]
-        (add-active-profile project :monolith/inherited profile)))
+      (let [monolith (config/find-monolith! project)
+            profiles (build-inherited-profiles monolith project)]
+        (reduce-kv add-active-profile project profiles)))
     ; Normal project, don't activate.
     project))
