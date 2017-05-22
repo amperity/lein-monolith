@@ -3,8 +3,16 @@ lein-monolith
 
 [![CircleCI](https://circleci.com/gh/amperity/lein-monolith.svg?style=svg&circle-token=e57a92e79aa9113f1950498cbeeb0880c3f587d3)](https://circleci.com/gh/amperity/lein-monolith/tree/master)
 
-`lein-monolith` is a Leiningen plugin to work with multiple projects inside a monorepo.
-For an introduction to the project and some motivation, see this
+`lein-monolith` is a Leiningen plugin to work with multiple projects inside a
+monorepo. At a high level, the plugin gives you a way to:
+- Share configuration across subprojects, such as `:repositories`,
+  `:managed-dependencies`, `:env`, etc.
+- Run tasks across a multiple projects matching sophisticated selection
+  criteria.
+- Run tasks across a globally-merged view of multiple projects.
+- Query dependencies, generate graphs, and other utilities.
+
+For a more detailed introduction to the project and some motivation, see this
 [2016 Seajure presentation](https://docs.google.com/presentation/d/1jqYG2N2YalWdVG4oDqs1mua4hOyxVD_nejANrg6h8to/present).
 
 ## Installation

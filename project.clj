@@ -1,12 +1,11 @@
-(defproject lein-monolith "1.0.1-SNAPSHOT"
+(defproject lein-monolith "1.0.1"
   :description "Leiningen plugin for managing subrojects within a monorepo."
   :url "https://github.com/amperity/lein-monolith"
   :license {:name "Apache License 2.0"
             :url "http://www.apache.org/licenses/LICENSE-2.0"}
 
-  :deploy-branches ["master"]
-
   :eval-in-leiningen true
+  :deploy-branches ["master"]
 
   :dependencies
   [[manifold "0.1.6"]
@@ -20,5 +19,5 @@
    :ignore-ns #{clojure puget manifold}}
 
   :profiles
-  {:dev {:plugins [[rfkm/lein-cloverage "1.0.8"]]
+  {:dev {:plugins [[lein-cloverage "1.0.9"]]
          :dependencies [[org.clojure/clojure "1.8.0"]]}})

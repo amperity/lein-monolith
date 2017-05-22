@@ -7,6 +7,10 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 
+...
+
+## [1.0.1] - 2017-05-22
+
 ### Added
 - Metaprojects can specify an `:inherit-leaky` vector to generate a leaky
   profile for inclusion in subprojects' built artifacts.
@@ -137,7 +141,8 @@ instead of loading them all before running any commands.
 
 Initial project release
 
-[Unreleased]: https://github.com/amperity/lein-monolith/compare/1.0.0...HEAD
+[Unreleased]: https://github.com/amperity/lein-monolith/compare/1.0.1...HEAD
+[1.0.1]: https://github.com/amperity/lein-monolith/compare/1.0.0...1.0.1
 [1.0.0]: https://github.com/amperity/lein-monolith/compare/0.3.2...1.0.0
 [0.3.2]: https://github.com/amperity/lein-monolith/compare/0.3.1...0.3.2
 [0.3.1]: https://github.com/amperity/lein-monolith/compare/0.3.0...0.3.1
