@@ -186,8 +186,8 @@
   {:subtasks [#'info #'lint #'deps-on #'deps-of #'graph
               #'with-all #'each #'link #'unlink]}
   [project command & args]
-  (puget/with-color
-   (case command
+  (puget/with-options {:print-color (get-in project [:monolith :print-color] true)}
+    (case command
      "info"       (info project args)
      "lint"       (lint project args)
      "deps-on"    (deps-on project args)
