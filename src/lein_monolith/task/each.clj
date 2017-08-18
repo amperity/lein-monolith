@@ -8,14 +8,14 @@
       [project :as project]
       [utils :refer [rebind-io!]])
     (lein-monolith
+      [ansi :as ansi]
       [config :as config]
       [dependency :as dep]
       [plugin :as plugin]
       [target :as target])
     [lein-monolith.task.util :as u]
     [manifold.deferred :as d]
-    [manifold.executor :as executor]
-    [puget.color.ansi :as ansi])
+    [manifold.executor :as executor])
   (:import
     (com.hypirion.io
       ClosingPipe
@@ -74,25 +74,25 @@
   (let [task-time (reduce + (keep :elapsed results))
         speedup (/ task-time elapsed)]
     (lein/info (format "\n%s  %11s"
-                       (ansi/sgr "Run time:" :bold :cyan)
+                       (ansi/maybe-sgr "Run time:" :bold :cyan)
                        (u/human-duration elapsed)))
     (lein/info (format "%s %11s"
-                       (ansi/sgr "Task time:" :bold :cyan)
+                       (ansi/maybe-sgr "Task time:" :bold :cyan)
                        (u/human-duration task-time)))
     (lein/info (format "%s   %11.1f"
-                       (ansi/sgr "Speedup:" :bold :cyan)
+                       (ansi/maybe-sgr "Speedup:" :bold :cyan)
                        speedup))
     (lein/info (->> results
                     (sort-by :elapsed)
                     (reverse)
                     (take 8)
                     (map #(format "%-45s %s %11s"
-                                  (ansi/sgr (:name %) :bold :yellow)
+                                  (ansi/maybe-sgr (:name %) :bold :yellow)
                                   (if (:success %) " " "!")
                                   (u/human-duration (:elapsed %))))
                     (str/join "\n")
                     (str \newline
-                         (ansi/sgr "Slowest projects:" :bold :cyan)
+                         (ansi/maybe-sgr "Slowest projects:" :bold :cyan)
                          \newline)))))
 
 
@@ -238,7 +238,7 @@
         results (delay {:name target
                         :elapsed (/ (- (System/nanoTime) start) 1000000.0)})]
     (try
-      (lein/info (format "\nApplying to %s" (ansi/sgr target :bold :yellow)))
+      (lein/info (format "\nApplying to %s" (ansi/maybe-sgr target :bold :yellow)))
       (if-let [out-dir (get-in ctx [:opts :output] )]
         ; Capture output to file.
         (apply-subproject-task-with-output (:monolith ctx) subproject (:task ctx) out-dir results)
@@ -253,17 +253,17 @@
                               [:start target]
                               (:task ctx))]
             (lein/warn (format "\n%s %s\n"
-                               (ansi/sgr "Resume with:" :bold :red)
+                               (ansi/maybe-sgr "Resume with:" :bold :red)
                                (str/join " " resume-args)))))
         (when-not (:endure opts)
           (throw ex))
         (assoc @results :success false, :error ex))
       (finally
         (lein/info (format "Completed %s (%s/%s) in %s"
-                           (ansi/sgr target :bold :yellow)
-                           (ansi/sgr (swap! (:completions ctx) inc) :cyan)
-                           (ansi/sgr (:num-targets ctx) :cyan)
-                           (ansi/sgr (u/human-duration (:elapsed @results)) :bold :cyan)))))))
+                           (ansi/maybe-sgr target :bold :yellow)
+                           (ansi/maybe-sgr (swap! (:completions ctx) inc) :cyan)
+                           (ansi/maybe-sgr (:num-targets ctx) :cyan)
+                           (ansi/maybe-sgr (u/human-duration (:elapsed @results)) :bold :cyan)))))))
 
 
 (defn- run-linear!
@@ -312,8 +312,8 @@
     (when (empty? targets)
       (lein/abort "Target selection matched zero subprojects!"))
     (lein/info "Applying"
-               (ansi/sgr (str/join " " task) :bold :cyan)
-               "to" (ansi/sgr (count targets) :cyan)
+               (ansi/maybe-sgr (str/join " " task) :bold :cyan)
+               "to" (ansi/maybe-sgr (count targets) :cyan)
                "subprojects...")
     (let [ctx {:monolith monolith
                :subprojects subprojects
@@ -329,14 +329,14 @@
         (print-report results elapsed))
       (if-let [failures (seq (map :name (remove :success results)))]
         (lein/abort (format "\n%s: Applied %s to %s projects in %s with %d failures: %s"
-                            (ansi/sgr "FAILURE" :bold :red)
-                            (ansi/sgr (str/join " " task) :bold :cyan)
-                            (ansi/sgr (count targets) :cyan)
+                            (ansi/maybe-sgr "FAILURE" :bold :red)
+                            (ansi/maybe-sgr (str/join " " task) :bold :cyan)
+                            (ansi/maybe-sgr (count targets) :cyan)
                             (u/human-duration elapsed)
                             (count failures)
                             (str/join " " failures)))
         (lein/info (format "\n%s: Applied %s to %s projects in %s"
-                           (ansi/sgr "SUCCESS" :bold :green)
-                           (ansi/sgr (str/join " " task) :bold :cyan)
-                           (ansi/sgr (count targets) :cyan)
+                           (ansi/maybe-sgr "SUCCESS" :bold :green)
+                           (ansi/maybe-sgr (str/join " " task) :bold :cyan)
+                           (ansi/maybe-sgr (count targets) :cyan)
                            (u/human-duration elapsed)))))))

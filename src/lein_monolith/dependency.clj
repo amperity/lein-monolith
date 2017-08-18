@@ -4,7 +4,7 @@
     [clojure.set :as set]
     [clojure.string :as str]
     [leiningen.core.main :as lein]
-    [puget.color.ansi :as ansi]
+    [lein-monolith.ansi :as ansi]
     [puget.printer :as puget]))
 
 
@@ -193,7 +193,7 @@
                  (count (distinct (map dep-source specs)))
                  " projects - using " (pr-str default-choice) " from "
                  (dep-source default-choice))
-            (ansi/sgr :red)
+            (ansi/maybe-sgr :red)
             (lein/warn))
         (doseq [[spec projects] projects-for-specs]
           (lein/warn (format "%-50s from %s"

@@ -3,12 +3,12 @@
     [clojure.string :as str]
     [leiningen.core.main :as lein]
     (lein-monolith
+      [ansi :as ansi]
       [config :as config]
       [dependency :as dep]
       [target :as target])
     [lein-monolith.task.util :as u]
-    [puget.printer :as puget]
-    [puget.color.ansi :as ansi]))
+    [puget.printer :as puget]))
 
 
 (defn info
@@ -43,7 +43,7 @@
           (println subproject-name relative-path)
           (printf "  %-90s   %s\n"
                   (puget/cprint-str [subproject-name version])
-                  (ansi/sgr relative-path :cyan)))))))
+                  (ansi/maybe-sgr relative-path :cyan)))))))
 
 
 (defn lint
@@ -68,7 +68,7 @@
                             project-names)]
     (doseq [dep-name resolved-names]
       (when-not (:bare opts)
-        (lein/info "\nSubprojects which depend on" (ansi/sgr dep-name :bold :yellow)))
+        (lein/info "\nSubprojects which depend on" (ansi/maybe-sgr dep-name :bold :yellow)))
       (doseq [subproject-name (dep/topological-sort dep-map)
               :let [{:keys [version dependencies]} (get subprojects subproject-name)]]
         (when-let [spec (first (filter (comp #{dep-name} dep/condense-name first) dependencies))]
@@ -90,7 +90,7 @@
       (when-not (get dep-map project-name)
         (lein/abort project-name "is not a valid subproject!"))
       (when-not (:bare opts)
-        (lein/info "\nSubprojects which" (ansi/sgr project-name :bold :yellow)
+        (lein/info "\nSubprojects which" (ansi/maybe-sgr project-name :bold :yellow)
                    (if (:transitive opts)
                      "transitively depends on"
                      "depends on")))

@@ -18,8 +18,7 @@
       [graph :as graph]
       [info :as info]
       [util :as u])
-    [puget.printer :as puget]
-    [puget.color.ansi :as ansi]))
+    [puget.printer :as puget]))
 
 
 (defn- opts-only
@@ -187,15 +186,16 @@
   {:subtasks [#'info #'lint #'deps-on #'deps-of #'graph
               #'with-all #'each #'link #'unlink]}
   [project command & args]
-  (case command
-    "info"       (info project args)
-    "lint"       (lint project args)
-    "deps-on"    (deps-on project args)
-    "deps-of"    (deps-of project args)
-    "graph"      (graph project)
-    "with-all"   (with-all project args)
-    "each"       (each project args)
-    "link"       (link project args)
-    "unlink"     (unlink project)
-    (lein/abort (pr-str command) "is not a valid monolith command! Try: lein help monolith"))
+  (puget/with-color
+   (case command
+     "info"       (info project args)
+     "lint"       (lint project args)
+     "deps-on"    (deps-on project args)
+     "deps-of"    (deps-of project args)
+     "graph"      (graph project)
+     "with-all"   (with-all project args)
+     "each"       (each project args)
+     "link"       (link project args)
+     "unlink"     (unlink project)
+     (lein/abort (pr-str command) "is not a valid monolith command! Try: lein help monolith")))
   (flush))

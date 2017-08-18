@@ -1,7 +1,8 @@
 (ns lein-monolith.task.util
   "Utility functions for task code."
   (:require
-    [lein-monolith.config :as config]))
+    [lein-monolith.config :as config]
+    [puget.color.ansi :as ansi]))
 
 
 (defn parse-kw-args
