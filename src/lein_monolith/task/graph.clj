@@ -9,11 +9,13 @@
 
 (def image-name "project-hierarchy.png")
 
+
 (defn cluster->descriptor
   [monolith-root subdirectory]
-  (when-not (= monolith-root subdirectory)
+  (when (not= monolith-root subdirectory)
     {:label (subs (str subdirectory)
                   (inc (count monolith-root)))}))
+
 
 (defn graph
   "Generate a graph of subprojects and their interdependencies."
