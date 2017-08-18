@@ -31,3 +31,19 @@ generated build artifacts for the subprojects. The primary examples of these are
 key in the metaproject called `:inherit-leaky`, which follows the format of
 `:inherit` above. Properties in this profile will be included in the built JAR
 and pom files for the subproject.
+
+## Controlling color output
+
+monolith uses colored text to highlight important information. This
+can be disabled by adding `:print-color false` in the `:monolith`
+section of your `project.clj`.
+
+You can conditionally enable/disable color output by using a profile
+like this:
+
+```clojure
+:profiles {:ci {:monolith {:print-color false}}}
+```
+
+And then using `lein with-profile +ci monolith ...` when you want to
+disable color printing.

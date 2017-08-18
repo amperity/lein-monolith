@@ -30,5 +30,7 @@
     "libs/*"
     "not-found"]}
 
+  :profiles {:ci {:monolith {:print-color false}}}
+
   :env
   {:foo "bar"})
