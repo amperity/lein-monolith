@@ -140,7 +140,7 @@ If you have existing checkout links which conflict, you'll get warnings. To
 override them, you can pass the `:force` option.
 
 ```
-lein monolith link [:deep :force]
+lein monolith link [:deep :force] [project...]
 lein monolith unlink
 ```
 

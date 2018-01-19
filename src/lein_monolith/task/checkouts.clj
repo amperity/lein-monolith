@@ -57,16 +57,26 @@
 (defn link
   "Create symlinks in the checkouts directory pointing to all internal
   dependencies in the current project."
-  [project opts]
+  [project opts project-names]
   (let [[monolith subprojects] (u/load-monolith! project)
         dep-map (dep/dependency-map subprojects)
-        projects-to-link (as-> (:dependencies project) deps
-                           (map (comp dep/condense-name first) deps)
-                           (if (:deep opts)
-                             (set (mapcat (partial dep/upstream-keys dep-map) deps))
-                             deps)
-                           (keep subprojects deps))
+        selected-names (into #{}
+                             (map (partial dep/resolve-name! (keys dep-map)))
+                             project-names)
+        projects-to-link (cond->> (map (comp dep/condense-name first)
+                                       (:dependencies project))
+                           (or (:deep opts) (seq project-names))
+                             (mapcat (partial dep/upstream-keys dep-map))
+                           true
+                             (distinct)
+                           (seq selected-names)
+                             (filter selected-names)
+                           true
+                             (keep subprojects))
         checkouts-dir (io/file (:root project) "checkouts")]
+    (when (empty? projects-to-link)
+      (lein/abort (str "Couldn't find any projects to link matching: "
+                       (str/join " " project-names))))
     ; Create checkouts directory if needed.
     (when-not (.exists checkouts-dir)
       (lein/info "Creating checkout directory" (str checkouts-dir))
@@ -77,7 +87,7 @@
 
 
 (defn unlink
-  "Remove the checkout directory from a project."
+  "Remove the checkouts directory from a project."
   [project]
   (when-let [checkouts-dir (some-> (:root project) (io/file "checkouts"))]
     (when (.exists checkouts-dir)

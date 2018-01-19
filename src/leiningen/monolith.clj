@@ -162,7 +162,8 @@
 
 (defn link
   "Create symlinks in the checkouts directory pointing to all internal
-  dependencies in the current project.
+  dependencies in the current project. Optionally, a set of project names may
+  be specified to create links to only those projects (this implies `:deep`).
 
   Options:
     :force       Override any existing checkout links with conflicting names
@@ -170,11 +171,12 @@
   [project args]
   (when (:monolith project)
     (lein/abort "The 'link' task does not need to be run for the monolith project!"))
-  (checkouts/link project (opts-only {:force 0, :deep 0} args)))
+  (let [[opts project-names] (opts+projects {:force 0, :deep 0} project args)]
+    (checkouts/link project opts project-names)))
 
 
 (defn unlink
-  "Remove the checkout directory from a project."
+  "Remove the checkouts directory from a project."
   [project]
   (checkouts/unlink project))
 
