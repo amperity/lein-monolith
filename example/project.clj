@@ -12,10 +12,13 @@
   {:unit (complement :integration)
    :integration :integration}
 
+  :aliases {"version+" ["version"]}
+
   :monolith
   {:inherit
    [:test-selectors
-    :env]
+    :env
+    :aliases]
 
    :inherit-leaky
    [:repositories

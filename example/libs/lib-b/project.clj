@@ -1,5 +1,6 @@
 (defproject example/lib-b "0.2.0"
   :description "Example lib depending on lib-a."
+  :monolith/inherit true
 
   :dependencies
   [[example/lib-a "1.0.0"]
