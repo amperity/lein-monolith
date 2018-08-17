@@ -1,0 +1,37 @@
+version: 2
+
+jobs:
+  build:
+    working_directory: ~/project
+    docker:
+      - image: circleci/clojure:lein-2.8.1
+    steps:
+      - checkout
+      - restore_cache:
+          keys:
+            - v1-{{ checksum "project.clj" }}
+            - v1-
+      - run: lein deps
+      - save_cache:
+          paths:
+            - ~/.m2
+          key: v1-{{ checksum "project.clj" }}
+      - run: lein check
+      - run: lein test
+      # FIXME: Currently fails in CI with:
+      # clojure.lang.ArityException: Wrong number of args (2) passed to: reader/read
+      # Possibly due to wrong clojure version (1.4.0?) getting pulled in
+      #- run: lein cloverage --codecov
+      - save_cache:
+          paths:
+            - ~/.m2
+          key: v1-{{ checksum "project.clj" }}
+      #- store_artifacts:
+      #    path: target/coverage
+      #    destination: coverage
+      #- run:
+      #    name: Publish Coverage
+      #    command: "bash <(curl -s https://codecov.io/bash) -f target/coverage/codecov.json"
+      - run:
+          name: Run Example Tests
+          command: ./test/example-tests.sh
