@@ -8,9 +8,9 @@
   :deploy-branches ["master"]
 
   :dependencies
-  [[manifold "0.1.6"]
-   [mvxcvi/puget "1.0.1"]
-   [rhizome "0.2.7"]]
+  [[manifold "0.1.8"]
+   [mvxcvi/puget "1.0.2"]
+   [rhizome "0.2.9"]]
 
   :hiera
   {:vertical false
@@ -20,4 +20,4 @@
 
   :profiles
   {:dev {:plugins [[lein-cloverage "1.0.9"]]
-         :dependencies [[org.clojure/clojure "1.8.0"]]}})
+         :dependencies [[org.clojure/clojure "1.9.0"]]}})
