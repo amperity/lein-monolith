@@ -7,6 +7,8 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 
+## [1.1.0] - 2018-08-17
+
 ### Added
 - The `link` subtask accepts a list of projects to target, allowing you to
   select which checkout links get created.
@@ -147,8 +149,8 @@ instead of loading them all before running any commands.
 
 Initial project release
 
-[Unreleased]: https://github.com/amperity/lein-monolith/compare/1.0.2...HEAD
-[1.0.2]: https://github.com/amperity/lein-monolith/compare/1.0.1...1.0.2
+[Unreleased]: https://github.com/amperity/lein-monolith/compare/1.1.0...HEAD
+[1.1.0]: https://github.com/amperity/lein-monolith/compare/1.0.1...1.1.0
 [1.0.1]: https://github.com/amperity/lein-monolith/compare/1.0.0...1.0.1
 [1.0.0]: https://github.com/amperity/lein-monolith/compare/0.3.2...1.0.0
 [0.3.2]: https://github.com/amperity/lein-monolith/compare/0.3.1...0.3.2
