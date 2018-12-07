@@ -9,7 +9,7 @@
 
   :dependencies
   [[manifold "0.1.8"]
-   [mvxcvi/puget "1.0.2"]
+   [mvxcvi/puget "1.0.3"]
    [rhizome "0.2.9"]]
 
   :hiera
