@@ -15,6 +15,7 @@
     (lein-monolith.task
       [checkouts :as checkouts]
       [each :as each]
+      [fingerprint :as fingerprint]
       [graph :as graph]
       [info :as info]
       [util :as u])
@@ -187,17 +188,18 @@
 (defn monolith
   "Tasks for working with Leiningen projects inside a monorepo."
   {:subtasks [#'info #'lint #'deps-on #'deps-of #'graph
-              #'with-all #'each #'link #'unlink]}
+              #'with-all #'each #'link #'unlink #'fingerprint]}
   [project command & args]
   (case command
-    "info"       (info project args)
-    "lint"       (lint project args)
-    "deps-on"    (deps-on project args)
-    "deps-of"    (deps-of project args)
-    "graph"      (graph project)
-    "with-all"   (with-all project args)
-    "each"       (each project args)
-    "link"       (link project args)
-    "unlink"     (unlink project)
+    "info"        (info project args)
+    "lint"        (lint project args)
+    "deps-on"     (deps-on project args)
+    "deps-of"     (deps-of project args)
+    "graph"       (graph project)
+    "with-all"    (with-all project args)
+    "each"        (each project args)
+    "link"        (link project args)
+    "unlink"      (unlink project)
+    "fingerprint" (apply fingerprint project args)
     (lein/abort (pr-str command) "is not a valid monolith command! Try: lein help monolith"))
   (flush))
