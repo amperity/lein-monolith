@@ -184,7 +184,10 @@
 
 ;; ## Fingerprinting
 
-(defn changed
+;; Leiningen's help framework doesn't officially support "subsubtasks" so
+;; we'll try our best to make it work by making them look like subtasks.
+
+(defn fingerprint-changed
   "Prints a report about the projects whose fingerprints have changed.
 
   Options:
@@ -194,11 +197,16 @@
 
 
 (defn fingerprint
-  "Tasks for working with subproject fingerprinting."
-  {:subtasks [#'changed]}
-  [project command & args]
+  "Tasks for working with project fingerprinting.
+
+Subtasks available:
+changed        Show projects whose fingerprints have changed.
+
+For task-specific help, call `lein help monolith fingerprint-<task>`."
+  [project & [command & args]]
   (case command
-    "changed" (changed project args)
+    "changed" (fingerprint-changed project args)
+    nil (lein/abort "Expected a subcommand relating to project fingerprinting. Try `lein help monolith fingerprint`")
     (lein/abort (pr-str command) "is not a valid fingerprint subcommand! Try: lein help monolith fingerprint")))
 
 
@@ -207,7 +215,8 @@
 (defn monolith
   "Tasks for working with Leiningen projects inside a monorepo."
   {:subtasks [#'info #'lint #'deps-on #'deps-of #'graph
-              #'with-all #'each #'link #'unlink #'fingerprint]}
+              #'with-all #'each #'link #'unlink #'fingerprint
+              #'fingerprint-changed]}
   [project command & args]
   (case command
     "info"        (info project args)
