@@ -9,18 +9,5 @@
 
 
 (defn changed
-  "Prints a report about the projects whose fingerprints have changed.
-
-  Options:
-    :bare       Only print the project names and directories, one per line"
-  [project args]
-  )
-
-
-(defn fingerprint
-  "Tasks for working with subproject fingerprinting."
-  {:subtasks [#'report]}
-  [project command & args]
-  (case command
-    "changed" (changed project args)
-    (lein/abort (pr-str command) "is not a valid fingerprint subcommand! Try: lein help monolith fingerprint")))
+  [project opts]
+  (lein/info opts))

@@ -182,6 +182,25 @@
   (checkouts/unlink project))
 
 
+;; ## Fingerprinting
+
+(defn changed
+  "Prints a report about the projects whose fingerprints have changed.
+
+  Options:
+    :bare       Only print out the project names and directories, one per line"
+  [project args]
+  (fingerprint/changed project (opts-only {:bare 0} args)))
+
+
+(defn fingerprint
+  "Tasks for working with subproject fingerprinting."
+  {:subtasks [#'changed]}
+  [project command & args]
+  (case command
+    "changed" (changed project args)
+    (lein/abort (pr-str command) "is not a valid fingerprint subcommand! Try: lein help monolith fingerprint")))
+
 
 ;; ## Plugin Entry
 
