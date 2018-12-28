@@ -25,11 +25,13 @@
   "Takes a collection of multihashes, and aggregates them together into a unified hash."
   [mhashes]
   ;; TODO: is there a better way to do this?
-  (->> mhashes
-       (map mhash/base58)
-       (sort)
-       (apply str)
-       (->multihash)))
+  (if (= 1 (count mhashes))
+    (first mhashes)
+    (->> mhashes
+         (map mhash/base58)
+         (sort)
+         (apply str)
+         (->multihash))))
 
 
 (defn- list-all-files
