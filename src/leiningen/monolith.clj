@@ -193,7 +193,7 @@
   Options:
     :bare       Only print out the project names and directories, one per line"
   [project args]
-  (fingerprint/changed project (opts-only {:bare 0} args)))
+  (fingerprint/changed project (opts-only fingerprint/changed-opts args)))
 
 
 (defn fingerprint

@@ -6,6 +6,7 @@
     [leiningen.core.main :as lein]
     [leiningen.core.project :as project]
     [lein-monolith.dependency :as dep]
+    [lein-monolith.target :as target]
     [lein-monolith.task.util :as u]
     [multihash.core :as mhash]
     [multihash.digest :as digest]
@@ -14,6 +15,13 @@
     (java.io
       File
       PushbackInputStream)))
+
+
+(def changed-opts
+  (merge
+    target/selection-opts
+    {:upstream 0
+     :downstream 0}))
 
 
 (def ^:private ->multihash
@@ -89,7 +97,7 @@
   (get (swap! cache assoc (dep/project-name project) m) (dep/project-name project)))
 
 
-(defn all-fingerprints
+(defn- project-fingerprints
   "Computes the various subfingerprints and final aggregate fingerprint for a project.
 
   Returns a map of `{:type-of-fingerprint <mhash>}`, with the final fingerprint
@@ -113,17 +121,27 @@
 (defn project-fingerprint
   "Returns just the final aggregate fingerprint for a project."
   [project dep-map subprojects cache]
-  (:final (all-fingerprints project dep-map subprojects cache)))
+  (:final (project-fingerprints project dep-map subprojects cache)))
 
 
 (defn changed
   [project opts]
-  (when (:monolith project)
-    (lein/abort "Cannot (yet) run on monolith project"))
-  (time
-    (let [[monolith subprojects] (u/load-monolith! project)
-          dep-map (dep/dependency-map subprojects)
-          cache (atom {})
-          prints (all-fingerprints project dep-map subprojects cache)]
-      (puget.printer/cprint cache)
-      (lein/info "fingerprint:" (pr-str (into {} (map (juxt key (comp mhash/base58 val))) prints))))))
+  (let [[monolith subprojects] (u/load-monolith! project)
+        dep-map (dep/dependency-map subprojects)
+        project-name (dep/project-name project)
+        opts' (cond-> opts
+                (:upstream opts)
+                (update :upstream-of conj (str project-name))
+
+                (:downstream opts)
+                (update :downstream-of conj (str project-name)))
+        targets (target/select monolith subprojects opts')
+        cache (atom {})
+        prints (->> targets
+                    (keep
+                      (fn [project-name]
+                        (when-let [subproject (subprojects project-name)]
+                          [project-name
+                           (project-fingerprints subproject dep-map subprojects cache)])))
+                    (into {}))]
+    (puget.printer/cprint prints)))
