@@ -12,7 +12,8 @@
     [lein-monolith.task.util :as u]
     [multihash.core :as mhash]
     [multihash.digest :as digest]
-    [puget.color.ansi :as ansi])
+    [puget.color.ansi :as ansi]
+    [puget.printer :as puget])
   (:import
     (java.io
       File
@@ -155,13 +156,19 @@
   [monolith]
   (let [f (fingerprints-file monolith)]
     (when (.exists f)
-      (edn/read-string (slurp f)))))
+      (edn/read-string
+        {:readers {'data/hash mhash/decode}}
+        (slurp f)))))
 
 
 (defn- write-fingerprints!
   [monolith fingerprints]
   (let [f (fingerprints-file monolith)]
-    (spit f (pr-str fingerprints))))
+    (spit f (puget/pprint-str
+              fingerprints
+              {:print-handlers
+               {multihash.core.Multihash
+                (puget/tagged-handler 'data/hash mhash/base58)}}))))
 
 
 ;; ## Comparing fingerprints
@@ -189,7 +196,7 @@
 
 
 (defn changed
-  [project opts]
+  [project opts & [fingerprint-type]]
   (let [[monolith subprojects] (u/load-monolith! project)
         dep-map (dep/dependency-map subprojects)
         project-name (dep/project-name project)
@@ -210,6 +217,13 @@
                               subproject dep-map subprojects cache)])))
                      (into {}))
         past (read-fingerprints monolith)
-        changed (changed-projects past current)]
-    (doseq [project-name changed]
-      (explain-change past current project-name))))
+        changed (changed-projects past current)
+        ftypes (if fingerprint-type
+                 [fingerprint-type]
+                 (keys past))]
+    (if (empty? ftypes)
+      (lein/warn "No saved fingerprint types I can compare to")
+      (doseq [ftype ftypes]
+        (println "Report for" ftype)
+        (doseq [project-name changed]
+          (explain-change past current project-name))))))

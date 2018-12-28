@@ -193,7 +193,8 @@
   Options:
     :bare       Only print out the project names and directories, one per line"
   [project args]
-  (fingerprint/changed project (opts-only fingerprint/changed-opts args)))
+  (let [[opts more] (u/parse-kw-args fingerprint/changed-opts args)]
+    (apply fingerprint/changed project opts more)))
 
 
 (defn fingerprint
