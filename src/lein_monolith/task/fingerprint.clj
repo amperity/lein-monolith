@@ -1,5 +1,7 @@
 (ns lein-monolith.task.fingerprint
   (:require
+    [clojure.data]
+    [clojure.edn :as edn]
     [clojure.java.io :as jio]
     [clojure.set :as set]
     [clojure.string :as str]
@@ -23,6 +25,8 @@
     {:upstream 0
      :downstream 0}))
 
+
+;; ## Generating fingerprints
 
 (def ^:private ->multihash
   "Globally storing the algorithm we use to generate each multihash."
@@ -81,14 +85,14 @@
       (->multihash)))
 
 
-(declare project-fingerprint)
+(declare fingerprint-info)
 
 
 (defn- hash-upstream-projects
   [project dep-map subprojects cache]
   (->> (dep-map (dep/project-name project))
        (keep subprojects)
-       (map #(project-fingerprint % dep-map subprojects cache))
+       (map #(::final (fingerprint-info % dep-map subprojects cache)))
        (aggregate-hashes)))
 
 
@@ -97,31 +101,91 @@
   (get (swap! cache assoc (dep/project-name project) m) (dep/project-name project)))
 
 
-(defn- project-fingerprints
-  "Computes the various subfingerprints and final aggregate fingerprint for a project.
-
-  Returns a map of `{:type-of-fingerprint <mhash>}`, with the final fingerprint
-  in the `:final` key, so it's easier to explain what caused a project's
+(defn- hash-inputs
+  "Hashes each of a project's inputs, and returns a map containing each individual
+  result, so it's easier to explain what aspect of a project caused its overall
   fingerprint to change.
 
-  Keeps a cache of fingerprints computed so far, for efficiency."
+  Returns a map of `{::xyz <mhash>}`
+
+  Keeps a cache of hashes computed so far, for efficiency."
   [project dep-map subprojects cache]
   (or (@cache (dep/project-name project))
       (let [prints
-            {:sources (hash-sources project :source-paths)
-             :tests (hash-sources project :test-paths)
-             :resources (hash-sources project :resource-paths)
-             :deps (hash-dependencies project)
-             :upstream (hash-upstream-projects project dep-map subprojects cache)}]
-        (cache-result!
-          cache project
-          (assoc prints :final (aggregate-hashes (vals prints)))))))
+            {::sources (hash-sources project :source-paths)
+             ::tests (hash-sources project :test-paths)
+             ::resources (hash-sources project :resource-paths)
+             ::deps (hash-dependencies project)
+             ::upstream (hash-upstream-projects project dep-map subprojects cache)}]
+        (cache-result! cache project prints))))
 
 
-(defn project-fingerprint
-  "Returns just the final aggregate fingerprint for a project."
+(defn fingerprint-info
+  "Returns a map of fingerpint info for a project, that can be compared with a
+  previous fingerprint file."
   [project dep-map subprojects cache]
-  (:final (project-fingerprints project dep-map subprojects cache)))
+  (let [prints (hash-inputs project dep-map subprojects cache)]
+    (assoc prints
+           ::final (aggregate-hashes (vals prints))
+           ::time (System/currentTimeMillis))))
+
+
+;; ## Storing fingerprints
+
+;; The .lein-monolith-fingerprints file at the metaproject root stores the
+;; detailed fingerprint map for each project and marker type.
+
+(comment
+  ;; Example .lein-monolith-fingerprints
+  {:build {foo/bar {::sources "multihash abcde"
+                    ::tests "multihash fghij"
+                    ,,,
+                    ::final "multihash vwxyz"}
+           ,,,}
+   ,,,})
+
+
+(defn- fingerprints-file
+  ^File
+  [monolith]
+  (jio/file (str (:root monolith) ".lein-monolith-fingerprints")))
+
+
+(defn- read-fingerprints
+  [monolith]
+  (let [f (fingerprints-file monolith)]
+    (when (.exists f)
+      (edn/read-string (slurp f)))))
+
+
+(defn- write-fingerprints!
+  [monolith fingerprints]
+  (let [f (fingerprints-file monolith)]
+    (spit f (pr-str fingerprints))))
+
+
+;; ## Comparing fingerprints
+
+(defn- changed-projects
+  "Takes two detailed fingerprint maps, and returns a set of project names that
+  have a current fingerprint but changed."
+  [past current]
+  (into #{}
+        (keep
+          (fn compare-fingerprints
+            [[project-name current-info]]
+            (let [past-info (get past project-name)]
+              (when (not= (::final past-info) (::final current-info))
+                project-name))))
+        current))
+
+
+(defn- explain-change
+  [past current project-name]
+  (let [past-info (get past project-name)
+        current-info (get current project-name)]
+    (println project-name "changed:")
+    (prn (take 2 (clojure.data/diff past-info current-info)))))
 
 
 (defn changed
@@ -137,11 +201,15 @@
                 (update :downstream-of conj (str project-name)))
         targets (target/select monolith subprojects opts')
         cache (atom {})
-        prints (->> targets
-                    (keep
-                      (fn [project-name]
-                        (when-let [subproject (subprojects project-name)]
-                          [project-name
-                           (project-fingerprints subproject dep-map subprojects cache)])))
-                    (into {}))]
-    (puget.printer/cprint prints)))
+        current (->> targets
+                     (keep
+                       (fn [project-name]
+                         (when-let [subproject (subprojects project-name)]
+                           [project-name
+                            (fingerprint-info
+                              subproject dep-map subprojects cache)])))
+                     (into {}))
+        past (read-fingerprints monolith)
+        changed (changed-projects past current)]
+    (doseq [project-name changed]
+      (explain-change past current project-name))))
