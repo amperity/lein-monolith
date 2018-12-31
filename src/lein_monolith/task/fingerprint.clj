@@ -142,7 +142,7 @@
 (defn- fingerprints-file
   ^File
   [monolith]
-  (jio/file (str (:root monolith) ".lein-monolith-fingerprints")))
+  (jio/file (:root monolith) ".lein-monolith-fingerprints"))
 
 
 (defn- read-fingerprints
@@ -218,7 +218,9 @@
 
 (defn mark
   [project opts args]
-  (let [[monolith subprojects] (u/load-monolith! project)
+  ;; TODO: validate markers
+  (let [markers (str/split (first args) #",")
+        [monolith subprojects] (u/load-monolith! project)
         dep-map (dep/dependency-map subprojects)
         targets (target/select monolith subprojects opts)
         cache (atom {})
@@ -229,4 +231,13 @@
                            [project-name
                             (fingerprint-info
                               subproject dep-map subprojects cache)])))
-                     (into {}))]))
+                     (into {}))
+        state (read-fingerprints monolith)
+        state' (reduce
+                 (fn [state marker]
+                   (update state marker merge current))
+                 state
+                 markers)]
+    (write-fingerprints! monolith state')
+    (lein/info (format "Set %d markers for %d projects"
+                       (count markers) (count current)))))
