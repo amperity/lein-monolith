@@ -187,26 +187,49 @@
 ;; Leiningen's help framework doesn't officially support "subsubtasks" so
 ;; we'll try our best to make it work by making them look like subtasks.
 
-(defn fingerprint-changed
+(defn fingerprint-info
   "Prints a report about the projects whose fingerprints have changed.
 
-  Options:
-    :bare       Only print out the project names and directories, one per line"
+  Optionally takes a marker id to narrow the information."
   [project args]
-  (let [[opts more] (u/parse-kw-args fingerprint/changed-opts args)]
-    (apply fingerprint/changed project opts more)))
+  (let [[opts more] (u/parse-kw-args target/selection-opts args)]
+    (fingerprint/info project opts more)))
+
+
+(defn fingerprint-mark
+  "Fingerprints all projects, or selected set of projects, and saves the results
+  under the given marker id(s), for later use with the `:changed` selector.
+
+  Usage:
+  lein monolith fingerprint mark [project-selectors] marker1,marker2,..."
+  [project args]
+  (let [[opts more] (u/parse-kw-args target/selection-opts args)]
+    (fingerprint/mark project opts more)))
+
+
+(defn fingerprint-clear
+  "Clears the fingerprints associated with one or more marker types on one or more
+  projects. By default, clears all projects for all marker types.
+
+  Usage:
+  lein monolith fingerprint clear [project-selectors] [marker1,marker2,...]"
+  [project args]
+  ;; TODO
+  )
 
 
 (defn fingerprint
   "Tasks for working with project fingerprinting.
 
 Subtasks available:
-changed        Show projects whose fingerprints have changed.
+report     Print a report about projects whose fingerprints have changed.
 
 For task-specific help, call `lein help monolith fingerprint-<task>`."
   [project & [command & args]]
   (case command
-    "changed" (fingerprint-changed project args)
+    "info"   (fingerprint-info project args)
+    "mark"   (fingerprint-mark project args)
+    "clear"  (fingerprint-clear project args)
     nil (lein/abort "Expected a subcommand relating to project fingerprinting. Try `lein help monolith fingerprint`")
     (lein/abort (pr-str command) "is not a valid fingerprint subcommand! Try: lein help monolith fingerprint")))
 
@@ -217,7 +240,7 @@ For task-specific help, call `lein help monolith fingerprint-<task>`."
   "Tasks for working with Leiningen projects inside a monorepo."
   {:subtasks [#'info #'lint #'deps-on #'deps-of #'graph
               #'with-all #'each #'link #'unlink #'fingerprint
-              #'fingerprint-changed]}
+              #'fingerprint-info #'fingerprint-mark #'fingerprint-clear]}
   [project command & args]
   (case command
     "info"        (info project args)

@@ -20,13 +20,6 @@
       PushbackInputStream)))
 
 
-(def changed-opts
-  (merge
-    target/selection-opts
-    {:upstream 0
-     :downstream 0}))
-
-
 ;; ## Generating fingerprints
 
 (def ^:private ->multihash
@@ -195,18 +188,12 @@
     (prn (take 2 (clojure.data/diff past-info current-info)))))
 
 
-(defn changed
+(defn info
   [project opts & [fingerprint-type]]
   (let [[monolith subprojects] (u/load-monolith! project)
         dep-map (dep/dependency-map subprojects)
         project-name (dep/project-name project)
-        opts' (cond-> opts
-                (:upstream opts)
-                (update :upstream-of conj (str project-name))
-
-                (:downstream opts)
-                (update :downstream-of conj (str project-name)))
-        targets (target/select monolith subprojects opts')
+        targets (target/select monolith subprojects opts)
         cache (atom {})
         current (->> targets
                      (keep
@@ -227,3 +214,19 @@
         (println "Report for" ftype)
         (doseq [project-name changed]
           (explain-change past current project-name))))))
+
+
+(defn mark
+  [project opts args]
+  (let [[monolith subprojects] (u/load-monolith! project)
+        dep-map (dep/dependency-map subprojects)
+        targets (target/select monolith subprojects opts)
+        cache (atom {})
+        current (->> targets
+                     (keep
+                       (fn [project-name]
+                         (when-let [subproject (subprojects project-name)]
+                           [project-name
+                            (fingerprint-info
+                              subproject dep-map subprojects cache)])))
+                     (into {}))]))
