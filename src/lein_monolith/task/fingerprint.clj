@@ -169,27 +169,40 @@
 (defn- changed-projects
   "Takes two detailed fingerprint maps, and returns a set of project names that
   have a current fingerprint but changed."
-  [past current]
+  [past current marker]
   (into #{}
         (keep
           (fn compare-fingerprints
             [[project-name current-info]]
-            (let [past-info (get past project-name)]
+            (let [past-info (get-in past [marker project-name])]
               (when (not= (::final past-info) (::final current-info))
                 project-name))))
         current))
 
 
-(defn- explain-change
-  [past current project-name]
-  (let [past-info (get past project-name)
+(defn- explain
+  [past current marker project-name]
+  (let [past-info (get-in past [marker project-name])
         current-info (get current project-name)]
-    (println project-name "changed:")
-    (prn (take 2 (clojure.data/diff past-info current-info)))))
+    (if (= (::final past-info) (::final current-info))
+      ::up-to-date
+      (or (some
+            (fn [ftype]
+              (when (not= (ftype past-info) (ftype current-info))
+                ftype))
+            [::sources ::tests ::resources ::deps ::upstream])
+          ::unknown))))
+
+
+(defn- list-projects
+  [project-names color]
+  (->> project-names
+       (map #(ansi/sgr % color))
+       (str/join ", ")))
 
 
 (defn info
-  [project opts & [fingerprint-type]]
+  [project opts & [marker]]
   (let [[monolith subprojects] (u/load-monolith! project)
         dep-map (dep/dependency-map subprojects)
         project-name (dep/project-name project)
@@ -204,16 +217,44 @@
                               subproject dep-map subprojects cache)])))
                      (into {}))
         past (read-fingerprints monolith)
-        changed (changed-projects past current)
-        ftypes (if fingerprint-type
-                 [fingerprint-type]
-                 (keys past))]
-    (if (empty? ftypes)
-      (lein/warn "No saved fingerprint types I can compare to")
-      (doseq [ftype ftypes]
-        (println "Report for" ftype)
-        (doseq [project-name changed]
-          (explain-change past current project-name))))))
+        markers (if marker
+                  [marker]
+                  (keys past))]
+    (if (empty? markers)
+      (lein/info "No saved fingerprint markers")
+      (doseq [marker markers
+              :let [changed (changed-projects past current marker)
+                    pct-changed (if (seq current)
+                                  (* 100.0 (/ (count changed) (count current)))
+                                  0.0)]]
+        (lein/info (ansi/sgr (format "%.2f%%" pct-changed)
+                             (cond
+                               (== 0.0 pct-changed) :green
+                               (< pct-changed 50) :yellow
+                               :else :red))
+                   "out of"
+                   (count current)
+                   "projects have out-of-date"
+                   (ansi/sgr marker :bold)
+                   "fingerprints:\n")
+        (let [reasons (group-by (partial explain past current marker)
+                                (keys current))]
+          (when-let [projs (seq (::up-to-date reasons))]
+            (lein/info "*" (ansi/sgr (count projs) :green)
+                       "up-to-date"))
+          (when-let [projs (seq (concat (::sources reasons)
+                                        (::tests reasons)
+                                        (::resources reasons)))]
+            (lein/info "*" (ansi/sgr (count projs) :red)
+                       "updated sources:"
+                       (list-projects projs :red)))
+          (when-let [projs (seq (::deps reasons))]
+            (lein/info "*" (ansi/sgr (count projs) :yellow)
+                       "updated external dependencies:"
+                       (list-projects projs :yellow)))
+          (when-let [projs (seq (::upstream reasons))]
+            (lein/info "*" (ansi/sgr (count projs) :yellow)
+                       "are downstream of affected projects")))))))
 
 
 (defn mark
@@ -239,5 +280,6 @@
                  state
                  markers)]
     (write-fingerprints! monolith state')
-    (lein/info (format "Set %d markers for %d projects"
-                       (count markers) (count current)))))
+    (lein/info (format "Set %s markers for %s projects"
+                       (ansi/sgr (count markers) :bold)
+                       (ansi/sgr (count current) :bold)))))
