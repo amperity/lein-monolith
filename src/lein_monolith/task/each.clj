@@ -36,7 +36,8 @@
      :upstream 0
      :downstream 0
      :start 1
-     :changed 1}))
+     :changed 1
+     :refresh 1}))
 
 
 (defn- opts->args
@@ -242,18 +243,26 @@
         opts (:opts ctx)
         subproject (get-in ctx [:subprojects target])
         results (delay {:name target
-                        :elapsed (/ (- (System/nanoTime) start) 1000000.0)})]
+                        :elapsed (/ (- (System/nanoTime) start) 1000000.0)})
+        marker (:changed opts)
+        save? (:save-fingerprints opts)
+        fctx (:fingerprint-context ctx)]
     (try
       (lein/info (format "\nApplying to %s%s"
                          (ansi/sgr target :bold :yellow)
-                         (if-let [marker (:changed opts)]
-                           (str " (" (fingerprint/explain-str (:fingerprint-context ctx) marker target) ")")
+                         (if marker
+                           (str " (" (fingerprint/explain-str fctx marker target) ")")
                            "")))
       (if-let [out-dir (get-in ctx [:opts :output] )]
         ; Capture output to file.
         (apply-subproject-task-with-output (:monolith ctx) subproject (:task ctx) out-dir results)
         ; Run without output capturing.
         (apply-subproject-task (:monolith ctx) subproject (:task ctx)))
+      (when save?
+        (fingerprint/save! fctx marker target)
+        (lein/info (format "Saved %s fingerprint for %s"
+                           (ansi/sgr marker :bold)
+                           (ansi/sgr target :bold :yellow))))
       (assoc @results :success true)
       (catch Exception ex
         (when-not (or (:parallel opts) (:endure opts))
@@ -317,6 +326,12 @@
   [project opts task]
   (let [[monolith subprojects] (u/load-monolith! project)
         fctx (fingerprint/context monolith subprojects)
+        opts (if-let [marker (:refresh opts)]
+               (-> opts
+                   (dissoc :refresh)
+                   (assoc :changed marker
+                          :save-fingerprints true))
+               opts)
         targets (select-projects monolith subprojects fctx (dep/project-name project) opts)
         n (inc (or (first (last targets)) -1))
         start-time (System/nanoTime)]

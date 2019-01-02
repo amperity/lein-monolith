@@ -140,7 +140,7 @@
   (jio/file (:root monolith) ".lein-monolith-fingerprints"))
 
 
-(defn- read-fingerprints
+(defn- read-fingerprints-file
   [monolith]
   (let [f (fingerprints-file monolith)]
     (when (.exists f)
@@ -149,7 +149,7 @@
         (slurp f)))))
 
 
-(defn- write-fingerprints!
+(defn- write-fingerprints-file!
   [monolith fingerprints]
   (let [f (fingerprints-file monolith)]
     (spit f (puget/pprint-str
@@ -159,13 +159,22 @@
                 (puget/tagged-handler 'data/hash mhash/base58)}}))))
 
 
-;; ## Comparing fingerprints
+(let [lock (Object.)]
+  (defn update-fingerprints-file!
+    [monolith f & args]
+    (locking lock
+      (write-fingerprints-file!
+        monolith
+        (apply f (read-fingerprints-file monolith) args)))))
+
+
+;; ## Generating and comparing fingerprints
 
 (defn context
   "Create a stateful context to use for fingerprinting operations."
   [monolith subprojects]
   (let [dep-map (dep/dependency-map subprojects)
-        initial (read-fingerprints monolith)
+        initial (read-fingerprints-file monolith)
         cache (atom {})]
     {:monolith monolith
      :subprojects subprojects
@@ -186,7 +195,7 @@
   "Determines if a project has changed since the last fingerprint saved under the
   given marker."
   [ctx marker project-name]
-  (let [{:keys [monolith subprojects dependencies initial cache]} ctx
+  (let [{:keys [initial]} ctx
         current (fingerprints ctx project-name)
         past (get-in initial [marker project-name])]
     (not= (::final past) (::final current))))
@@ -194,7 +203,7 @@
 
 (defn- explain-kw
   [ctx marker project-name]
-  (let [{:keys [monolith subprojects dependencies initial cache]} ctx
+  (let [{:keys [initial]} ctx
         current (fingerprints ctx project-name)
         past (get-in initial [marker project-name])]
     (if (= (::final past) (::final current))
@@ -217,6 +226,15 @@
     ::deps (ansi/sgr "external dependency changed" :yellow)
     ::upstream (ansi/sgr "downstream of affected project" :yellow)
     ::unknown (ansi/sgr "new project" :red)))
+
+
+(defn save!
+  "Save the fingerprints for a project with the specified marker."
+  [ctx marker project-name]
+  (let [current (fingerprints ctx project-name)]
+    (update-fingerprints-file!
+      (:monolith ctx)
+      assoc-in [marker project-name] current)))
 
 
 ;; TODO: remove
@@ -270,7 +288,7 @@
                             (hash-inputs
                               subproject dep-map subprojects cache)])))
                      (into {}))
-        past (read-fingerprints monolith)
+        past (read-fingerprints-file monolith)
         markers (if marker
                   [marker]
                   (keys past))]
@@ -327,13 +345,13 @@
                             (hash-inputs
                               subproject dep-map subprojects cache)])))
                      (into {}))
-        state (read-fingerprints monolith)
+        state (read-fingerprints-file monolith)
         state' (reduce
                  (fn [state marker]
                    (update state marker merge current))
                  state
                  markers)]
-    (write-fingerprints! monolith state')
+    (write-fingerprints-file! monolith state')
     (lein/info (format "Set %s markers for %s projects"
                        (ansi/sgr (count markers) :bold)
                        (ansi/sgr (count current) :bold)))))
