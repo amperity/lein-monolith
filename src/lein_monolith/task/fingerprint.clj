@@ -220,23 +220,21 @@
           ::unknown))))
 
 
-(defn- elaborate
-  [kw-reason]
-  (case kw-reason
-    ::up-to-date ["up-to-date" :green]
-    ::new-project ["new project" :red]
-    ::sources ["sources changed" :red]
-    ::tests ["tests changed" :red]
-    ::resources ["resources changed" :red]
-    ::deps ["external dependency changed" :yellow]
-    ::upstream ["downstream of affected projects" :yellow]
-    ::unknown ["different fingerprint" :red]))
+(def ^:private reason-details
+  {::up-to-date ["is up-to-date" "are up-to-date" :green]
+   ::new-project ["is a new project" "are new projects" :red]
+   ::sources ["has updated sources" "have updated sources" :red]
+   ::tests ["has updated tests" "have updated tests" :red]
+   ::resources ["has updated resources" "have updated resources" :red]
+   ::deps ["has updated external dependencies" "have updated external dependencies" :yellow]
+   ::upstream ["is downstream of an affected project" "are downstream of affected projects" :yellow]
+   ::unknown ["has a different fingerprint" "have different fingerprints" :red]})
 
 
 (defn explain-str
   [ctx marker project-name]
-  (let [[s color] (elaborate (explain-kw ctx marker project-name))]
-    (ansi/sgr s color)))
+  (let [[singular plural color] (reason-details (explain-kw ctx marker project-name))]
+    (ansi/sgr singular color)))
 
 
 (defn save!
@@ -288,9 +286,10 @@
         (let [reasons (group-by (partial explain-kw ctx marker) targets)]
           (doseq [k [::unknown ::new-project ::sources ::tests ::resources ::deps ::upstream ::up-to-date]]
             (when-let [projs (seq (k reasons))]
-              (let [[s color] (elaborate k)]
+              (let [[singular plural color] (reason-details k)
+                    c (count projs)]
                 (lein/info "*" (ansi/sgr (count projs) color)
-                           (str s
+                           (str (if (= 1 c) singular plural)
                                 (when-not (#{::up-to-date ::upstream} k)
                                   (str ": " (list-projects projs color)))))))))
         (when (seq (rest markers))
