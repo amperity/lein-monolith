@@ -220,17 +220,23 @@
           ::unknown))))
 
 
+(defn- elaborate
+  [kw-reason]
+  (case kw-reason
+    ::up-to-date ["up-to-date" :green]
+    ::new-project ["new project" :red]
+    ::sources ["sources changed" :red]
+    ::tests ["tests changed" :red]
+    ::resources ["resources changed" :red]
+    ::deps ["external dependency changed" :yellow]
+    ::upstream ["downstream of affected projects" :yellow]
+    ::unknown ["different fingerprint" :red]))
+
+
 (defn explain-str
   [ctx marker project-name]
-  (case (explain-kw ctx marker project-name)
-    ::up-to-date (ansi/sgr "up-to-date" :green)
-    ::new-project (ansi/sgr "new project" :red)
-    ::sources (ansi/sgr "sources changed" :red)
-    ::tests (ansi/sgr "tests changed" :red)
-    ::resources (ansi/sgr "resources changed" :red)
-    ::deps (ansi/sgr "external dependency changed" :yellow)
-    ::upstream (ansi/sgr "downstream of affected project" :yellow)
-    ::unknown (ansi/sgr "different fingerprint" :red)))
+  (let [[s color] (elaborate (explain-kw ctx marker project-name))]
+    (ansi/sgr s color)))
 
 
 (defn save!
@@ -240,35 +246,6 @@
     (update-fingerprints-file!
       (:monolith ctx)
       assoc-in [marker project-name] current)))
-
-
-;; TODO: remove
-(defn- changed-projects
-  "Takes two detailed fingerprint maps, and returns a set of project names that
-  have a current fingerprint but changed."
-  [past current marker]
-  (into #{}
-        (keep
-          (fn compare-fingerprints
-            [[project-name current-info]]
-            (let [past-info (get-in past [marker project-name])]
-              (when (not= (::final past-info) (::final current-info))
-                project-name))))
-        current))
-
-
-(defn- explain
-  [past current marker project-name]
-  (let [past-info (get-in past [marker project-name])
-        current-info (get current project-name)]
-    (if (= (::final past-info) (::final current-info))
-      ::up-to-date
-      (or (some
-            (fn [ftype]
-              (when (not= (ftype past-info) (ftype current-info))
-                ftype))
-            [::sources ::tests ::resources ::deps ::upstream])
-          ::unknown))))
 
 
 (defn- list-projects
@@ -281,28 +258,22 @@
 (defn info
   [project opts & [marker]]
   (let [[monolith subprojects] (u/load-monolith! project)
-        dep-map (dep/dependency-map subprojects)
-        project-name (dep/project-name project)
+        ctx (context monolith subprojects)
         targets (target/select monolith subprojects opts)
-        cache (atom {})
-        current (->> targets
-                     (keep
-                       (fn [project-name]
-                         (when-let [subproject (subprojects project-name)]
-                           [project-name
-                            (hash-inputs
-                              subproject dep-map subprojects cache)])))
-                     (into {}))
-        past (read-fingerprints-file monolith)
         markers (if marker
                   [marker]
-                  (keys past))]
-    (if (empty? markers)
-      (lein/info "No saved fingerprint markers")
+                  (keys (:initial ctx)))]
+    (cond
+      (empty? markers) (lein/info "No saved fingerprint markers")
+      (empty? targets) (lein/info "No projects selected")
+
+      :else
       (doseq [marker markers
-              :let [changed (changed-projects past current marker)
-                    pct-changed (if (seq current)
-                                  (* 100.0 (/ (count changed) (count current)))
+              :let [changed (->> targets
+                                 (filter (partial changed? ctx marker))
+                                 (set))
+                    pct-changed (if (seq targets)
+                                  (* 100.0 (/ (count changed) (count targets)))
                                   0.0)]]
         (lein/info (ansi/sgr (format "%.2f%%" pct-changed)
                              (cond
@@ -310,28 +281,18 @@
                                (< pct-changed 50) :yellow
                                :else :red))
                    "out of"
-                   (count current)
+                   (count targets)
                    "projects have out-of-date"
                    (ansi/sgr marker :bold)
                    "fingerprints:\n")
-        (let [reasons (group-by (partial explain past current marker)
-                                (keys current))]
-          (when-let [projs (seq (concat (::sources reasons)
-                                        (::tests reasons)
-                                        (::resources reasons)))]
-            (lein/info "*" (ansi/sgr (count projs) :red)
-                       "updated sources:"
-                       (list-projects projs :red)))
-          (when-let [projs (seq (::deps reasons))]
-            (lein/info "*" (ansi/sgr (count projs) :yellow)
-                       "updated external dependencies:"
-                       (list-projects projs :yellow)))
-          (when-let [projs (seq (::upstream reasons))]
-            (lein/info "*" (ansi/sgr (count projs) :yellow)
-                       "are downstream of affected projects"))
-          (when-let [projs (seq (::up-to-date reasons))]
-            (lein/info "*" (ansi/sgr (count projs) :green)
-                       "up-to-date")))
+        (let [reasons (group-by (partial explain-kw ctx marker) targets)]
+          (doseq [k [::unknown ::new-project ::sources ::tests ::resources ::deps ::upstream ::up-to-date]]
+            (when-let [projs (seq (k reasons))]
+              (let [[s color] (elaborate k)]
+                (lein/info "*" (ansi/sgr (count projs) color)
+                           (str s
+                                (when-not (#{::up-to-date ::upstream} k)
+                                  (str ": " (list-projects projs color)))))))))
         (when (seq (rest markers))
           (lein/info))))))
 
