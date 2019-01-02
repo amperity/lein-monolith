@@ -297,28 +297,30 @@
 
 
 (defn mark
-  [project opts args]
-  ;; TODO: validate markers
-  (let [markers (str/split (first args) #",")
-        [monolith subprojects] (u/load-monolith! project)
-        dep-map (dep/dependency-map subprojects)
+  [project opts markers]
+  (when-not (seq markers)
+    (lein/abort "Please specify one or more markers!"))
+  (let [[monolith subprojects] (u/load-monolith! project)
+        ctx (context monolith subprojects)
         targets (target/select monolith subprojects opts)
-        cache (atom {})
-        current (->> targets
-                     (keep
-                       (fn [project-name]
-                         (when-let [subproject (subprojects project-name)]
-                           [project-name
-                            (hash-inputs
-                              subproject dep-map subprojects cache)])))
-                     (into {}))
-        state (read-fingerprints-file monolith)
-        state' (reduce
-                 (fn [state marker]
-                   (update state marker merge current))
-                 state
-                 markers)]
-    (write-fingerprints-file! monolith state')
+        prints (->> targets
+                    (map
+                      (fn [project-name]
+                        [project-name (fingerprints ctx project-name)]))
+                    (into {}))]
+    (update-fingerprints-file!
+      monolith
+      (fn [all-prints]
+        (reduce
+          #(update %1 %2 merge prints)
+          all-prints
+          markers)))
     (lein/info (format "Set %s markers for %s projects"
                        (ansi/sgr (count markers) :bold)
-                       (ansi/sgr (count current) :bold)))))
+                       (ansi/sgr (count targets) :bold)))))
+
+
+(defn clear
+  [project opts args]
+  ;; TODO
+  )

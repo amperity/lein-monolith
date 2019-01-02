@@ -201,7 +201,7 @@
   under the given marker id(s), for later use with the `:changed` selector.
 
   Usage:
-  lein monolith fingerprint mark [project-selectors] marker1,marker2,..."
+  lein monolith fingerprint mark [project-selectors] marker1 marker2 ..."
   [project args]
   (let [[opts more] (u/parse-kw-args target/selection-opts args)]
     (fingerprint/mark project opts more)))
@@ -212,10 +212,10 @@
   projects. By default, clears all projects for all marker types.
 
   Usage:
-  lein monolith fingerprint clear [project-selectors] [marker1,marker2,...]"
+  lein monolith fingerprint clear [project-selectors] [marker1 marker2 ...]"
   [project args]
-  ;; TODO
-  )
+  (let [[opts more] (u/parse-kw-args target/selection-opts args)]
+    (fingerprint/clear project opts more)))
 
 
 (defn fingerprint
