@@ -206,26 +206,31 @@
   (let [{:keys [initial]} ctx
         current (fingerprints ctx project-name)
         past (get-in initial [marker project-name])]
-    (if (= (::final past) (::final current))
-      ::up-to-date
+    (cond
+      (nil? past) ::new-project
+
+      (= (::final past) (::final current)) ::up-to-date
+
+      :else
       (or (some
             (fn [ftype]
               (when (not= (ftype past) (ftype current))
                 ftype))
             [::sources ::tests ::resources ::deps ::upstream])
-          ::no-keyword))))
+          ::unknown))))
 
 
 (defn explain-str
   [ctx marker project-name]
   (case (explain-kw ctx marker project-name)
     ::up-to-date (ansi/sgr "up-to-date" :green)
+    ::new-project (ansi/sgr "new project" :red)
     ::sources (ansi/sgr "sources changed" :red)
     ::tests (ansi/sgr "tests changed" :red)
     ::resources (ansi/sgr "resources changed" :red)
     ::deps (ansi/sgr "external dependency changed" :yellow)
     ::upstream (ansi/sgr "downstream of affected project" :yellow)
-    ::unknown (ansi/sgr "new project" :red)))
+    ::unknown (ansi/sgr "different fingerprint" :red)))
 
 
 (defn save!
@@ -326,7 +331,9 @@
                        "are downstream of affected projects"))
           (when-let [projs (seq (::up-to-date reasons))]
             (lein/info "*" (ansi/sgr (count projs) :green)
-                       "up-to-date")))))))
+                       "up-to-date")))
+        (when (seq (rest markers))
+          (lein/info))))))
 
 
 (defn mark

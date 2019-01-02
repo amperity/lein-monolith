@@ -193,7 +193,7 @@
   Optionally takes a marker id to narrow the information."
   [project args]
   (let [[opts more] (u/parse-kw-args target/selection-opts args)]
-    (fingerprint/info project opts more)))
+    (apply fingerprint/info project opts more)))
 
 
 (defn fingerprint-mark
