@@ -336,7 +336,8 @@
         n (inc (or (first (last targets)) -1))
         start-time (System/nanoTime)]
     (when (empty? targets)
-      (lein/abort "Target selection matched zero subprojects!"))
+      (lein/info "Target selection matched zero subprojects; nothing to do")
+      (lein/exit 0))
     (lein/info "Applying"
                (ansi/sgr (str/join " " task) :bold :cyan)
                "to" (ansi/sgr (count targets) :cyan)
