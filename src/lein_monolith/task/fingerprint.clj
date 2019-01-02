@@ -20,7 +20,7 @@
       PushbackInputStream)))
 
 
-;; ## Generating fingerprints
+;; ## Hashing projects' inputs
 
 (def ^:private ->multihash
   "Globally storing the algorithm we use to generate each multihash."
@@ -79,14 +79,14 @@
       (->multihash)))
 
 
-(declare fingerprint-info)
+(declare hash-inputs)
 
 
 (defn- hash-upstream-projects
   [project dep-map subprojects cache]
   (->> (dep-map (dep/project-name project))
        (keep subprojects)
-       (map #(::final (fingerprint-info % dep-map subprojects cache)))
+       (map #(::final (hash-inputs % dep-map subprojects cache)))
        (aggregate-hashes)))
 
 
@@ -110,18 +110,13 @@
              ::tests (hash-sources project :test-paths)
              ::resources (hash-sources project :resource-paths)
              ::deps (hash-dependencies project)
-             ::upstream (hash-upstream-projects project dep-map subprojects cache)}]
+             ::upstream (hash-upstream-projects project dep-map subprojects cache)}
+
+            prints
+            (assoc prints
+                   ::final (aggregate-hashes (vals prints))
+                   ::time (System/currentTimeMillis))]
         (cache-result! cache project prints))))
-
-
-(defn fingerprint-info
-  "Returns a map of fingerpint info for a project, that can be compared with a
-  previous fingerprint file."
-  [project dep-map subprojects cache]
-  (let [prints (hash-inputs project dep-map subprojects cache)]
-    (assoc prints
-           ::final (aggregate-hashes (vals prints))
-           ::time (System/currentTimeMillis))))
 
 
 ;; ## Storing fingerprints
@@ -166,6 +161,65 @@
 
 ;; ## Comparing fingerprints
 
+(defn context
+  "Create a stateful context to use for fingerprinting operations."
+  [monolith subprojects]
+  (let [dep-map (dep/dependency-map subprojects)
+        initial (read-fingerprints monolith)
+        cache (atom {})]
+    {:monolith monolith
+     :subprojects subprojects
+     :dependencies dep-map
+     :initial initial
+     :cache cache}))
+
+
+(defn- fingerprints
+  "Returns a map of fingerpints associated with a project, including the ::final
+  one. Can be compared with a previous fingerprint file."
+  [ctx project-name]
+  (let [{:keys [subprojects dependencies cache]} ctx]
+    (hash-inputs (subprojects project-name) dependencies subprojects cache)))
+
+
+(defn changed?
+  "Determines if a project has changed since the last fingerprint saved under the
+  given marker."
+  [ctx marker project-name]
+  (let [{:keys [monolith subprojects dependencies initial cache]} ctx
+        current (fingerprints ctx project-name)
+        past (get-in initial [marker project-name])]
+    (not= (::final past) (::final current))))
+
+
+(defn- explain-kw
+  [ctx marker project-name]
+  (let [{:keys [monolith subprojects dependencies initial cache]} ctx
+        current (fingerprints ctx project-name)
+        past (get-in initial [marker project-name])]
+    (if (= (::final past) (::final current))
+      ::up-to-date
+      (or (some
+            (fn [ftype]
+              (when (not= (ftype past) (ftype current))
+                ftype))
+            [::sources ::tests ::resources ::deps ::upstream])
+          ::no-keyword))))
+
+
+(defn explain-str
+  [ctx marker project-name]
+  (case (explain-kw ctx marker project-name)
+    ::up-to-date (ansi/sgr "up-to-date" :green)
+    ::sources (ansi/sgr "sources changed" :red)
+    ::tests (ansi/sgr "tests changed" :red)
+    ::resources (ansi/sgr "resources changed" :red)
+    ::deps (ansi/sgr "external dependency changed" :yellow)
+    ::upstream (ansi/sgr "downstream of affected project" :yellow)
+    ::unknown (ansi/sgr "new project" :red)))
+
+
+;; TODO: remove
 (defn- changed-projects
   "Takes two detailed fingerprint maps, and returns a set of project names that
   have a current fingerprint but changed."
@@ -213,7 +267,7 @@
                        (fn [project-name]
                          (when-let [subproject (subprojects project-name)]
                            [project-name
-                            (fingerprint-info
+                            (hash-inputs
                               subproject dep-map subprojects cache)])))
                      (into {}))
         past (read-fingerprints monolith)
@@ -239,9 +293,6 @@
                    "fingerprints:\n")
         (let [reasons (group-by (partial explain past current marker)
                                 (keys current))]
-          (when-let [projs (seq (::up-to-date reasons))]
-            (lein/info "*" (ansi/sgr (count projs) :green)
-                       "up-to-date"))
           (when-let [projs (seq (concat (::sources reasons)
                                         (::tests reasons)
                                         (::resources reasons)))]
@@ -254,7 +305,10 @@
                        (list-projects projs :yellow)))
           (when-let [projs (seq (::upstream reasons))]
             (lein/info "*" (ansi/sgr (count projs) :yellow)
-                       "are downstream of affected projects")))))))
+                       "are downstream of affected projects"))
+          (when-let [projs (seq (::up-to-date reasons))]
+            (lein/info "*" (ansi/sgr (count projs) :green)
+                       "up-to-date")))))))
 
 
 (defn mark
@@ -270,7 +324,7 @@
                        (fn [project-name]
                          (when-let [subproject (subprojects project-name)]
                            [project-name
-                            (fingerprint-info
+                            (hash-inputs
                               subproject dep-map subprojects cache)])))
                      (into {}))
         state (read-fingerprints monolith)
