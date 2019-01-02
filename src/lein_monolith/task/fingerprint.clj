@@ -303,17 +303,18 @@
   (let [[monolith subprojects] (u/load-monolith! project)
         ctx (context monolith subprojects)
         targets (target/select monolith subprojects opts)
-        prints (->> targets
-                    (map
-                      (fn [project-name]
-                        [project-name (fingerprints ctx project-name)]))
-                    (into {}))]
+        fprints (->> targets
+                     (map
+                       (fn [project-name]
+                         [project-name (fingerprints ctx project-name)]))
+                     (into {}))]
     (update-fingerprints-file!
       monolith
-      (fn [all-prints]
+      (fn add-new-fingerprints
+        [all-fprints]
         (reduce
-          #(update %1 %2 merge prints)
-          all-prints
+          #(update %1 %2 merge fprints)
+          all-fprints
           markers)))
     (lein/info (format "Set %s markers for %s projects"
                        (ansi/sgr (count markers) :bold)
@@ -321,6 +322,19 @@
 
 
 (defn clear
-  [project opts args]
-  ;; TODO
-  )
+  [project opts markers]
+  (let [[monolith subprojects] (u/load-monolith! project)
+        markers (set markers)
+        targets (set (target/select monolith subprojects opts))]
+    (update-fingerprints-file!
+      monolith
+      (partial into {}
+               (keep
+                 (fn [[marker fprints]]
+                   (if (markers marker)
+                     (when-let [fprints' (seq (filter (comp targets val) fprints))]
+                       [marker fprints'])
+                     [marker fprints])))))
+    (lein/info (format "Cleared %s markers for %s projects"
+                       (ansi/sgr (count markers) :bold)
+                       (ansi/sgr (count targets) :bold)))))
