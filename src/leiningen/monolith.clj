@@ -189,9 +189,12 @@
 ;; we'll try our best to make it work by making them look like subtasks.
 
 (defn fingerprint-info
-  "Prints a report about the projects whose fingerprints have changed.
+  "Prints a report about the projects whose fingerprints have changed. Optionally
+  takes a marker id to narrow the information, or project selectors to narrow
+  down the projects.
 
-  Optionally takes a marker id to narrow the information."
+  Usage:
+  lein monolith fingerprint info [project-selectors] [marker1 marker2 ...]"
   [project args]
   (let [[opts more] (u/parse-kw-args fingerprint/selection-opts args)
         opts (u/globalize-opts project opts)]
@@ -225,10 +228,12 @@
 (defn fingerprint
   "Tasks for working with project fingerprinting.
 
-Subtasks available:
-report     Print a report about projects whose fingerprints have changed.
+  Subtasks available:
+  info      Print a report about projects whose fingerprints have changed.
+  mark      Manually reset fingerprints reflecting projects' current state.
+  clear     Delete fingerprint information.
 
-For task-specific help, call `lein help monolith fingerprint-<task>`."
+  For task-specific help, call `lein help monolith fingerprint-<task>`."
   [project & [command & args]]
   (case command
     "info"   (fingerprint-info project args)

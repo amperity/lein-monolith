@@ -272,12 +272,12 @@
 
 
 (defn info
-  [project opts & [marker]]
+  [project opts & markers]
   (let [[monolith subprojects] (u/load-monolith! project)
         ctx (context monolith subprojects)
         targets (filter subprojects (target/select monolith subprojects opts))
-        markers (if marker
-                  [marker]
+        markers (if (seq markers)
+                  markers
                   (keys (:initial ctx)))]
     (cond
       (empty? markers) (lein/info "No saved fingerprint markers")
