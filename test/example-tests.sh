@@ -38,6 +38,6 @@ test_monolith each :parallel 3 :report :endure cprint :group
 test_monolith each :refresh foo install
 test_monolith each :refresh foo install
 test_monolith each :parallel 3 :refresh bar install
-test_monolith fingerprint info
-test_monolith fingerprint clear :upstream-of lib-b
-test_monolith fingerprint mark :upstream-of lib-b foo bar
+test_monolith changed
+test_monolith clear :upstream-of lib-b
+test_monolith mark :upstream-of lib-b foo bar
