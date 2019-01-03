@@ -140,6 +140,8 @@
     :select <key>           Use a selector from the config to filter target projects.
     :skip <names>           Exclude one or more projects from the target set.
     :start <name>           Provide a starting point for the subproject iteration
+    :refresh <marker>       Only iterate over projects that have changed since the last `:refresh` of this marker
+    :changed <marker>       Like `:refresh` but does not reset the projects' fingerprints for the next run
 
   Each <names> argument can contain multiple comma-separated project names, and
   all the targeting options except `:start` may be provided multiple times.
@@ -149,7 +151,8 @@
       lein monolith each check
       lein monolith each :upstream :parallel 4 install
       lein monolith each :select :deployable uberjar
-      lein monolith each :report :start my/lib-a test"
+      lein monolith each :report :start my/lib-a test
+      lein monolith each :refresh ci/build install"
   [project args]
   (let [[opts task] (u/parse-kw-args each/task-opts args)]
     (when (empty? task)
