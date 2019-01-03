@@ -141,7 +141,7 @@
     :skip <names>           Exclude one or more projects from the target set.
     :start <name>           Provide a starting point for the subproject iteration
     :refresh <marker>       Only iterate over projects that have changed since the last `:refresh` of this marker
-    :changed <marker>       Like `:refresh` but does not reset the projects' fingerprints for the next run
+    :changed <marker>       Like `:refresh` but does not reset the projects' state for the next run
 
   Each <names> argument can contain multiple comma-separated project names, and
   all the targeting options except `:start` may be provided multiple times.
