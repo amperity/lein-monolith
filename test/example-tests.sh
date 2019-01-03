@@ -35,3 +35,9 @@ test_monolith each :in lib-a cprint :root
 test_monolith each :upstream-of lib-b cprint :version
 test_monolith each :downstream-of lib-a cprint :name
 test_monolith each :parallel 3 :report :endure cprint :group
+test_monolith each :refresh foo install
+test_monolith each :refresh foo install
+test_monolith each :parallel 3 :refresh bar install
+test_monolith fingerprint info
+test_monolith fingerprint clear :upstream-of lib-b
+test_monolith fingerprint mark :upstream-of lib-b foo bar
