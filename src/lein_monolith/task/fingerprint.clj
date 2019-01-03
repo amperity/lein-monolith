@@ -269,7 +269,7 @@
   [project opts & [marker]]
   (let [[monolith subprojects] (u/load-monolith! project)
         ctx (context monolith subprojects)
-        targets (target/select monolith subprojects opts)
+        targets (filter subprojects (target/select monolith subprojects opts))
         markers (if marker
                   [marker]
                   (keys (:initial ctx)))]
@@ -314,7 +314,7 @@
     (lein/abort "Please specify one or more markers!"))
   (let [[monolith subprojects] (u/load-monolith! project)
         ctx (context monolith subprojects)
-        targets (target/select monolith subprojects opts)
+        targets (filter subprojects (target/select monolith subprojects opts))
         fprints (->> targets
                      (map
                        (fn [project-name]
@@ -337,7 +337,7 @@
   [project opts markers]
   (let [[monolith subprojects] (u/load-monolith! project)
         markers (set markers)
-        targets (set (target/select monolith subprojects opts))]
+        targets (set (filter subprojects (target/select monolith subprojects opts)))]
     (update-fingerprints-file!
       monolith
       (partial into {}
