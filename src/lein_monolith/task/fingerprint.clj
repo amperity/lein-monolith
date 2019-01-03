@@ -265,8 +265,8 @@
        (str/join ", ")))
 
 
-(defn info
-  [project opts & markers]
+(defn changed
+  [project opts markers]
   (let [[monolith subprojects] (u/load-monolith! project)
         ctx (context monolith subprojects)
         targets (filter subprojects (target/select monolith subprojects opts))

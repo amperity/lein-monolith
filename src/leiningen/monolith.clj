@@ -188,59 +188,47 @@
 ;; Leiningen's help framework doesn't officially support "subsubtasks" so
 ;; we'll try our best to make it work by making them look like subtasks.
 
-(defn fingerprint-info
-  "Prints a report about the projects whose fingerprints have changed. Optionally
-  takes a marker id to narrow the information, or project selectors to narrow
-  down the projects.
+(defn changed
+  "Show information about the projects that have changed since last :refresh.
+
+  Optionally takes one or more marker ids, or project selectors, to narrow the
+  information.
 
   Usage:
-  lein monolith fingerprint info [project-selectors] [marker1 marker2 ...]"
+  lein monolith changed [project-selectors] [marker1 marker2 ...]"
   [project args]
   (let [[opts more] (u/parse-kw-args fingerprint/selection-opts args)
         opts (u/globalize-opts project opts)]
-    (apply fingerprint/info project opts more)))
+    (fingerprint/changed project opts more)))
 
 
-(defn fingerprint-mark
-  "Fingerprints all projects, or selected set of projects, and saves the results
-  under the given marker id(s), for later use with the `:changed` selector.
+(defn mark
+  "Manually mark projects as refreshed.
+
+  Fingerprints all projects, or a selected set of projects, and saves the
+  results under the given marker id(s), for later use with the `:refresh`
+  selector.
 
   Usage:
-  lein monolith fingerprint mark [project-selectors] marker1 marker2 ..."
+  lein monolith mark [project-selectors] marker1 marker2 ..."
   [project args]
   (let [[opts more] (u/parse-kw-args fingerprint/selection-opts args)
         opts (u/globalize-opts project opts)]
     (fingerprint/mark project opts more)))
 
 
-(defn fingerprint-clear
-  "Clears the fingerprints associated with one or more marker types on one or more
-  projects. By default, clears all projects for all marker types.
+(defn clear
+  "Clear projects' cached state so they will be re-built next :refresh.
+
+  Removes the fingerprints associated with one or more marker types on one or
+  more projects. By default, clears all projects for all marker types.
 
   Usage:
-  lein monolith fingerprint clear [project-selectors] [marker1 marker2 ...]"
+  lein monolith clear [project-selectors] [marker1 marker2 ...]"
   [project args]
   (let [[opts more] (u/parse-kw-args fingerprint/selection-opts args)
         opts (u/globalize-opts project opts)]
     (fingerprint/clear project opts more)))
-
-
-(defn fingerprint
-  "Tasks for working with project fingerprinting.
-
-  Subtasks available:
-  info      Print a report about projects whose fingerprints have changed.
-  mark      Manually reset fingerprints reflecting projects' current state.
-  clear     Delete fingerprint information.
-
-  For task-specific help, call `lein help monolith fingerprint-<task>`."
-  [project & [command & args]]
-  (case command
-    "info"   (fingerprint-info project args)
-    "mark"   (fingerprint-mark project args)
-    "clear"  (fingerprint-clear project args)
-    nil (lein/abort "Expected a subcommand relating to project fingerprinting. Try `lein help monolith fingerprint`")
-    (lein/abort (pr-str command) "is not a valid fingerprint subcommand! Try: lein help monolith fingerprint")))
 
 
 ;; ## Plugin Entry
@@ -248,8 +236,8 @@
 (defn monolith
   "Tasks for working with Leiningen projects inside a monorepo."
   {:subtasks [#'info #'lint #'deps-on #'deps-of #'graph
-              #'with-all #'each #'link #'unlink #'fingerprint
-              #'fingerprint-info #'fingerprint-mark #'fingerprint-clear]}
+              #'with-all #'each #'link #'unlink
+              #'changed #'mark #'clear]}
   [project command & args]
   (case command
     "info"        (info project args)
@@ -261,6 +249,8 @@
     "each"        (each project args)
     "link"        (link project args)
     "unlink"      (unlink project)
-    "fingerprint" (apply fingerprint project args)
+    "changed"     (changed project args)
+    "mark"        (mark project args)
+    "clear"       (clear project args)
     (lein/abort (pr-str command) "is not a valid monolith command! Try: lein help monolith"))
   (flush))
