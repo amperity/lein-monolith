@@ -58,9 +58,26 @@
       (->multihash in))))
 
 
+(defn- all-paths
+  "Finds all source, test, and resource paths associated with a project, including
+  those set in profiles."
+  [project]
+  (->> (concat
+         [project]
+         (vals (:profiles project)))
+       (mapcat (juxt :source-paths :test-paths :resource-paths))
+       (mapcat identity)
+       (map (fn absolute-file
+              [dir-str]
+              ;; Monolith subprojects and profiles don't use absolute paths
+              (if (str/starts-with? dir-str (:root project))
+                (jio/file dir-str)
+                (jio/file (:root project) dir-str))))))
+
+
 (defn- hash-sources
-  [project paths-key]
-  (->> (paths-key project)
+  [project]
+  (->> (all-paths project)
        (map (fn absolute-file
               [dir-str]
               ;; Monolith subprojects don't have absolute paths
@@ -106,9 +123,7 @@
   [project dep-map subprojects cache]
   (or (@cache (dep/project-name project))
       (let [prints
-            {::sources (hash-sources project :source-paths)
-             ::tests (hash-sources project :test-paths)
-             ::resources (hash-sources project :resource-paths)
+            {::sources (hash-sources project)
              ::deps (hash-dependencies project)
              ::upstream (hash-upstream-projects project dep-map subprojects cache)}
 
@@ -127,7 +142,6 @@
 (comment
   ;; Example .lein-monolith-fingerprints
   {:build {foo/bar {::sources "multihash abcde"
-                    ::tests "multihash fghij"
                     ,,,
                     ::final "multihash vwxyz"}
            ,,,}
@@ -216,7 +230,7 @@
             (fn [ftype]
               (when (not= (ftype past) (ftype current))
                 ftype))
-            [::sources ::tests ::resources ::deps ::upstream])
+            [::sources ::deps ::upstream])
           ::unknown))))
 
 
@@ -224,8 +238,6 @@
   {::up-to-date ["is up-to-date" "are up-to-date" :green]
    ::new-project ["is a new project" "are new projects" :red]
    ::sources ["has updated sources" "have updated sources" :red]
-   ::tests ["has updated tests" "have updated tests" :red]
-   ::resources ["has updated resources" "have updated resources" :red]
    ::deps ["has updated external dependencies" "have updated external dependencies" :yellow]
    ::upstream ["is downstream of an affected project" "are downstream of affected projects" :yellow]
    ::unknown ["has a different fingerprint" "have different fingerprints" :red]})
@@ -284,7 +296,7 @@
                    (ansi/sgr marker :bold)
                    "fingerprints:\n")
         (let [reasons (group-by (partial explain-kw ctx marker) targets)]
-          (doseq [k [::unknown ::new-project ::sources ::tests ::resources ::deps ::upstream ::up-to-date]]
+          (doseq [k [::unknown ::new-project ::sources ::resources ::deps ::upstream ::up-to-date]]
             (when-let [projs (seq (k reasons))]
               (let [[singular plural color] (reason-details k)
                     c (count projs)]
