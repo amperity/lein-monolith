@@ -84,12 +84,6 @@
 (defn- hash-sources
   [project]
   (->> (all-paths project)
-       (map (fn absolute-file
-              [dir-str]
-              ;; Monolith subprojects don't have absolute paths
-              (if (str/starts-with? dir-str (:root project))
-                (jio/file dir-str)
-                (jio/file (:root project) dir-str))))
        (mapcat list-all-files)
        (map hash-file)
        (aggregate-hashes)))
