@@ -171,8 +171,11 @@
   [project args]
   (when (:monolith project)
     (lein/abort "The 'link' task does not need to be run for the monolith project!"))
-  (let [[opts project-names] (opts+projects {:force 0, :deep 0} project args)]
-    (checkouts/link project opts project-names)))
+  (let [[opts project-names] (opts+projects {:force 0, :deep 0} project args)
+        subproject-names (remove #(= (dep/project-name project) %)
+                                 project-names)]
+    (checkouts/link project opts
+                    subproject-names)))
 
 
 (defn unlink
