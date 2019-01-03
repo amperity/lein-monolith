@@ -104,13 +104,7 @@
   subprojects."
   [monolith subprojects fctx project-name opts]
   (let [dependencies (dep/dependency-map subprojects)
-        opts' (cond-> opts
-                (:upstream opts)
-                (update :upstream-of conj (str project-name))
-
-                (:downstream opts)
-                (update :downstream-of conj (str project-name)))
-        targets (target/select monolith subprojects opts')
+        targets (target/select monolith subprojects opts)
         start-from (some->> (:start opts)
                             (read-string)
                             (dep/resolve-name! (keys subprojects)))
@@ -332,7 +326,10 @@
                    (assoc :changed marker
                           :save-fingerprints true))
                opts)
-        targets (select-projects monolith subprojects fctx (dep/project-name project) opts)
+        targets (select-projects
+                  monolith subprojects fctx
+                  (dep/project-name project)
+                  (u/globalize-opts project opts))
         n (inc (or (first (last targets)) -1))
         start-time (System/nanoTime)]
     (when (empty? targets)

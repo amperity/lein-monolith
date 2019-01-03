@@ -156,8 +156,6 @@
       (lein/abort "Cannot run each without a task argument!"))
     (when (and (:start opts) (:parallel opts))
       (lein/abort "The :parallel and :start options are not compatible!"))
-    (when (and (:monolith project) (or (:upstream opts) (:downstream opts)))
-      (lein/warn "The :upstream and :downstream options have no meaning in the monolith project."))
     (each/run-tasks project opts task)))
 
 
@@ -192,7 +190,8 @@
 
   Optionally takes a marker id to narrow the information."
   [project args]
-  (let [[opts more] (u/parse-kw-args target/selection-opts args)]
+  (let [[opts more] (u/parse-kw-args fingerprint/selection-opts args)
+        opts (u/globalize-opts project opts)]
     (apply fingerprint/info project opts more)))
 
 
@@ -203,7 +202,8 @@
   Usage:
   lein monolith fingerprint mark [project-selectors] marker1 marker2 ..."
   [project args]
-  (let [[opts more] (u/parse-kw-args target/selection-opts args)]
+  (let [[opts more] (u/parse-kw-args fingerprint/selection-opts args)
+        opts (u/globalize-opts project opts)]
     (fingerprint/mark project opts more)))
 
 
@@ -214,7 +214,8 @@
   Usage:
   lein monolith fingerprint clear [project-selectors] [marker1 marker2 ...]"
   [project args]
-  (let [[opts more] (u/parse-kw-args target/selection-opts args)]
+  (let [[opts more] (u/parse-kw-args fingerprint/selection-opts args)
+        opts (u/globalize-opts project opts)]
     (fingerprint/clear project opts more)))
 
 

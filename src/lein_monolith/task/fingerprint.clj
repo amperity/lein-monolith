@@ -20,6 +20,12 @@
       PushbackInputStream)))
 
 
+;; ## Options
+
+(def selection-opts
+  (assoc target/selection-opts :upstream 0 :downstream 0))
+
+
 ;; ## Hashing projects' inputs
 
 (def ^:private ->multihash
