@@ -1,7 +1,6 @@
 (ns leiningen.monolith
   "Leiningen task implementations for working with monorepos."
   (:require
-    [clojure.java.io :as jio]
     [clojure.set :as set]
     [clojure.string :as str]
     (leiningen.core
@@ -184,9 +183,6 @@
 
 
 ;; ## Fingerprinting
-
-;; Leiningen's help framework doesn't officially support "subsubtasks" so
-;; we'll try our best to make it work by making them look like subtasks.
 
 (defn changed
   "Show information about the projects that have changed since last :refresh.

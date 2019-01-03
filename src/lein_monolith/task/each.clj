@@ -112,10 +112,11 @@
     (->
       ; Sort project names by dependency order.
       (dep/topological-sort dependencies targets)
-      ; Skip projects until the starting project, if provided.
-      (cond->> start-from (drop-while (partial not= start-from)))
-      ; Skip projects whose fingerprint hasn't changed.
-      (cond->> marker (filter (partial fingerprint/changed? fctx marker)))
+      (cond->>
+        ; Skip projects until the starting project, if provided.
+        start-from (drop-while (partial not= start-from))
+        ; Skip projects whose fingerprint hasn't changed.
+        marker (filter (partial fingerprint/changed? fctx marker)))
       ; Pair names up with an index [[i project-sym] ...]
       (->> (map-indexed vector)))))
 
@@ -239,7 +240,6 @@
         results (delay {:name target
                         :elapsed (/ (- (System/nanoTime) start) 1000000.0)})
         marker (:changed opts)
-        save? (:save-fingerprints opts)
         fctx (:fingerprint-context ctx)]
     (try
       (lein/info (format "\nApplying to %s%s"
@@ -252,7 +252,7 @@
         (apply-subproject-task-with-output (:monolith ctx) subproject (:task ctx) out-dir results)
         ; Run without output capturing.
         (apply-subproject-task (:monolith ctx) subproject (:task ctx)))
-      (when save?
+      (when (:save-fingerprints opts)
         (fingerprint/save! fctx marker target)
         (lein/info (format "Saved %s fingerprint for %s"
                            (ansi/sgr marker :bold)

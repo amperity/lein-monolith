@@ -1,8 +1,7 @@
 (ns lein-monolith.task.fingerprint
   (:require
-    [clojure.data]
     [clojure.edn :as edn]
-    [clojure.java.io :as jio]
+    [clojure.java.io :as io]
     [clojure.set :as set]
     [clojure.string :as str]
     [leiningen.core.main :as lein]
@@ -59,7 +58,7 @@
   [^File file]
   ;; TODO: only prefix the file location relative to the subproject root?
   (let [prefix (.getBytes (str (.getAbsolutePath file) "\n"))]
-    (with-open [in (PushbackInputStream. (jio/input-stream file) (count prefix))]
+    (with-open [in (PushbackInputStream. (io/input-stream file) (count prefix))]
       (.unread in prefix)
       (->multihash in))))
 
@@ -77,8 +76,8 @@
               [dir-str]
               ;; Monolith subprojects and profiles don't use absolute paths
               (if (str/starts-with? dir-str (:root project))
-                (jio/file dir-str)
-                (jio/file (:root project) dir-str))))))
+                (io/file dir-str)
+                (io/file (:root project) dir-str))))))
 
 
 (defn- hash-sources
@@ -109,7 +108,8 @@
 
 (defn- cache-result!
   [cache project m]
-  (get (swap! cache assoc (dep/project-name project) m) (dep/project-name project)))
+  (swap! cache assoc (dep/project-name project) m)
+  m)
 
 
 (defn- hash-inputs
@@ -151,7 +151,7 @@
 (defn- fingerprints-file
   ^File
   [monolith]
-  (jio/file (:root monolith) ".lein-monolith-fingerprints"))
+  (io/file (:root monolith) ".lein-monolith-fingerprints"))
 
 
 (defn- read-fingerprints-file
