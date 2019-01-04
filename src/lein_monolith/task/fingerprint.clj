@@ -7,6 +7,7 @@
     [leiningen.core.main :as lein]
     [leiningen.core.project :as project]
     [lein-monolith.dependency :as dep]
+    [lein-monolith.plugin :as plugin]
     [lein-monolith.target :as target]
     [lein-monolith.task.util :as u]
     [puget.color.ansi :as ansi]
@@ -117,10 +118,16 @@
 
 
 (defn- hash-dependencies
+  "Hashes a project's dependencies and managed dependencies, as well as that of
+  its profiles and project root."
   [project]
-  (-> (:dependencies project)
-      (pr-str)
-      (sha1)))
+  (let [hashable-info #(select-keys % [:dependencies :managed-dependencies])]
+    (->> (:profiles project)
+         (map (juxt key (comp hashable-info val)))
+         (into {} (filter (comp seq second)))
+         (merge {::default (hashable-info project)})
+         (puget/render-str (puget/canonical-printer))
+         (sha1))))
 
 
 (declare hash-inputs)
@@ -170,10 +177,10 @@
 
 (comment
   ;; Example .lein-monolith-fingerprints
-  {:build {foo/bar {::sources "abcde"
-                    ,,,
-                    ::final "vwxyz"}
-           ,,,}
+  {"build" {foo/bar {::sources "abcde"
+                     ,,,
+                     ::final "vwxyz"}
+            ,,,}
    ,,,})
 
 
@@ -213,7 +220,16 @@
   (let [dep-map (dep/dependency-map subprojects)
         root (:root monolith)
         initial (read-fingerprints-file root)
-        cache (atom {})]
+        cache (atom {})
+        subprojects (into {}
+                          (map
+                            (fn inherit-profiles
+                              [[k subproject]]
+                              [k
+                               (update subproject :profiles merge
+                                       (plugin/build-inherited-profiles
+                                         monolith subproject))]))
+                          subprojects)]
     {:root root
      :subprojects subprojects
      :dependencies dep-map
