@@ -7,6 +7,15 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 
+### Changed
+- The `each` subtask no longer fails when zero projects are selected.
+
+### Added
+- The `each` subtask supports `:refresh` and `:changed` to perform incremental
+  runs over the projects.
+- New `changed`, `mark-fresh`, and `clear-fingerprints` subtasks inspect and
+  manipulate the underlying fingerprints used to perform incremental runs.
+
 ## [1.1.0] - 2018-08-17
 
 ### Added
