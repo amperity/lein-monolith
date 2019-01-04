@@ -364,7 +364,10 @@
 (defn clear
   [project opts markers]
   (let [[monolith subprojects] (u/load-monolith! project)
-        markers (set markers)
+        ctx (context monolith subprojects)
+        markers (if (seq markers)
+                  (set markers)
+                  (set (keys (:initial ctx))))
         targets (set (filter subprojects (target/select monolith subprojects opts)))]
     (update-fingerprints-file!
       monolith
