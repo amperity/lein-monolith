@@ -359,7 +359,7 @@
                          [project-name (fingerprints ctx project-name)]))
                      (into {}))]
     (update-fingerprints-file!
-      monolith
+      (:root monolith)
       (fn add-new-fingerprints
         [all-fprints]
         (reduce
