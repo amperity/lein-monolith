@@ -138,12 +138,6 @@
        (kv-hash)))
 
 
-(defn- cache-result!
-  [cache project m]
-  (swap! cache assoc (dep/project-name project) m)
-  m)
-
-
 (defn- hash-inputs
   "Hashes each of a project's inputs, and returns a map containing each individual
   result, so it's easier to explain what aspect of a project caused its overall
@@ -153,17 +147,20 @@
 
   Keeps a cache of hashes computed so far, for efficiency."
   [project dep-map subprojects cache]
-  (or (@cache (dep/project-name project))
-      (let [prints
-            {::sources (hash-sources project)
-             ::deps (hash-dependencies project)
-             ::upstream (hash-upstream-projects project dep-map subprojects cache)}
+  (let [project-name (dep/project-name project)]
+    (or (@cache project-name)
+        (let [prints
+              {::sources (hash-sources project)
+               ::deps (hash-dependencies project)
+               ::upstream (hash-upstream-projects
+                            project dep-map subprojects cache)}
 
-            prints
-            (assoc prints
-                   ::final (kv-hash prints)
-                   ::time (System/currentTimeMillis))]
-        (cache-result! cache project prints))))
+              prints
+              (assoc prints
+                     ::final (kv-hash prints)
+                     ::time (System/currentTimeMillis))]
+          (swap! cache assoc project-name prints)
+          prints))))
 
 
 ;; ## Storing fingerprints
