@@ -67,6 +67,10 @@
       (mapcat (partial vector :select) selectors))
     (when-let [skips (seq (:skip opts))]
       [:skip (str/join "," skips)])
+    (if-let [refresh (:refresh opts)]
+      [:refresh refresh]
+      (when-let [changed (:changed opts)]
+        [:changed changed]))
     (when-let [start (:start opts)]
       [:start start])))
 
@@ -252,7 +256,7 @@
         (apply-subproject-task-with-output (:monolith ctx) subproject (:task ctx) out-dir results)
         ; Run without output capturing.
         (apply-subproject-task (:monolith ctx) subproject (:task ctx)))
-      (when (:save-fingerprints opts)
+      (when (:refresh opts)
         (fingerprint/save! fprints marker target)
         (lein/info (format "Saved %s fingerprint for %s"
                            (ansi/sgr marker :bold)
@@ -322,9 +326,7 @@
         fprints (fingerprint/context monolith subprojects)
         opts (if-let [marker (:refresh opts)]
                (-> opts
-                   (dissoc :refresh)
-                   (assoc :changed marker
-                          :save-fingerprints true))
+                   (assoc :changed marker))
                opts)
         targets (select-projects
                   monolith subprojects fprints
