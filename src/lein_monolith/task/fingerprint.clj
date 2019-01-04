@@ -184,30 +184,30 @@
 
 (defn- fingerprints-file
   ^File
-  [monolith]
-  (io/file (:root monolith) ".lein-monolith-fingerprints"))
+  [root]
+  (io/file root ".lein-monolith-fingerprints"))
 
 
 (defn- read-fingerprints-file
-  [monolith]
-  (let [f (fingerprints-file monolith)]
+  [root]
+  (let [f (fingerprints-file root)]
     (when (.exists f)
       (edn/read-string (slurp f)))))
 
 
 (defn- write-fingerprints-file!
-  [monolith fingerprints]
-  (let [f (fingerprints-file monolith)]
+  [root fingerprints]
+  (let [f (fingerprints-file root)]
     (spit f (puget/pprint-str fingerprints))))
 
 
 (let [lock (Object.)]
   (defn update-fingerprints-file!
-    [monolith f & args]
+    [root f & args]
     (locking lock
       (write-fingerprints-file!
-        monolith
-        (apply f (read-fingerprints-file monolith) args)))))
+        root
+        (apply f (read-fingerprints-file root) args)))))
 
 
 ;; ## Generating and comparing fingerprints
@@ -216,9 +216,10 @@
   "Create a stateful context to use for fingerprinting operations."
   [monolith subprojects]
   (let [dep-map (dep/dependency-map subprojects)
-        initial (read-fingerprints-file monolith)
+        root (:root monolith)
+        initial (read-fingerprints-file root)
         cache (atom {})]
-    {:monolith monolith
+    {:root root
      :subprojects subprojects
      :dependencies dep-map
      :initial initial
@@ -282,8 +283,7 @@
   [ctx marker project-name]
   (let [current (fingerprints ctx project-name)]
     (update-fingerprints-file!
-      (:monolith ctx)
-      assoc-in [marker project-name] current)))
+      (:root ctx) assoc-in [marker project-name] current)))
 
 
 (defn- list-projects
