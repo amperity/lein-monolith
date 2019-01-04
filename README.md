@@ -113,6 +113,30 @@ In addition to targeting options, `each` accepts:
 - `:report` show a detailed timing report after the tasks finish executing.
 - `:output` path to a directory to save individual build output in.
 
+#### Incremental Builds
+
+The `:refresh` option only visits projects that have changed since the last
+`:refresh`. This allows incrementally building your projects:
+
+```
+lein monolith each :refresh ci/build install
+```
+
+Or running tests over only the projects that need to be tested:
+
+```
+lein monolith each :refresh ci/test test
+```
+
+Behind the scenes, lein-monolith is storing hashed fingerprints of each project,
+which you can inspect and manually manipulate:
+
+```
+lein monolith changed
+lein monolith mark :upstream ci/build
+lein monolith clear ci/test
+```
+
 ### Merged Source Profile
 
 The plugin can create a profile with `:resource-paths`, `:source-paths` and
