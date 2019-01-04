@@ -63,11 +63,10 @@
   "Takes a map from strings (ids of things we hashed) to strings (their hash
   results); returns a new hash that identifies the aggregate
   collection."
-  [m]
+  [kind m]
   {:pre [(every? string? (vals m))]}
-  (->> (sort-by key m)
-       (vec)
-       (pr-str)
+  (->> (puget/render-str (puget/canonical-printer) m)
+       (str "v1/" (name kind) "\n")
        (sha1)))
 
 
@@ -114,7 +113,7 @@
                (with-open [in (io/input-stream file)]
                  (sha1 in))]))
        (into {})
-       (kv-hash)))
+       (kv-hash :files)))
 
 
 (defn- hash-dependencies
@@ -127,6 +126,7 @@
          (into {} (filter (comp seq second)))
          (merge {::default (hashable-info project)})
          (puget/render-str (puget/canonical-printer))
+         (str "v1/dependencies\n")
          (sha1))))
 
 
@@ -142,7 +142,7 @@
                  [subproject-name
                   (::final (hash-inputs subproject dep-map subprojects cache))])))
        (into {})
-       (kv-hash)))
+       (kv-hash :projects)))
 
 
 (defn- hash-inputs
@@ -164,7 +164,7 @@
 
               prints
               (assoc prints
-                     ::final (kv-hash prints)
+                     ::final (kv-hash :inputs prints)
                      ::time (System/currentTimeMillis))]
           (swap! cache assoc project-name prints)
           prints))))
