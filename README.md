@@ -122,7 +122,9 @@ The `:refresh` option only visits projects that have changed since the last
 lein monolith each :refresh ci/build install
 ```
 
-Or running tests over only the projects that need to be tested:
+The project is only considered refreshed if the task is successful. This means
+you can run tests over the projects that have changed since the last
+_successful_ test run:
 
 ```
 lein monolith each :refresh ci/test test
