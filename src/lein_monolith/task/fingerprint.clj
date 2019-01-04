@@ -13,7 +13,6 @@
     [puget.printer :as puget])
   (:import
     (java.io
-      ByteArrayOutputStream
       File
       InputStream
       PushbackInputStream)
@@ -65,11 +64,10 @@
   collection."
   [m]
   {:pre [(every? string? (vals m))]}
-  (let [out (ByteArrayOutputStream.)]
-    (->> (sort-by key m)
-         (vec)
-         (pr-str)
-         (sha1))))
+  (->> (sort-by key m)
+       (vec)
+       (pr-str)
+       (sha1)))
 
 
 (defn- list-all-files
