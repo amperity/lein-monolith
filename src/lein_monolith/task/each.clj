@@ -102,7 +102,7 @@
 (defn- select-projects
   "Returns a vector of pairs of index numbers and symbols naming the selected
   subprojects."
-  [monolith subprojects fctx project-name opts]
+  [monolith subprojects fprints project-name opts]
   (let [dependencies (dep/dependency-map subprojects)
         targets (target/select monolith subprojects opts)
         start-from (some->> (:start opts)
@@ -116,7 +116,7 @@
         ; Skip projects until the starting project, if provided.
         start-from (drop-while (partial not= start-from))
         ; Skip projects whose fingerprint hasn't changed.
-        marker (filter (partial fingerprint/changed? fctx marker)))
+        marker (filter (partial fingerprint/changed? fprints marker)))
       ; Pair names up with an index [[i project-sym] ...]
       (->> (map-indexed vector)))))
 
@@ -240,12 +240,12 @@
         results (delay {:name target
                         :elapsed (/ (- (System/nanoTime) start) 1000000.0)})
         marker (:changed opts)
-        fctx (:fingerprint-context ctx)]
+        fprints (:fingerprints ctx)]
     (try
       (lein/info (format "\nApplying to %s%s"
                          (ansi/sgr target :bold :yellow)
                          (if marker
-                           (str " (" (fingerprint/explain-str fctx marker target) ")")
+                           (str " (" (fingerprint/explain-str fprints marker target) ")")
                            "")))
       (if-let [out-dir (get-in ctx [:opts :output] )]
         ; Capture output to file.
@@ -253,7 +253,7 @@
         ; Run without output capturing.
         (apply-subproject-task (:monolith ctx) subproject (:task ctx)))
       (when (:save-fingerprints opts)
-        (fingerprint/save! fctx marker target)
+        (fingerprint/save! fprints marker target)
         (lein/info (format "Saved %s fingerprint for %s"
                            (ansi/sgr marker :bold)
                            (ansi/sgr target :bold :yellow))))
@@ -319,7 +319,7 @@
   "Iterate over each subproject in the monolith and apply the given task."
   [project opts task]
   (let [[monolith subprojects] (u/load-monolith! project)
-        fctx (fingerprint/context monolith subprojects)
+        fprints (fingerprint/context monolith subprojects)
         opts (if-let [marker (:refresh opts)]
                (-> opts
                    (dissoc :refresh)
@@ -327,7 +327,7 @@
                           :save-fingerprints true))
                opts)
         targets (select-projects
-                  monolith subprojects fctx
+                  monolith subprojects fprints
                   (dep/project-name project)
                   (u/globalize-opts project opts))
         n (inc (or (first (last targets)) -1))
@@ -341,7 +341,7 @@
                "subprojects...")
     (let [ctx {:monolith monolith
                :subprojects subprojects
-               :fingerprint-context fctx
+               :fingerprints fprints
                :completions (atom (ffirst targets))
                :num-targets n
                :task task
