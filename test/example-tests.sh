@@ -39,5 +39,5 @@ test_monolith each :refresh foo install
 test_monolith each :refresh foo install
 test_monolith each :parallel 3 :refresh bar install
 test_monolith changed
-test_monolith clear :upstream-of lib-b
-test_monolith mark :upstream-of lib-b foo bar
+test_monolith clear-fingerprints :upstream-of lib-b
+test_monolith mark-fresh :upstream-of lib-b foo bar

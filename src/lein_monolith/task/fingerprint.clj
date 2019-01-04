@@ -346,7 +346,7 @@
         (lein/info)))))
 
 
-(defn mark
+(defn mark-fresh
   [project opts markers]
   (when-not (seq markers)
     (lein/abort "Please specify one or more markers!"))

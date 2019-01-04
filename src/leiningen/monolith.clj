@@ -198,7 +198,7 @@
     (fingerprint/changed project opts more)))
 
 
-(defn mark
+(defn mark-fresh
   "Manually mark projects as refreshed.
 
   Fingerprints all projects, or a selected set of projects, and saves the
@@ -210,11 +210,11 @@
   [project args]
   (let [[opts more] (u/parse-kw-args fingerprint/selection-opts args)
         opts (u/globalize-opts project opts)]
-    (fingerprint/mark project opts more)))
+    (fingerprint/mark-fresh project opts more)))
 
 
-(defn clear
-  "Clear projects' cached state so they will be re-built next :refresh.
+(defn clear-fingerprints
+  "Clear projects' cached fingerprints so they will be re-built next :refresh.
 
   Removes the fingerprints associated with one or more marker types on one or
   more projects. By default, clears all projects for all marker types.
@@ -233,20 +233,20 @@
   "Tasks for working with Leiningen projects inside a monorepo."
   {:subtasks [#'info #'lint #'deps-on #'deps-of #'graph
               #'with-all #'each #'link #'unlink
-              #'changed #'mark #'clear]}
+              #'changed #'mark-fresh #'clear-fingerprints]}
   [project command & args]
   (case command
-    "info"       (info project args)
-    "lint"       (lint project args)
-    "deps-on"    (deps-on project args)
-    "deps-of"    (deps-of project args)
-    "graph"      (graph project)
-    "with-all"   (with-all project args)
-    "each"       (each project args)
-    "link"       (link project args)
-    "unlink"     (unlink project)
-    "changed"    (changed project args)
-    "mark"       (mark project args)
-    "clear"      (clear project args)
+    "info"               (info project args)
+    "lint"               (lint project args)
+    "deps-on"            (deps-on project args)
+    "deps-of"            (deps-of project args)
+    "graph"              (graph project)
+    "with-all"           (with-all project args)
+    "each"               (each project args)
+    "link"               (link project args)
+    "unlink"             (unlink project)
+    "changed"            (changed project args)
+    "mark-fresh"         (mark-fresh project args)
+    "clear-fingerprints" (clear-fingerprints project args)
     (lein/abort (pr-str command) "is not a valid monolith command! Try: lein help monolith"))
   (flush))

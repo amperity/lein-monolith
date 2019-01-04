@@ -133,8 +133,8 @@ which you can inspect and manually manipulate:
 
 ```
 lein monolith changed
-lein monolith mark :upstream ci/build
-lein monolith clear ci/test
+lein monolith mark-fresh :upstream ci/build
+lein monolith clear-fingerprints ci/test
 ```
 
 ### Merged Source Profile
