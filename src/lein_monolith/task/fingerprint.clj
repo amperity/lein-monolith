@@ -332,8 +332,7 @@
                            (str (if (= 1 c) singular plural)
                                 (when-not (#{::up-to-date ::upstream} k)
                                   (str ": " (list-projects projs color)))))))))
-        (when (seq (rest markers))
-          (lein/info))))))
+        (lein/info)))))
 
 
 (defn mark
