@@ -9,7 +9,6 @@
 
   :dependencies
   [[manifold "0.1.8"]
-   [mvxcvi/multihash "2.0.3"]
    [mvxcvi/puget "1.0.3"]
    [rhizome "0.2.9"]]
 

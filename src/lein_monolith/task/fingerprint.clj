@@ -9,14 +9,18 @@
     [lein-monolith.dependency :as dep]
     [lein-monolith.target :as target]
     [lein-monolith.task.util :as u]
-    [multihash.core :as mhash]
-    [multihash.digest :as digest]
     [puget.color.ansi :as ansi]
     [puget.printer :as puget])
   (:import
     (java.io
+      ByteArrayOutputStream
       File
-      PushbackInputStream)))
+      InputStream
+      PushbackInputStream)
+    (java.security
+      MessageDigest)
+    (java.util
+      Base64)))
 
 
 ;; ## Options
@@ -27,22 +31,45 @@
 
 ;; ## Hashing projects' inputs
 
-(def ^:private ->multihash
-  "Globally storing the algorithm we use to generate each multihash."
-  digest/sha1)
+(defn- base64
+  [^bytes content]
+  (String. (.encode (Base64/getEncoder) content)))
 
 
-(defn- aggregate-hashes
-  "Takes a collection of multihashes, and aggregates them together into a unified hash."
-  [mhashes]
-  ;; TODO: is there a better way to do this?
-  (if (= 1 (count mhashes))
-    (first mhashes)
-    (->> mhashes
-         (map mhash/base58)
-         (sort)
-         (apply str)
-         (->multihash))))
+(defn- sha1
+  "Takes a string or an InputStream, and returns a base64 string representing the
+  SHA-1 hash."
+  [content]
+  (let [hasher (MessageDigest/getInstance "SHA-1")]
+    (cond
+      (string? content) (.update hasher (.getBytes ^String content))
+
+      (instance? InputStream content)
+      (let [buffer (byte-array 4096)]
+        (loop []
+          (let [n (.read ^InputStream content buffer 0 (count buffer))]
+            (when (pos? n)
+              (.update hasher buffer 0 n)
+              (recur)))))
+
+      :else
+      (throw (ex-info
+               (str "Cannot compute digest from " (type content))
+               {})))
+    (base64 (.digest hasher))))
+
+
+(defn- kv-hash
+  "Takes a map from strings (ids of things we hashed) to strings (their hash
+  results); returns a new hash that identifies the aggregate
+  collection."
+  [m]
+  {:pre [(every? string? (vals m))]}
+  (let [out (ByteArrayOutputStream.)]
+    (->> (sort-by key m)
+         (vec)
+         (pr-str)
+         (sha1))))
 
 
 (defn- list-all-files
@@ -52,15 +79,13 @@
     (mapcat list-all-files (.listFiles file))))
 
 
-(defn- hash-file
-  "Takes a File object, and returns a multihash that uniquely identifies the
-  content of this file and the location of the file."
-  [^File file]
-  ;; TODO: only prefix the file location relative to the subproject root?
-  (let [prefix (.getBytes (str (.getAbsolutePath file) "\n"))]
-    (with-open [in (PushbackInputStream. (io/input-stream file) (count prefix))]
-      (.unread in prefix)
-      (->multihash in))))
+(defn- local-path
+  [project ^File file]
+  (let [root (:root project)
+        path (.getAbsolutePath file)]
+    (when-not (str/starts-with? path root)
+      (throw (ex-info "Cannot determine local path with different root" {})))
+    (subs path (count root))))
 
 
 (defn- all-paths
@@ -84,15 +109,20 @@
   [project]
   (->> (all-paths project)
        (mapcat list-all-files)
-       (map hash-file)
-       (aggregate-hashes)))
+       (map (fn hash-file
+              [^File file]
+              [(local-path project file)
+               (with-open [in (io/input-stream file)]
+                 (sha1 in))]))
+       (into {})
+       (kv-hash)))
 
 
 (defn- hash-dependencies
   [project]
   (-> (:dependencies project)
       (pr-str)
-      (->multihash)))
+      (sha1)))
 
 
 (declare hash-inputs)
@@ -101,9 +131,13 @@
 (defn- hash-upstream-projects
   [project dep-map subprojects cache]
   (->> (dep-map (dep/project-name project))
-       (keep subprojects)
-       (map #(::final (hash-inputs % dep-map subprojects cache)))
-       (aggregate-hashes)))
+       (keep (fn hash-upstream
+               [subproject-name]
+               (when-let [subproject (subprojects subproject-name)]
+                 [subproject-name
+                  (::final (hash-inputs subproject dep-map subprojects cache))])))
+       (into {})
+       (kv-hash)))
 
 
 (defn- cache-result!
@@ -117,7 +151,7 @@
   result, so it's easier to explain what aspect of a project caused its overall
   fingerprint to change.
 
-  Returns a map of `{::xyz <mhash>}`
+  Returns a map of `{::xyz \"hash\"}`
 
   Keeps a cache of hashes computed so far, for efficiency."
   [project dep-map subprojects cache]
@@ -129,7 +163,7 @@
 
             prints
             (assoc prints
-                   ::final (aggregate-hashes (vals prints))
+                   ::final (kv-hash prints)
                    ::time (System/currentTimeMillis))]
         (cache-result! cache project prints))))
 
@@ -141,9 +175,9 @@
 
 (comment
   ;; Example .lein-monolith-fingerprints
-  {:build {foo/bar {::sources "multihash abcde"
+  {:build {foo/bar {::sources "abcde"
                     ,,,
-                    ::final "multihash vwxyz"}
+                    ::final "vwxyz"}
            ,,,}
    ,,,})
 
@@ -158,19 +192,13 @@
   [monolith]
   (let [f (fingerprints-file monolith)]
     (when (.exists f)
-      (edn/read-string
-        {:readers {'data/hash mhash/decode}}
-        (slurp f)))))
+      (edn/read-string (slurp f)))))
 
 
 (defn- write-fingerprints-file!
   [monolith fingerprints]
   (let [f (fingerprints-file monolith)]
-    (spit f (puget/pprint-str
-              fingerprints
-              {:print-handlers
-               {multihash.core.Multihash
-                (puget/tagged-handler 'data/hash mhash/base58)}}))))
+    (spit f (puget/pprint-str fingerprints))))
 
 
 (let [lock (Object.)]
