@@ -380,7 +380,7 @@
                   (set (keys (:initial ctx))))
         targets (set (filter subprojects (target/select monolith subprojects opts)))]
     (update-fingerprints-file!
-      monolith
+      (:root monolith)
       (partial into {}
                (keep
                  (fn [[marker fprints]]
