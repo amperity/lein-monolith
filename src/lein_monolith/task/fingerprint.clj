@@ -33,7 +33,10 @@
 
 (defn- base64
   [^bytes content]
-  (String. (.encode (Base64/getEncoder) content)))
+  (-> (Base64/getUrlEncoder)
+      (.withoutPadding)
+      (.encode content)
+      (String.)))
 
 
 (defn- sha1
