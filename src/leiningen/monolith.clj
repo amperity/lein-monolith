@@ -1,7 +1,6 @@
 (ns leiningen.monolith
   "Leiningen task implementations for working with monorepos."
   (:require
-    [clojure.java.io :as jio]
     [clojure.set :as set]
     [clojure.string :as str]
     (leiningen.core
@@ -15,6 +14,7 @@
     (lein-monolith.task
       [checkouts :as checkouts]
       [each :as each]
+      [fingerprint :as fingerprint]
       [graph :as graph]
       [info :as info]
       [util :as u])
@@ -139,6 +139,8 @@
     :select <key>           Use a selector from the config to filter target projects.
     :skip <names>           Exclude one or more projects from the target set.
     :start <name>           Provide a starting point for the subproject iteration
+    :refresh <marker>       Only iterate over projects that have changed since the last `:refresh` of this marker
+    :changed <marker>       Like `:refresh` but does not reset the projects' state for the next run
 
   Each <names> argument can contain multiple comma-separated project names, and
   all the targeting options except `:start` may be provided multiple times.
@@ -148,15 +150,14 @@
       lein monolith each check
       lein monolith each :upstream :parallel 4 install
       lein monolith each :select :deployable uberjar
-      lein monolith each :report :start my/lib-a test"
+      lein monolith each :report :start my/lib-a test
+      lein monolith each :refresh ci/build install"
   [project args]
   (let [[opts task] (u/parse-kw-args each/task-opts args)]
     (when (empty? task)
       (lein/abort "Cannot run each without a task argument!"))
     (when (and (:start opts) (:parallel opts))
       (lein/abort "The :parallel and :start options are not compatible!"))
-    (when (and (:monolith project) (or (:upstream opts) (:downstream opts)))
-      (lein/warn "The :upstream and :downstream options have no meaning in the monolith project."))
     (each/run-tasks project opts task)))
 
 
@@ -184,23 +185,71 @@
   (checkouts/unlink project))
 
 
+;; ## Fingerprinting
+
+(defn changed
+  "Show information about the projects that have changed since last :refresh.
+
+  Optionally takes one or more marker ids, or project selectors, to narrow the
+  information.
+
+  Usage:
+  lein monolith changed [project-selectors] [marker1 marker2 ...]"
+  [project args]
+  (let [[opts more] (u/parse-kw-args fingerprint/selection-opts args)
+        opts (u/globalize-opts project opts)]
+    (fingerprint/changed project opts more)))
+
+
+(defn mark-fresh
+  "Manually mark projects as refreshed.
+
+  Fingerprints all projects, or a selected set of projects, and saves the
+  results under the given marker id(s), for later use with the `:refresh`
+  selector.
+
+  Usage:
+  lein monolith mark [project-selectors] marker1 marker2 ..."
+  [project args]
+  (let [[opts more] (u/parse-kw-args fingerprint/selection-opts args)
+        opts (u/globalize-opts project opts)]
+    (fingerprint/mark-fresh project opts more)))
+
+
+(defn clear-fingerprints
+  "Clear projects' cached fingerprints so they will be re-built next :refresh.
+
+  Removes the fingerprints associated with one or more marker types on one or
+  more projects. By default, clears all projects for all marker types.
+
+  Usage:
+  lein monolith clear [project-selectors] [marker1 marker2 ...]"
+  [project args]
+  (let [[opts more] (u/parse-kw-args fingerprint/selection-opts args)
+        opts (u/globalize-opts project opts)]
+    (fingerprint/clear project opts more)))
+
 
 ;; ## Plugin Entry
 
 (defn monolith
   "Tasks for working with Leiningen projects inside a monorepo."
   {:subtasks [#'info #'lint #'deps-on #'deps-of #'graph
-              #'with-all #'each #'link #'unlink]}
+              #'with-all #'each #'link #'unlink
+              #'changed #'mark-fresh #'clear-fingerprints]}
   [project command & args]
   (case command
-    "info"       (info project args)
-    "lint"       (lint project args)
-    "deps-on"    (deps-on project args)
-    "deps-of"    (deps-of project args)
-    "graph"      (graph project)
-    "with-all"   (with-all project args)
-    "each"       (each project args)
-    "link"       (link project args)
-    "unlink"     (unlink project)
+    "info"               (info project args)
+    "lint"               (lint project args)
+    "deps-on"            (deps-on project args)
+    "deps-of"            (deps-of project args)
+    "graph"              (graph project)
+    "with-all"           (with-all project args)
+    "each"               (each project args)
+    "link"               (link project args)
+    "unlink"             (unlink project)
+    "changed"            (changed project args)
+    "mark-fresh"         (mark-fresh project args)
+    "clear-fingerprints" (clear-fingerprints project args)
     (lein/abort (pr-str command) "is not a valid monolith command! Try: lein help monolith"))
   (flush))
