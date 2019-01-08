@@ -1,7 +1,8 @@
 (ns lein-monolith.task.util
   "Utility functions for task code."
   (:require
-    [lein-monolith.config :as config]))
+    [lein-monolith.config :as config]
+    [leiningen.core.main :as lein]))
 
 
 (defn parse-kw-args
@@ -40,6 +41,18 @@
           :else
             (recur (assoc opts kw (vec (take arg-count (rest args))))
                    (drop (inc arg-count) args)))))))
+
+
+(defn globalize-opts
+  "Takes a map of parsed options, and converts the `:upstream` and `:downstream`
+  options into `:upstream-of <project>` and `:downstream-of <project>`."
+  [project opts]
+  (if (and (:monolith project) (or (:upstream opts) (:downstream opts)))
+    (do (lein/warn "The :upstream and :downstream options have no meaning in the monolith project.")
+        opts)
+    (cond-> opts
+      (:upstream opts) (update :upstream-of conj (:name project))
+      (:downstream opts) (update :downstream-of conj (:name project)))))
 
 
 (defn human-duration

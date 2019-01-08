@@ -7,6 +7,19 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 
+### Changed
+- The `each` subtask no longer fails when zero projects are selected.
+
+### Added
+- The `each` subtask supports `:refresh` and `:changed` to perform incremental
+  runs over the projects.
+- New `changed`, `mark-fresh`, and `clear-fingerprints` subtasks inspect and
+  manipulate the underlying fingerprints used to perform incremental runs.
+
+### Fixed
+- `link` could try to link a project to itself and fail. [#41](https://github.com/amperity/lein-monolith/pull/41)
+- Bumped puget version to 1.0.3 to support JDK 11.
+
 ## [1.1.0] - 2018-08-17
 
 ### Added

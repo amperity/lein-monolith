@@ -1,6 +1,6 @@
 (ns lein-monolith.config
   (:require
-    [clojure.java.io :as jio]
+    [clojure.java.io :as io]
     (leiningen.core
       [main :as lein]
       [project :as project])
@@ -31,8 +31,8 @@
   [root file-name]
   (when root
     (lazy-seq
-      (let [dir (jio/file root)
-            file (jio/file dir file-name)
+      (let [dir (io/file root)
+            file (io/file dir file-name)
             next-files (find-up (.getParentFile dir) file-name)]
         (if (.exists file)
           (cons file next-files)
@@ -95,7 +95,7 @@
   the loaded project map, or nil if the directory does not contain a valid
   `project.clj` file."
   [dir]
-  (let [project-file (jio/file dir "project.clj")]
+  (let [project-file (io/file dir "project.clj")]
     (when (.exists project-file)
       (lein/debug "Reading subproject definition from" (str project-file))
       (project/read-raw (str project-file)))))
@@ -107,7 +107,7 @@
   [monolith]
   (->>
     (get-in monolith [:monolith :project-dirs])
-    (map (partial jio/file (:root monolith)))
+    (map (partial io/file (:root monolith)))
     (mapcat pick-directories)
     (keep read-subproject)
     (map (juxt dep/project-name identity))

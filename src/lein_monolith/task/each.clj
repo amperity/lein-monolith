@@ -12,6 +12,7 @@
       [dependency :as dep]
       [plugin :as plugin]
       [target :as target])
+    [lein-monolith.task.fingerprint :as fingerprint]
     [lein-monolith.task.util :as u]
     [manifold.deferred :as d]
     [manifold.executor :as executor]
@@ -34,7 +35,9 @@
      :output 1
      :upstream 0
      :downstream 0
-     :start 1}))
+     :start 1
+     :changed 1
+     :refresh 1}))
 
 
 (defn- opts->args
@@ -64,6 +67,10 @@
       (mapcat (partial vector :select) selectors))
     (when-let [skips (seq (:skip opts))]
       [:skip (str/join "," skips)])
+    (if-let [refresh (:refresh opts)]
+      [:refresh refresh]
+      (when-let [changed (:changed opts)]
+        [:changed changed]))
     (when-let [start (:start opts)]
       [:start start])))
 
@@ -99,22 +106,21 @@
 (defn- select-projects
   "Returns a vector of pairs of index numbers and symbols naming the selected
   subprojects."
-  [monolith subprojects project-name opts]
+  [monolith subprojects fprints project-name opts]
   (let [dependencies (dep/dependency-map subprojects)
-        opts' (cond-> opts
-                (:upstream opts)
-                  (update :upstream-of conj (str project-name))
-                (:downstream opts)
-                  (update :downstream-of conj (str project-name)))
-        targets (target/select monolith subprojects opts')
+        targets (target/select monolith subprojects opts)
         start-from (some->> (:start opts)
                             (read-string)
-                            (dep/resolve-name! (keys subprojects)))]
+                            (dep/resolve-name! (keys subprojects)))
+        marker (:changed opts)]
     (->
       ; Sort project names by dependency order.
       (dep/topological-sort dependencies targets)
-      ; Skip projects until the starting project, if provided.
-      (cond->> start-from (drop-while (partial not= start-from)))
+      (cond->>
+        ; Skip projects until the starting project, if provided.
+        start-from (drop-while (partial not= start-from))
+        ; Skip projects whose fingerprint hasn't changed.
+        marker (filter (partial fingerprint/changed? fprints marker)))
       ; Pair names up with an index [[i project-sym] ...]
       (->> (map-indexed vector)))))
 
@@ -236,14 +242,25 @@
         opts (:opts ctx)
         subproject (get-in ctx [:subprojects target])
         results (delay {:name target
-                        :elapsed (/ (- (System/nanoTime) start) 1000000.0)})]
+                        :elapsed (/ (- (System/nanoTime) start) 1000000.0)})
+        marker (:changed opts)
+        fprints (:fingerprints ctx)]
     (try
-      (lein/info (format "\nApplying to %s" (ansi/sgr target :bold :yellow)))
+      (lein/info (format "\nApplying to %s%s"
+                         (ansi/sgr target :bold :yellow)
+                         (if marker
+                           (str " (" (fingerprint/explain-str fprints marker target) ")")
+                           "")))
       (if-let [out-dir (get-in ctx [:opts :output] )]
         ; Capture output to file.
         (apply-subproject-task-with-output (:monolith ctx) subproject (:task ctx) out-dir results)
         ; Run without output capturing.
         (apply-subproject-task (:monolith ctx) subproject (:task ctx)))
+      (when (:refresh opts)
+        (fingerprint/save! fprints marker target)
+        (lein/info (format "Saved %s fingerprint for %s"
+                           (ansi/sgr marker :bold)
+                           (ansi/sgr target :bold :yellow))))
       (assoc @results :success true)
       (catch Exception ex
         (when-not (or (:parallel opts) (:endure opts))
@@ -306,17 +323,27 @@
   "Iterate over each subproject in the monolith and apply the given task."
   [project opts task]
   (let [[monolith subprojects] (u/load-monolith! project)
-        targets (select-projects monolith subprojects (dep/project-name project) opts)
+        fprints (fingerprint/context monolith subprojects)
+        opts (if-let [marker (:refresh opts)]
+               (-> opts
+                   (assoc :changed marker))
+               opts)
+        targets (select-projects
+                  monolith subprojects fprints
+                  (dep/project-name project)
+                  (u/globalize-opts project opts))
         n (inc (or (first (last targets)) -1))
         start-time (System/nanoTime)]
     (when (empty? targets)
-      (lein/abort "Target selection matched zero subprojects!"))
+      (lein/info "Target selection matched zero subprojects; nothing to do")
+      (lein/exit 0))
     (lein/info "Applying"
                (ansi/sgr (str/join " " task) :bold :cyan)
                "to" (ansi/sgr (count targets) :cyan)
                "subprojects...")
     (let [ctx {:monolith monolith
                :subprojects subprojects
+               :fingerprints fprints
                :completions (atom (ffirst targets))
                :num-targets n
                :task task
