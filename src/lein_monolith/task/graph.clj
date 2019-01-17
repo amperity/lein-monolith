@@ -27,9 +27,11 @@
         targets (target/select monolith subprojects opts)
         dependencies (dep/dependency-map subprojects)
         graph-file (io/file (:target-path monolith) image-name)]
+    (when (empty? targets)
+      (lein/abort "No targets selected to graph!"))
     (.mkdir (.getParentFile graph-file))
     (visualize!
-      (or (seq targets) (keys dependencies))
+      targets
       dependencies
       :vertical? false
       :node->descriptor #(array-map :label (name %))
