@@ -4,6 +4,7 @@
     [clojure.string :as str]
     [leiningen.core.main :as lein]
     [lein-monolith.dependency :as dep]
+    [lein-monolith.target :as target]
     [lein-monolith.task.util :as u]))
 
 
@@ -19,15 +20,16 @@
 
 (defn graph
   "Generate a graph of subprojects and their interdependencies."
-  [project]
+  [project opts]
   (require 'rhizome.viz)
   (let [visualize! (ns-resolve 'rhizome.viz 'save-graph)
         [monolith subprojects] (u/load-monolith! project)
+        targets (target/select monolith subprojects opts)
         dependencies (dep/dependency-map subprojects)
         graph-file (io/file (:target-path monolith) image-name)]
     (.mkdir (.getParentFile graph-file))
     (visualize!
-      (keys dependencies)
+      (or (seq targets) (keys dependencies))
       dependencies
       :vertical? false
       :node->descriptor #(array-map :label (name %))
