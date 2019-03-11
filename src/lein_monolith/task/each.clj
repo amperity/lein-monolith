@@ -334,36 +334,36 @@
                   (u/globalize-opts project opts))
         n (inc (or (first (last targets)) -1))
         start-time (System/nanoTime)]
-    (when (empty? targets)
+    (if (empty? targets)
       (lein/info "Target selection matched zero subprojects; nothing to do")
-      (lein/exit 0))
-    (lein/info "Applying"
-               (ansi/sgr (str/join " " task) :bold :cyan)
-               "to" (ansi/sgr (count targets) :cyan)
-               "subprojects...")
-    (let [ctx {:monolith monolith
-               :subprojects subprojects
-               :fingerprints fprints
-               :completions (atom (ffirst targets))
-               :num-targets n
-               :task task
-               :opts opts}
-          results (if-let [threads (:parallel opts)]
-                    (run-parallel! ctx (Integer/parseInt threads) targets)
-                    (run-linear! ctx targets))
-          elapsed (/ (- (System/nanoTime) start-time) 1000000.0)]
-      (when (:report opts)
-        (print-report results elapsed))
-      (if-let [failures (seq (map :name (remove :success results)))]
-        (lein/abort (format "\n%s: Applied %s to %s projects in %s with %d failures: %s"
-                            (ansi/sgr "FAILURE" :bold :red)
-                            (ansi/sgr (str/join " " task) :bold :cyan)
-                            (ansi/sgr (count targets) :cyan)
-                            (u/human-duration elapsed)
-                            (count failures)
-                            (str/join " " failures)))
-        (lein/info (format "\n%s: Applied %s to %s projects in %s"
-                           (ansi/sgr "SUCCESS" :bold :green)
-                           (ansi/sgr (str/join " " task) :bold :cyan)
-                           (ansi/sgr (count targets) :cyan)
-                           (u/human-duration elapsed)))))))
+      (do
+        (lein/info "Applying"
+                   (ansi/sgr (str/join " " task) :bold :cyan)
+                   "to" (ansi/sgr (count targets) :cyan)
+                   "subprojects...")
+        (let [ctx {:monolith monolith
+                   :subprojects subprojects
+                   :fingerprints fprints
+                   :completions (atom (ffirst targets))
+                   :num-targets n
+                   :task task
+                   :opts opts}
+              results (if-let [threads (:parallel opts)]
+                        (run-parallel! ctx (Integer/parseInt threads) targets)
+                        (run-linear! ctx targets))
+              elapsed (/ (- (System/nanoTime) start-time) 1000000.0)]
+          (when (:report opts)
+            (print-report results elapsed))
+          (if-let [failures (seq (map :name (remove :success results)))]
+            (lein/abort (format "\n%s: Applied %s to %s projects in %s with %d failures: %s"
+                                (ansi/sgr "FAILURE" :bold :red)
+                                (ansi/sgr (str/join " " task) :bold :cyan)
+                                (ansi/sgr (count targets) :cyan)
+                                (u/human-duration elapsed)
+                                (count failures)
+                                (str/join " " failures)))
+            (lein/info (format "\n%s: Applied %s to %s projects in %s"
+                               (ansi/sgr "SUCCESS" :bold :green)
+                               (ansi/sgr (str/join " " task) :bold :cyan)
+                               (ansi/sgr (count targets) :cyan)
+                               (u/human-duration elapsed)))))))))
