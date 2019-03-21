@@ -7,6 +7,10 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 
+### Fixed
+- The `each` subtask couldn't be composed with subsequent tasks if it had no
+  work to do. [#44](https://github.com/amperity/lein-monolith/pull/44)
+
 ## [1.2.0] - 2019-01-08
 
 ### Changed
