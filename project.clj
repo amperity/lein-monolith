@@ -1,4 +1,4 @@
-(defproject lein-monolith "1.2.0"
+(defproject lein-monolith "1.2.1"
   :description "Leiningen plugin for managing subrojects within a monorepo."
   :url "https://github.com/amperity/lein-monolith"
   :license {:name "Apache License 2.0"
@@ -9,7 +9,7 @@
 
   :dependencies
   [[manifold "0.1.8"]
-   [mvxcvi/puget "1.0.3"]
+   [mvxcvi/puget "1.1.2"]
    [rhizome "0.2.9"]]
 
   :hiera

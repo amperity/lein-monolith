@@ -84,8 +84,8 @@
 
 (defn graph
   "Generate a graph of subprojects and their interdependencies."
-  [project]
-  (graph/graph project))
+  [project args]
+  (graph/graph project (opts-only target/selection-opts args)))
 
 
 (defn ^:higher-order with-all
@@ -243,7 +243,7 @@
     "lint"               (lint project args)
     "deps-on"            (deps-on project args)
     "deps-of"            (deps-of project args)
-    "graph"              (graph project)
+    "graph"              (graph project args)
     "with-all"           (with-all project args)
     "each"               (each project args)
     "link"               (link project args)
