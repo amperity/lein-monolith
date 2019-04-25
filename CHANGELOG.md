@@ -9,6 +9,10 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [1.2.1] - 2019-04-25
 
+### Added
+- Allow the `graph` subtask to take specific targeting options.
+  [#43](https://github.com/amperity/lein-monolith/pull/43)
+
 ### Fixed
 - The `each` subtask couldn't be composed with subsequent tasks if it had no
   work to do. [#44](https://github.com/amperity/lein-monolith/pull/44)
