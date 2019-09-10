@@ -1,10 +1,9 @@
 (ns lein-monolith.config
   (:require
     [clojure.java.io :as io]
-    (leiningen.core
-      [main :as lein]
-      [project :as project])
-    [lein-monolith.dependency :as dep])
+    [lein-monolith.dependency :as dep]
+    [leiningen.core.main :as lein]
+    [leiningen.core.project :as project])
   (:import
     java.io.File))
 
@@ -81,13 +80,14 @@
   [^File file]
   (cond
     (.isDirectory file)
-      [file]
+    [file]
+
     (and (= "*" (.getName file)) (.isDirectory (.getParentFile file)))
-      (->> (.getParentFile file)
-           (.listFiles)
-           (filter #(.isDirectory ^File %)))
-    :else
-      nil))
+    (->> (.getParentFile file)
+         (.listFiles)
+         (filter #(.isDirectory ^File %)))
+
+    :else nil))
 
 
 (defn- read-subproject

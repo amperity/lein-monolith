@@ -2,18 +2,16 @@
   (:require
     [clojure.java.io :as io]
     [clojure.string :as str]
-    (leiningen.core
-      [eval :as eval]
-      [main :as lein]
-      [project :as project]
-      [utils :refer [rebind-io!]])
-    (lein-monolith
-      [config :as config]
-      [dependency :as dep]
-      [plugin :as plugin]
-      [target :as target])
+    [lein-monolith.config :as config]
+    [lein-monolith.dependency :as dep]
+    [lein-monolith.plugin :as plugin]
+    [lein-monolith.target :as target]
     [lein-monolith.task.fingerprint :as fingerprint]
     [lein-monolith.task.util :as u]
+    [leiningen.core.eval :as eval]
+    [leiningen.core.main :as lein]
+    [leiningen.core.project :as project]
+    [leiningen.core.utils :refer [rebind-io!]]
     [manifold.deferred :as d]
     [manifold.executor :as executor]
     [puget.color.ansi :as ansi])
@@ -22,8 +20,7 @@
       ClosingPipe
       Pipe
       RevivableInputStream)
-    (java.io
-      OutputStream)))
+    java.io.OutputStream))
 
 
 (def task-opts
@@ -195,7 +192,8 @@
   [monolith subproject task]
   (binding [lein/*exit-process?* false]
     (let [inherited (plugin/build-inherited-profiles monolith subproject)]
-      (as-> subproject subproject
+      (as-> subproject
+        subproject
         (reduce-kv
           (fn inject-profile [p k v] (assoc-in p [:profiles k] v))
           subproject inherited)
@@ -251,7 +249,7 @@
                          (if marker
                            (str " (" (fingerprint/explain-str fprints marker target) ")")
                            "")))
-      (if-let [out-dir (get-in ctx [:opts :output] )]
+      (if-let [out-dir (get-in ctx [:opts :output])]
         ; Capture output to file.
         (apply-subproject-task-with-output (:monolith ctx) subproject (:task ctx) out-dir results)
         ; Run without output capturing.

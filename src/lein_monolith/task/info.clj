@@ -1,14 +1,13 @@
 (ns lein-monolith.task.info
   (:require
     [clojure.string :as str]
-    [leiningen.core.main :as lein]
-    (lein-monolith
-      [config :as config]
-      [dependency :as dep]
-      [target :as target])
+    [lein-monolith.config :as config]
+    [lein-monolith.dependency :as dep]
+    [lein-monolith.target :as target]
     [lein-monolith.task.util :as u]
-    [puget.printer :as puget]
-    [puget.color.ansi :as ansi]))
+    [leiningen.core.main :as lein]
+    [puget.color.ansi :as ansi]
+    [puget.printer :as puget]))
 
 
 (defn info
