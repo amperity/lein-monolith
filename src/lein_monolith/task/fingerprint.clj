@@ -4,12 +4,12 @@
     [clojure.java.io :as io]
     [clojure.set :as set]
     [clojure.string :as str]
-    [leiningen.core.main :as lein]
-    [leiningen.core.project :as project]
     [lein-monolith.dependency :as dep]
     [lein-monolith.plugin :as plugin]
     [lein-monolith.target :as target]
     [lein-monolith.task.util :as u]
+    [leiningen.core.main :as lein]
+    [leiningen.core.project :as project]
     [puget.color.ansi :as ansi]
     [puget.printer :as puget])
   (:import
@@ -17,10 +17,8 @@
       File
       InputStream
       PushbackInputStream)
-    (java.security
-      MessageDigest)
-    (java.util
-      Base64)))
+    java.security.MessageDigest
+    java.util.Base64))
 
 
 ;; ## Options

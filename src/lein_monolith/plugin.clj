@@ -4,12 +4,10 @@
   (:require
     [clojure.java.io :as jio]
     [clojure.string :as str]
-    (leiningen.core
-      [main :as lein]
-      [project :as project])
-    (lein-monolith
-      [config :as config]
-      [dependency :as dep])
+    [lein-monolith.config :as config]
+    [lein-monolith.dependency :as dep]
+    [leiningen.core.main :as lein]
+    [leiningen.core.project :as project]
     [puget.color.ansi :as ansi]
     [puget.printer :as puget]))
 
@@ -62,24 +60,23 @@
     (cond
       ; Don't inherit anything
       (not setting)
-        nil
+      nil
 
       ; Inherit the base properties specified in the parent.
       (true? setting)
-        ; TODO: instead of select-keys, could do reducing get-in/assoc-in
-        (select-keys monolith base-properties)
+      (select-keys monolith base-properties)
 
       ; Provide additional properties to inherit, or replace if metadata is set.
       (vector? setting)
-        (->> (if (:replace (meta setting))
-               setting
-               (distinct (concat base-properties setting)))
-             (select-keys monolith))
+      (->> (if (:replace (meta setting))
+             setting
+             (distinct (concat base-properties setting)))
+           (select-keys monolith))
 
       :else
-        (throw (ex-info (str "Unknown value type for monolith inherit setting: "
-                             (pr-str setting))
-                        {:inherit setting})))))
+      (throw (ex-info (str "Unknown value type for monolith inherit setting: "
+                           (pr-str setting))
+                      {:inherit setting})))))
 
 
 (defn build-inherited-profiles

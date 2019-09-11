@@ -2,10 +2,10 @@
   (:require
     [clojure.java.io :as io]
     [clojure.string :as str]
-    [leiningen.core.main :as lein]
     [lein-monolith.dependency :as dep]
     [lein-monolith.target :as target]
-    [lein-monolith.task.util :as u]))
+    [lein-monolith.task.util :as u]
+    [leiningen.core.main :as lein]))
 
 
 (def image-name "project-hierarchy.png")
