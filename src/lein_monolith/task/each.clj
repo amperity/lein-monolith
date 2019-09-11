@@ -165,8 +165,12 @@
   (when-not *task-file-output*
     (throw (IllegalStateException.
              (str "Cannot run task without bound *task-file-output*: " (pr-str cmd)))))
-  (let [env (@#'eval/overridden-env eval/*env*)
-        ^Process proc (.exec (Runtime/getRuntime) (into-array String cmd) env (io/file eval/*dir*))]
+  (let [cmd (into-array String cmd)
+        env (into-array String (@#'eval/overridden-env eval/*env*))
+        proc (.exec (Runtime/getRuntime)
+                    ^{:tag "[Ljava.lang.String;"} cmd
+                    ^{:tag "[Ljava.lang.String;"} env
+                    (io/file eval/*dir*))]
     (.addShutdownHook (Runtime/getRuntime)
                       (Thread. (fn [] (.destroy proc))))
     (with-open [out (.getInputStream proc)
