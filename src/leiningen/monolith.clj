@@ -3,23 +3,20 @@
   (:require
     [clojure.set :as set]
     [clojure.string :as str]
-    (leiningen.core
-      [main :as lein]
-      [project :as project])
-    (lein-monolith
-      [config :as config]
-      [dependency :as dep]
-      [plugin :as plugin]
-      [target :as target])
-    (lein-monolith.task
-      [checkouts :as checkouts]
-      [each :as each]
-      [fingerprint :as fingerprint]
-      [graph :as graph]
-      [info :as info]
-      [util :as u])
-    [puget.printer :as puget]
-    [puget.color.ansi :as ansi]))
+    [lein-monolith.config :as config]
+    [lein-monolith.dependency :as dep]
+    [lein-monolith.plugin :as plugin]
+    [lein-monolith.target :as target]
+    [lein-monolith.task.checkouts :as checkouts]
+    [lein-monolith.task.each :as each]
+    [lein-monolith.task.fingerprint :as fingerprint]
+    [lein-monolith.task.graph :as graph]
+    [lein-monolith.task.info :as info]
+    [lein-monolith.task.util :as u]
+    [leiningen.core.main :as lein]
+    [leiningen.core.project :as project]
+    [puget.color.ansi :as ansi]
+    [puget.printer :as puget]))
 
 
 (defn- opts-only

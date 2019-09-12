@@ -2,12 +2,11 @@
   (:require
     [clojure.java.io :as io]
     [clojure.string :as str]
-    [leiningen.core.main :as lein]
     [lein-monolith.dependency :as dep]
-    [lein-monolith.task.util :as u])
+    [lein-monolith.task.util :as u]
+    [leiningen.core.main :as lein])
   (:import
-    (java.io
-      File)
+    java.io.File
     (java.nio.file
       Files
       LinkOption
@@ -63,16 +62,18 @@
         selected-names (into #{}
                              (map (partial dep/resolve-name! (keys dep-map)))
                              project-names)
-        projects-to-link (cond->> (map (comp dep/condense-name first)
-                                       (:dependencies project))
-                           (or (:deep opts) (seq project-names))
+        projects-to-link (->
+                           (map (comp dep/condense-name first)
+                                (:dependencies project))
+                           (cond->>
+                             (or (:deep opts) (seq project-names))
                              (mapcat (partial dep/upstream-keys dep-map))
-                           true
+
+                             (seq selected-names)
+                             (filter selected-names))
+                           (->>
                              (distinct)
-                           (seq selected-names)
-                             (filter selected-names)
-                           true
-                             (keep subprojects))
+                             (keep subprojects)))
         checkouts-dir (io/file (:root project) "checkouts")]
     (when (empty? projects-to-link)
       (lein/abort (str "Couldn't find any projects to link matching: "

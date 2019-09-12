@@ -36,13 +36,18 @@
   [project-names sym]
   (let [valid-keys (set project-names)]
     (cond
-      (valid-keys sym) sym
-      (valid-keys (condense-name sym)) (condense-name sym)
+      (valid-keys sym)
+      sym
+
+      (valid-keys (condense-name sym))
+      (condense-name sym)
+
       (nil? (namespace sym))
-        (let [candidates (filter #(= (name %) (name sym)) valid-keys)]
-          (if (= 1 (count candidates))
-            (first candidates)
-            (seq candidates)))
+      (let [candidates (filter #(= (name %) (name sym)) valid-keys)]
+        (if (= 1 (count candidates))
+          (first candidates)
+          (seq candidates)))
+
       :else nil)))
 
 
@@ -53,10 +58,12 @@
   (let [result (resolve-name project-names sym)]
     (cond
       (nil? result)
-        (lein/abort "Could not resolve" sym "to any monolith subproject!")
+      (lein/abort "Could not resolve" sym "to any monolith subproject!")
+
       (coll? result)
-        (lein/abort "Name" sym "resolves to multiple monolith subprojects:"
-                    (str/join " " (sort result)))
+      (lein/abort "Name" sym "resolves to multiple monolith subprojects:"
+                  (str/join " " (sort result)))
+
       :else result)))
 
 
@@ -124,7 +131,8 @@
   "Returns a set of the keys which are downstream of a given node in the
   dependency map. Includes the root value itself."
   [dependencies root]
-  (let [deps-on (fn deps-on [n]
+  (let [deps-on (fn deps-on
+                  [n]
                   (set (keep (fn [[k deps]] (when (deps n) k))
                              dependencies)))]
     (loop [result #{}

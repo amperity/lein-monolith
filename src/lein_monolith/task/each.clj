@@ -2,18 +2,16 @@
   (:require
     [clojure.java.io :as io]
     [clojure.string :as str]
-    (leiningen.core
-      [eval :as eval]
-      [main :as lein]
-      [project :as project]
-      [utils :refer [rebind-io!]])
-    (lein-monolith
-      [config :as config]
-      [dependency :as dep]
-      [plugin :as plugin]
-      [target :as target])
+    [lein-monolith.config :as config]
+    [lein-monolith.dependency :as dep]
+    [lein-monolith.plugin :as plugin]
+    [lein-monolith.target :as target]
     [lein-monolith.task.fingerprint :as fingerprint]
     [lein-monolith.task.util :as u]
+    [leiningen.core.eval :as eval]
+    [leiningen.core.main :as lein]
+    [leiningen.core.project :as project]
+    [leiningen.core.utils :refer [rebind-io!]]
     [manifold.deferred :as d]
     [manifold.executor :as executor]
     [puget.color.ansi :as ansi])
@@ -22,8 +20,7 @@
       ClosingPipe
       Pipe
       RevivableInputStream)
-    (java.io
-      OutputStream)))
+    java.io.OutputStream))
 
 
 (def task-opts
@@ -168,8 +165,12 @@
   (when-not *task-file-output*
     (throw (IllegalStateException.
              (str "Cannot run task without bound *task-file-output*: " (pr-str cmd)))))
-  (let [env (@#'eval/overridden-env eval/*env*)
-        ^Process proc (.exec (Runtime/getRuntime) (into-array String cmd) env (io/file eval/*dir*))]
+  (let [cmd (into-array String cmd)
+        env (into-array String (@#'eval/overridden-env eval/*env*))
+        proc (.exec (Runtime/getRuntime)
+                    ^{:tag "[Ljava.lang.String;"} cmd
+                    ^{:tag "[Ljava.lang.String;"} env
+                    (io/file eval/*dir*))]
     (.addShutdownHook (Runtime/getRuntime)
                       (Thread. (fn [] (.destroy proc))))
     (with-open [out (.getInputStream proc)
@@ -190,17 +191,26 @@
           exit-value)))))
 
 
+(def ^:private init-lock
+  "An object to lock on to ensure that projects are not initialized
+  concurrently. This prevents the mysterious 'unbound fn' errors that sometimes
+  crop up during parallel execution."
+  (Object.))
+
+
 (defn- apply-subproject-task
   "Applies the task to the given subproject."
   [monolith subproject task]
   (binding [lein/*exit-process?* false]
     (let [inherited (plugin/build-inherited-profiles monolith subproject)]
-      (as-> subproject subproject
+      (as-> subproject
+        subproject
         (reduce-kv
           (fn inject-profile [p k v] (assoc-in p [:profiles k] v))
           subproject inherited)
         (config/debug-profile "init-subproject"
-          (project/init-project subproject (cons :default (keys inherited))))
+          (locking init-lock
+            (project/init-project subproject (cons :default (keys inherited)))))
         (config/debug-profile "apply-task"
           (binding [eval/*dir* (:root subproject)]
             (lein/resolve-and-apply subproject task)))))))
@@ -251,7 +261,7 @@
                          (if marker
                            (str " (" (fingerprint/explain-str fprints marker target) ")")
                            "")))
-      (if-let [out-dir (get-in ctx [:opts :output] )]
+      (if-let [out-dir (get-in ctx [:opts :output])]
         ; Capture output to file.
         (apply-subproject-task-with-output (:monolith ctx) subproject (:task ctx) out-dir results)
         ; Run without output capturing.

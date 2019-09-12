@@ -22,25 +22,25 @@
         (cond
           ; Unexpected option, halt parsing.
           (nil? arg-count)
-            [opts args]
+          [opts args]
 
           ; Flag option.
           (zero? arg-count)
-            (recur (assoc opts kw true) (rest args))
+          (recur (assoc opts kw true) (rest args))
 
           ; Single-valued option.
           (and (= 1 arg-count) (nil? multi-arg-count))
-            (recur (assoc opts kw (first (rest args))) (drop 2 args))
+          (recur (assoc opts kw (first (rest args))) (drop 2 args))
 
           ; Multi-spec option, join value list.
           multi-arg-count
-            (recur (update opts kw (fnil into []) (take arg-count (rest args)))
-                   (drop (inc arg-count) args))
+          (recur (update opts kw (fnil into []) (take arg-count (rest args)))
+                 (drop (inc arg-count) args))
 
           ; Multi-arg (but not spec) option.
           :else
-            (recur (assoc opts kw (vec (take arg-count (rest args))))
-                   (drop (inc arg-count) args)))))))
+          (recur (assoc opts kw (vec (take arg-count (rest args))))
+                 (drop (inc arg-count) args)))))))
 
 
 (defn globalize-opts

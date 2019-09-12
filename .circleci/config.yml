@@ -1,37 +1,65 @@
-version: 2
+version: 2.1
 
-jobs:
-  build:
-    working_directory: ~/project
+# Common executor configuration
+executors:
+  clojure:
     docker:
-      - image: circleci/clojure:lein-2.8.1
+      - image: circleci/clojure:lein-2.9.1
+    working_directory: ~/repo
+
+
+# Job definitions
+jobs:
+  style:
+    executor: clojure
+    steps:
+      - checkout
+      - run:
+          name: Install cljfmt CLI
+          command: "wget https://github.com/greglook/cljfmt/releases/download/0.8.1/cljfmt_0.8.1_linux.tar.gz && tar -xzf cljfmt_0.8.1_linux.tar.gz"
+      - run:
+          name: Check source formatting
+          command: "./cljfmt check --stats style-stats.tsv"
+      - store_artifacts:
+          path: style-stats.tsv
+          destination: style
+
+  test:
+    executor: clojure
     steps:
       - checkout
       - restore_cache:
           keys:
-            - v1-{{ checksum "project.clj" }}
-            - v1-
+            - v1-test-{{ checksum "project.clj" }}
+            - v1-test-
       - run: lein deps
-      - save_cache:
-          paths:
-            - ~/.m2
-          key: v1-{{ checksum "project.clj" }}
       - run: lein check
       - run: lein test
-      # FIXME: Currently fails in CI with:
-      # clojure.lang.ArityException: Wrong number of args (2) passed to: reader/read
-      # Possibly due to wrong clojure version (1.4.0?) getting pulled in
-      #- run: lein cloverage --codecov
       - save_cache:
+          key: v1-test-{{ checksum "project.clj" }}
           paths:
             - ~/.m2
-          key: v1-{{ checksum "project.clj" }}
-      #- store_artifacts:
-      #    path: target/coverage
-      #    destination: coverage
-      #- run:
-      #    name: Publish Coverage
-      #    command: "bash <(curl -s https://codecov.io/bash) -f target/coverage/codecov.json"
+
+  examples:
+    executor: clojure
+    steps:
+      - checkout
+      - restore_cache:
+          keys:
+            - v1-test-{{ checksum "project.clj" }}
+            - v1-test-
       - run:
           name: Run Example Tests
           command: ./test/example-tests.sh
+
+
+# Workflow definitions
+workflows:
+  version: 2
+  build:
+    jobs:
+      - style
+      - test
+      - examples:
+          requires:
+            - test
