@@ -35,9 +35,13 @@
    :bg-reset   49})
 
 
-(def ^:dynamic *enabled*
-  "Whether to render text with color."
-  true)
+(def enabled?
+  "Delay which yields true if text should be rendered with color."
+  (delay
+    (let [env (System/getenv "LEIN_MONOLITH_COLOR")
+          disabled?  (and env (contains? #{"no" "false" "off"}
+                                         (str/lower-case env)))]
+      (not disabled?))))
 
 
 (defn- sgr
@@ -53,7 +57,7 @@
   "Wraps the given string with SGR escapes to apply the given codes, then reset
   the graphics. If `*enabled*` is not truthy, returns the string unaltered."
   [codes string]
-  (if *enabled*
+  (if @enabled?
     (let [codes (if (keyword? codes)
                   [codes]
                   (vec codes))]
