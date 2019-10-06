@@ -6,8 +6,7 @@
     [lein-monolith.dependency :as dep]
     [lein-monolith.target :as target]
     [lein-monolith.task.util :as u]
-    [leiningen.core.main :as lein]
-    [puget.printer :as puget]))
+    [leiningen.core.main :as lein]))
 
 
 (defn info
@@ -19,15 +18,18 @@
       (newline)
       (when-let [inherited (get-in monolith [:monolith :inherit])]
         (println "Inherited properties:")
-        (puget/cprint inherited)
+        (doseq [kw inherited]
+          (println (colorize [:bold :yellow] kw)))
         (newline))
       (when-let [inherited (get-in monolith [:monolith :inherit-leaky])]
         (println "Inherited (leaky) properties:")
-        (puget/cprint inherited)
+        (doseq [kw inherited]
+          (println (colorize [:bold :yellow] kw)))
         (newline))
       (when-let [dirs (get-in monolith [:monolith :project-dirs])]
         (println "Subproject directories:")
-        (puget/cprint dirs)
+        (doseq [dir dirs]
+          (println (colorize :magenta dir)))
         (newline)))
     (let [subprojects (config/read-subprojects! monolith)
           dependencies (dep/dependency-map subprojects)
@@ -42,7 +44,11 @@
         (if (:bare opts)
           (println subproject-name relative-path)
           (printf "  %-90s   %s\n"
-                  (puget/cprint-str [subproject-name version])
+                  (str (colorize :red \[)
+                       subproject-name
+                       \space
+                       (colorize :magenta (pr-str version))
+                       (colorize :red \]))
                   (colorize :cyan relative-path)))))))
 
 
@@ -74,8 +80,8 @@
         (when-let [spec (first (filter (comp #{dep-name} dep/condense-name first) dependencies))]
           (if (:bare opts)
             (println subproject-name (first spec) (second spec))
-            (println "  " (puget/cprint-str subproject-name)
-                     "->" (puget/cprint-str spec))))))))
+            (println "  " (colorize :bold subproject-name)
+                     "->" (colorize :bold spec))))))))
 
 
 (defn deps-of
@@ -101,5 +107,5 @@
                     (dep-map project-name))]
         (if (:bare opts)
           (println project-name dep)
-          (println "  " (puget/cprint-str project-name)
+          (println "  " (colorize :bold project-name)
                    "->" dep))))))
