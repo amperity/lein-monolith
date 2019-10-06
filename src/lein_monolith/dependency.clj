@@ -4,8 +4,7 @@
     [clojure.set :as set]
     [clojure.string :as str]
     [lein-monolith.color :refer [colorize]]
-    [leiningen.core.main :as lein]
-    [puget.printer :as puget]))
+    [leiningen.core.main :as lein]))
 
 
 ;; ## Coordinate Functions
@@ -205,7 +204,7 @@
              (lein/warn))
         (doseq [[spec projects] projects-for-specs]
           (lein/warn (format "%-50s from %s"
-                             (puget/cprint-str spec)
+                             (pr-str spec)
                              (str/join " " (sort projects)))))
         (lein/warn "")
         default-choice))))
