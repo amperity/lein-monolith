@@ -3,7 +3,7 @@
 
   :plugins
   [[lein-monolith "1.2.3-SNAPSHOT"]
-   [lein-cprint "1.2.0"]]
+   [lein-pprint "1.2.0"]]
 
   :dependencies
   [[org.clojure/clojure "1.8.0"]]

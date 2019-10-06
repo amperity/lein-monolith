@@ -29,12 +29,12 @@ test_monolith info
 test_monolith lint
 test_monolith deps-of example/app-a
 test_monolith deps-on example/lib-a
-test_monolith with-all cprint :dependencies :source-paths
-test_monolith each cprint :version
-test_monolith each :in lib-a cprint :root
-test_monolith each :upstream-of lib-b cprint :version
-test_monolith each :downstream-of lib-a cprint :name
-test_monolith each :parallel 3 :report :endure cprint :group
+test_monolith with-all pprint :dependencies :source-paths
+test_monolith each pprint :version
+test_monolith each :in lib-a pprint :root
+test_monolith each :upstream-of lib-b pprint :version
+test_monolith each :downstream-of lib-a pprint :name
+test_monolith each :parallel 3 :report :endure pprint :group
 test_monolith each :refresh foo install
 test_monolith each :refresh foo install
 test_monolith each :parallel 3 :refresh bar install
