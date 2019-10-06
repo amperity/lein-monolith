@@ -2,6 +2,7 @@
   (:require
     [clojure.edn :as edn]
     [clojure.java.io :as io]
+    [clojure.pprint :refer [pprint]]
     [clojure.set :as set]
     [clojure.string :as str]
     [lein-monolith.color :refer [colorize]]
@@ -10,8 +11,7 @@
     [lein-monolith.target :as target]
     [lein-monolith.task.util :as u]
     [leiningen.core.main :as lein]
-    [leiningen.core.project :as project]
-    [puget.printer :as puget])
+    [leiningen.core.project :as project])
   (:import
     (java.io
       File
@@ -43,12 +43,14 @@
   [content]
   (let [hasher (MessageDigest/getInstance "SHA-1")]
     (cond
-      (string? content) (.update hasher (.getBytes ^String content))
+      (string? content)
+      (.update hasher (.getBytes ^String content))
 
       (instance? InputStream content)
-      (let [buffer (byte-array 4096)]
+      (let [buffer (byte-array 4096)
+            in ^InputStream content]
         (loop []
-          (let [n (.read ^InputStream content buffer 0 (count buffer))]
+          (let [n (.read in buffer 0 (alength buffer))]
             (when (pos? n)
               (.update hasher buffer 0 n)
               (recur)))))
@@ -66,8 +68,11 @@
   collection."
   [kind m]
   {:pre [(every? string? (vals m))]}
-  (->> (puget/render-str (puget/canonical-printer) m)
-       (str "v1/" (name kind) "\n")
+  (->> (seq m)
+       (sort-by key)
+       (map #(str (key %) \tab (val %)))
+       (str/join "\n")
+       (str "v2/" (name kind) "\n")
        (sha1)))
 
 
@@ -124,10 +129,12 @@
   (let [hashable-info #(select-keys % [:dependencies :managed-dependencies])]
     (->> (:profiles project)
          (map (juxt key (comp hashable-info val)))
-         (into {} (filter (comp seq second)))
-         (merge {::default (hashable-info project)})
-         (puget/render-str (puget/canonical-printer))
-         (str "v1/dependencies\n")
+         (filter (comp seq second))
+         (into {::default (hashable-info project)})
+         (map #(str (pr-str (key %)) \tab (pr-str (val %))))
+         (sort)
+         (str/join "\n")
+         (str "v2/dependencies\n")
          (sha1))))
 
 
@@ -200,8 +207,8 @@
 
 (defn- write-fingerprints-file!
   [root fingerprints]
-  (let [f (fingerprints-file root)]
-    (spit f (puget/pprint-str fingerprints))))
+  (let [file (fingerprints-file root)]
+    (spit file (with-out-str (pprint fingerprints)))))
 
 
 (let [lock (Object.)]
