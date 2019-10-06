@@ -4,13 +4,13 @@
     [clojure.java.io :as io]
     [clojure.set :as set]
     [clojure.string :as str]
+    [lein-monolith.color :refer [colorize]]
     [lein-monolith.dependency :as dep]
     [lein-monolith.plugin :as plugin]
     [lein-monolith.target :as target]
     [lein-monolith.task.util :as u]
     [leiningen.core.main :as lein]
     [leiningen.core.project :as project]
-    [puget.color.ansi :as ansi]
     [puget.printer :as puget])
   (:import
     (java.io
@@ -287,7 +287,7 @@
 (defn explain-str
   [ctx marker project-name]
   (let [[singular plural color] (reason-details (explain-kw ctx marker project-name))]
-    (ansi/sgr singular color)))
+    (colorize color singular)))
 
 
 (defn save!
@@ -301,7 +301,7 @@
 (defn- list-projects
   [project-names color]
   (->> project-names
-       (map #(ansi/sgr % color))
+       (map (partial colorize color))
        (str/join ", ")))
 
 
@@ -325,22 +325,23 @@
                     pct-changed (if (seq targets)
                                   (* 100.0 (/ (count changed) (count targets)))
                                   0.0)]]
-        (lein/info (ansi/sgr (format "%.2f%%" pct-changed)
-                             (cond
-                               (== 0.0 pct-changed) :green
-                               (< pct-changed 50) :yellow
-                               :else :red))
+        (lein/info (colorize
+                     (cond
+                       (== 0.0 pct-changed) :green
+                       (< pct-changed 50) :yellow
+                       :else :red)
+                     (format "%.2f%%" pct-changed))
                    "out of"
                    (count targets)
                    "projects have out-of-date"
-                   (ansi/sgr marker :bold)
+                   (colorize :bold marker)
                    "fingerprints:\n")
         (let [reasons (group-by (partial explain-kw ctx marker) targets)]
           (doseq [k [::unknown ::new-project ::sources ::resources ::deps ::upstream ::up-to-date]]
             (when-let [projs (seq (k reasons))]
               (let [[singular plural color] (reason-details k)
                     c (count projs)]
-                (lein/info "*" (ansi/sgr (count projs) color)
+                (lein/info "*" (colorize color (count projs))
                            (str (if (= 1 c) singular plural)
                                 (when-not (#{::up-to-date ::upstream} k)
                                   (str ": " (list-projects projs color)))))))))
@@ -368,8 +369,8 @@
           all-fprints
           markers)))
     (lein/info (format "Set %s markers for %s projects"
-                       (ansi/sgr (count markers) :bold)
-                       (ansi/sgr (count targets) :bold)))))
+                       (colorize :bold (count markers))
+                       (colorize :bold (count targets))))))
 
 
 (defn clear
@@ -390,5 +391,5 @@
                        [marker fprints'])
                      [marker fprints])))))
     (lein/info (format "Cleared %s markers for %s projects"
-                       (ansi/sgr (count markers) :bold)
-                       (ansi/sgr (count targets) :bold)))))
+                       (colorize :bold (count markers))
+                       (colorize :bold (count targets))))))

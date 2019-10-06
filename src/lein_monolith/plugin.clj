@@ -8,7 +8,6 @@
     [lein-monolith.dependency :as dep]
     [leiningen.core.main :as lein]
     [leiningen.core.project :as project]
-    [puget.color.ansi :as ansi]
     [puget.printer :as puget]))
 
 

@@ -1,12 +1,12 @@
 (ns lein-monolith.task.info
   (:require
     [clojure.string :as str]
+    [lein-monolith.color :refer [colorize]]
     [lein-monolith.config :as config]
     [lein-monolith.dependency :as dep]
     [lein-monolith.target :as target]
     [lein-monolith.task.util :as u]
     [leiningen.core.main :as lein]
-    [puget.color.ansi :as ansi]
     [puget.printer :as puget]))
 
 
@@ -33,6 +33,7 @@
           dependencies (dep/dependency-map subprojects)
           targets (target/select monolith subprojects opts)
           prefix-len (inc (count (:root monolith)))]
+      ; IDEA: some kind of stats about dependency graph shape
       (when-not (:bare opts)
         (printf "Internal projects (%d):\n" (count targets)))
       (doseq [subproject-name (dep/topological-sort dependencies targets)
@@ -42,7 +43,7 @@
           (println subproject-name relative-path)
           (printf "  %-90s   %s\n"
                   (puget/cprint-str [subproject-name version])
-                  (ansi/sgr relative-path :cyan)))))))
+                  (colorize :cyan relative-path)))))))
 
 
 (defn lint
@@ -67,7 +68,7 @@
                             project-names)]
     (doseq [dep-name resolved-names]
       (when-not (:bare opts)
-        (lein/info "\nSubprojects which depend on" (ansi/sgr dep-name :bold :yellow)))
+        (lein/info "\nSubprojects which depend on" (colorize [:bold :yellow] dep-name)))
       (doseq [subproject-name (dep/topological-sort dep-map)
               :let [{:keys [version dependencies]} (get subprojects subproject-name)]]
         (when-let [spec (first (filter (comp #{dep-name} dep/condense-name first) dependencies))]
@@ -89,7 +90,7 @@
       (when-not (get dep-map project-name)
         (lein/abort project-name "is not a valid subproject!"))
       (when-not (:bare opts)
-        (lein/info "\nSubprojects which" (ansi/sgr project-name :bold :yellow)
+        (lein/info "\nSubprojects which" (colorize [:bold :yellow] project-name)
                    (if (:transitive opts)
                      "transitively depends on"
                      "depends on")))
