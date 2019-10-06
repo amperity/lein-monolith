@@ -7,7 +7,9 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 
-...
+### Changed
+- Remove dependency on `puget` for colorized output and canonical printing. This
+  avoids pulling in `fipp` which is problematic on Java 9+.
 
 ## [1.2.2] - 2019-09-11
 
