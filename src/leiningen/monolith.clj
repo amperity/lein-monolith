@@ -1,9 +1,7 @@
 (ns leiningen.monolith
   "Leiningen task implementations for working with monorepos."
   (:require
-    [clojure.set :as set]
     [clojure.string :as str]
-    [lein-monolith.config :as config]
     [lein-monolith.dependency :as dep]
     [lein-monolith.plugin :as plugin]
     [lein-monolith.target :as target]
@@ -13,10 +11,7 @@
     [lein-monolith.task.graph :as graph]
     [lein-monolith.task.info :as info]
     [lein-monolith.task.util :as u]
-    [leiningen.core.main :as lein]
-    [leiningen.core.project :as project]
-    [puget.color.ansi :as ansi]
-    [puget.printer :as puget]))
+    [leiningen.core.main :as lein]))
 
 
 (defn- opts-only

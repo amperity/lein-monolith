@@ -4,7 +4,7 @@ version: 2.1
 executors:
   clojure:
     docker:
-      - image: circleci/clojure:lein-2.9.1
+      - image: circleci/clojure:openjdk-11-lein-2.9.1
     working_directory: ~/repo
 
 
@@ -16,7 +16,11 @@ jobs:
       - checkout
       - run:
           name: Install cljfmt CLI
-          command: "wget https://github.com/greglook/cljfmt/releases/download/0.8.1/cljfmt_0.8.1_linux.tar.gz && tar -xzf cljfmt_0.8.1_linux.tar.gz"
+          environment:
+            CLJFMT_VERSION: 0.8.2
+          command: |
+            wget https://github.com/greglook/cljfmt/releases/download/${CLJFMT_VERSION}/cljfmt_${CLJFMT_VERSION}_linux.tar.gz
+            tar -xzf cljfmt_${CLJFMT_VERSION}_linux.tar.gz
       - run:
           name: Check source formatting
           command: "./cljfmt check --stats style-stats.tsv"

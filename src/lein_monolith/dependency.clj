@@ -3,9 +3,8 @@
   (:require
     [clojure.set :as set]
     [clojure.string :as str]
-    [leiningen.core.main :as lein]
-    [puget.color.ansi :as ansi]
-    [puget.printer :as puget]))
+    [lein-monolith.color :refer [colorize]]
+    [leiningen.core.main :as lein]))
 
 
 ;; ## Coordinate Functions
@@ -196,16 +195,16 @@
       default-choice
       ; Multiple versions or specs declared! Warn and use the default.
       (do
-        (-> (str "WARN: Multiple dependency specs found for "
-                 (condense-name dep-name) " in "
-                 (count (distinct (map dep-source specs)))
-                 " projects - using " (pr-str default-choice) " from "
-                 (dep-source default-choice))
-            (ansi/sgr :red)
-            (lein/warn))
+        (->> (str "WARN: Multiple dependency specs found for "
+                  (condense-name dep-name) " in "
+                  (count (distinct (map dep-source specs)))
+                  " projects - using " (pr-str default-choice) " from "
+                  (dep-source default-choice))
+             (colorize :red)
+             (lein/warn))
         (doseq [[spec projects] projects-for-specs]
           (lein/warn (format "%-50s from %s"
-                             (puget/cprint-str spec)
+                             (pr-str spec)
                              (str/join " " (sort projects)))))
         (lein/warn "")
         default-choice))))

@@ -2,6 +2,7 @@
   (:require
     [clojure.java.io :as io]
     [clojure.string :as str]
+    [lein-monolith.color :refer [colorize]]
     [lein-monolith.config :as config]
     [lein-monolith.dependency :as dep]
     [lein-monolith.plugin :as plugin]
@@ -13,8 +14,7 @@
     [leiningen.core.project :as project]
     [leiningen.core.utils :refer [rebind-io!]]
     [manifold.deferred :as d]
-    [manifold.executor :as executor]
-    [puget.color.ansi :as ansi])
+    [manifold.executor :as executor])
   (:import
     (com.hypirion.io
       ClosingPipe
@@ -78,25 +78,25 @@
   (let [task-time (reduce + (keep :elapsed results))
         speedup (/ task-time elapsed)]
     (lein/info (format "\n%s  %11s"
-                       (ansi/sgr "Run time:" :bold :cyan)
+                       (colorize [:bold :cyan] "Run time:")
                        (u/human-duration elapsed)))
     (lein/info (format "%s %11s"
-                       (ansi/sgr "Task time:" :bold :cyan)
+                       (colorize [:bold :cyan] "Task time:")
                        (u/human-duration task-time)))
     (lein/info (format "%s   %11.1f"
-                       (ansi/sgr "Speedup:" :bold :cyan)
+                       (colorize [:bold :cyan] "Speedup:")
                        speedup))
     (lein/info (->> results
                     (sort-by :elapsed)
                     (reverse)
                     (take 8)
                     (map #(format "%-45s %s %11s"
-                                  (ansi/sgr (:name %) :bold :yellow)
+                                  (colorize [:bold :yellow] (:name %))
                                   (if (:success %) " " "!")
                                   (u/human-duration (:elapsed %))))
                     (str/join "\n")
                     (str \newline
-                         (ansi/sgr "Slowest projects:" :bold :cyan)
+                         (colorize [:bold :cyan] "Slowest projects:")
                          \newline)))))
 
 
@@ -257,7 +257,7 @@
         fprints (:fingerprints ctx)]
     (try
       (lein/info (format "\nApplying to %s%s"
-                         (ansi/sgr target :bold :yellow)
+                         (colorize [:bold :yellow] target)
                          (if marker
                            (str " (" (fingerprint/explain-str fprints marker target) ")")
                            "")))
@@ -269,8 +269,8 @@
       (when (:refresh opts)
         (fingerprint/save! fprints marker target)
         (lein/info (format "Saved %s fingerprint for %s"
-                           (ansi/sgr marker :bold)
-                           (ansi/sgr target :bold :yellow))))
+                           (colorize :bold marker)
+                           (colorize [:bold :yellow] target))))
       (assoc @results :success true)
       (catch Exception ex
         (when-not (or (:parallel opts) (:endure opts))
@@ -280,17 +280,17 @@
                               [:start target]
                               (:task ctx))]
             (lein/warn (format "\n%s %s\n"
-                               (ansi/sgr "Resume with:" :bold :red)
+                               (colorize [:bold :red] "Resume with:")
                                (str/join " " resume-args)))))
         (when-not (:endure opts)
           (throw ex))
         (assoc @results :success false, :error ex))
       (finally
         (lein/info (format "Completed %s (%s/%s) in %s"
-                           (ansi/sgr target :bold :yellow)
-                           (ansi/sgr (swap! (:completions ctx) inc) :cyan)
-                           (ansi/sgr (:num-targets ctx) :cyan)
-                           (ansi/sgr (u/human-duration (:elapsed @results)) :bold :cyan)))))))
+                           (colorize [:bold :yellow] target)
+                           (colorize :cyan (swap! (:completions ctx) inc))
+                           (colorize :cyan (:num-targets ctx))
+                           (colorize [:bold :cyan] (u/human-duration (:elapsed @results)))))))))
 
 
 (defn- run-linear!
@@ -348,8 +348,8 @@
       (lein/info "Target selection matched zero subprojects; nothing to do")
       (do
         (lein/info "Applying"
-                   (ansi/sgr (str/join " " task) :bold :cyan)
-                   "to" (ansi/sgr (count targets) :cyan)
+                   (colorize [:bold :cyan] (str/join " " task))
+                   "to" (colorize :cyan (count targets))
                    "subprojects...")
         (let [ctx {:monolith monolith
                    :subprojects subprojects
@@ -366,14 +366,14 @@
             (print-report results elapsed))
           (if-let [failures (seq (map :name (remove :success results)))]
             (lein/abort (format "\n%s: Applied %s to %s projects in %s with %d failures: %s"
-                                (ansi/sgr "FAILURE" :bold :red)
-                                (ansi/sgr (str/join " " task) :bold :cyan)
-                                (ansi/sgr (count targets) :cyan)
+                                (colorize [:bold :red] "FAILURE")
+                                (colorize [:bold :cyan] (str/join " " task))
+                                (colorize :cyan (count targets))
                                 (u/human-duration elapsed)
                                 (count failures)
                                 (str/join " " failures)))
             (lein/info (format "\n%s: Applied %s to %s projects in %s"
-                               (ansi/sgr "SUCCESS" :bold :green)
-                               (ansi/sgr (str/join " " task) :bold :cyan)
-                               (ansi/sgr (count targets) :cyan)
+                               (colorize [:bold :green] "SUCCESS")
+                               (colorize [:bold :cyan] (str/join " " task))
+                               (colorize :cyan (count targets))
                                (u/human-duration elapsed)))))))))

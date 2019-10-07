@@ -1,13 +1,12 @@
 (ns lein-monolith.task.info
   (:require
     [clojure.string :as str]
+    [lein-monolith.color :refer [colorize]]
     [lein-monolith.config :as config]
     [lein-monolith.dependency :as dep]
     [lein-monolith.target :as target]
     [lein-monolith.task.util :as u]
-    [leiningen.core.main :as lein]
-    [puget.color.ansi :as ansi]
-    [puget.printer :as puget]))
+    [leiningen.core.main :as lein]))
 
 
 (defn info
@@ -19,20 +18,24 @@
       (newline)
       (when-let [inherited (get-in monolith [:monolith :inherit])]
         (println "Inherited properties:")
-        (puget/cprint inherited)
+        (doseq [kw inherited]
+          (println (colorize [:bold :yellow] kw)))
         (newline))
       (when-let [inherited (get-in monolith [:monolith :inherit-leaky])]
         (println "Inherited (leaky) properties:")
-        (puget/cprint inherited)
+        (doseq [kw inherited]
+          (println (colorize [:bold :yellow] kw)))
         (newline))
       (when-let [dirs (get-in monolith [:monolith :project-dirs])]
         (println "Subproject directories:")
-        (puget/cprint dirs)
+        (doseq [dir dirs]
+          (println (colorize :magenta dir)))
         (newline)))
     (let [subprojects (config/read-subprojects! monolith)
           dependencies (dep/dependency-map subprojects)
           targets (target/select monolith subprojects opts)
           prefix-len (inc (count (:root monolith)))]
+      ; IDEA: some kind of stats about dependency graph shape
       (when-not (:bare opts)
         (printf "Internal projects (%d):\n" (count targets)))
       (doseq [subproject-name (dep/topological-sort dependencies targets)
@@ -41,8 +44,12 @@
         (if (:bare opts)
           (println subproject-name relative-path)
           (printf "  %-90s   %s\n"
-                  (puget/cprint-str [subproject-name version])
-                  (ansi/sgr relative-path :cyan)))))))
+                  (str (colorize :red \[)
+                       subproject-name
+                       \space
+                       (colorize :magenta (pr-str version))
+                       (colorize :red \]))
+                  (colorize :cyan relative-path)))))))
 
 
 (defn lint
@@ -67,14 +74,14 @@
                             project-names)]
     (doseq [dep-name resolved-names]
       (when-not (:bare opts)
-        (lein/info "\nSubprojects which depend on" (ansi/sgr dep-name :bold :yellow)))
+        (lein/info "\nSubprojects which depend on" (colorize [:bold :yellow] dep-name)))
       (doseq [subproject-name (dep/topological-sort dep-map)
               :let [{:keys [version dependencies]} (get subprojects subproject-name)]]
         (when-let [spec (first (filter (comp #{dep-name} dep/condense-name first) dependencies))]
           (if (:bare opts)
             (println subproject-name (first spec) (second spec))
-            (println "  " (puget/cprint-str subproject-name)
-                     "->" (puget/cprint-str spec))))))))
+            (println "  " (colorize :bold subproject-name)
+                     "->" (colorize :bold spec))))))))
 
 
 (defn deps-of
@@ -89,7 +96,7 @@
       (when-not (get dep-map project-name)
         (lein/abort project-name "is not a valid subproject!"))
       (when-not (:bare opts)
-        (lein/info "\nSubprojects which" (ansi/sgr project-name :bold :yellow)
+        (lein/info "\nSubprojects which" (colorize [:bold :yellow] project-name)
                    (if (:transitive opts)
                      "transitively depends on"
                      "depends on")))
@@ -100,5 +107,5 @@
                     (dep-map project-name))]
         (if (:bare opts)
           (println project-name dep)
-          (println "  " (puget/cprint-str project-name)
+          (println "  " (colorize :bold project-name)
                    "->" dep))))))
