@@ -7,9 +7,18 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 
+...
+
+## [1.3.0] - 2019-10-07
+
 ### Changed
 - Remove dependency on `puget` for colorized output and canonical printing. This
-  avoids pulling in `fipp` which is problematic on Java 9+.
+  avoids pulling in `fipp` which is problematic to use in Leiningen on Java 9+.
+  [#49](https://github.com/amperity/lein-monolith/pull/49)
+
+### Added
+- Allow ANSI color output to be disabled by setting the `LEIN_MONOLITH_COLOR`
+  environment variable to `no`, `false`, or `off`.
 
 ## [1.2.2] - 2019-09-11
 
@@ -189,7 +198,8 @@ instead of loading them all before running any commands.
 
 Initial project release
 
-[Unreleased]: https://github.com/amperity/lein-monolith/compare/1.2.2...HEAD
+[Unreleased]: https://github.com/amperity/lein-monolith/compare/1.3.0...HEAD
+[1.3.0]: https://github.com/amperity/lein-monolith/compare/1.2.2...1.3.0
 [1.2.2]: https://github.com/amperity/lein-monolith/compare/1.2.1...1.2.2
 [1.2.1]: https://github.com/amperity/lein-monolith/compare/1.2.0...1.2.1
 [1.2.0]: https://github.com/amperity/lein-monolith/compare/1.1.0...1.2.0
