@@ -2,11 +2,11 @@
   :description "Overarching example project."
 
   :plugins
-  [[lein-monolith "1.3.1-SNAPSHOT"]
+  [[lein-monolith "1.3.1"]
    [lein-pprint "1.2.0"]]
 
   :dependencies
-  [[org.clojure/clojure "1.9.0"]]
+  [[org.clojure/clojure "1.10.1"]]
 
   :test-selectors
   {:unit (complement :integration)
