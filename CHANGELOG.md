@@ -7,6 +7,10 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 
+### Fixed
+- Subproject fingerprints now include the project's artifact version in the
+  calculation.
+
 ### Added
 - Subprojects may include a `:monolith/fingerprint-seed` value as a way to force
   fingerprint invalidations when desired.

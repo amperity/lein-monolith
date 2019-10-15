@@ -165,7 +165,8 @@
   (let [project-name (dep/project-name project)]
     (or (@cache project-name)
         (let [prints
-              {::seed (str (:monolith/fingerprint-seed project 0))
+              {::version (str (:version project))
+               ::seed (str (:monolith/fingerprint-seed project 0))
                ::sources (hash-sources project)
                ::deps (hash-dependencies project)
                ::upstream (hash-upstream-projects
@@ -279,13 +280,15 @@
             (fn [ftype]
               (when (not= (ftype past) (ftype current))
                 ftype))
-            [::sources ::deps ::upstream])
+            [::version ::seed ::sources ::deps ::upstream])
           ::unknown))))
 
 
 (def ^:private reason-details
   {::up-to-date ["is up-to-date" "are up-to-date" :green]
    ::new-project ["is a new project" "are new projects" :red]
+   ::version ["has a different version" "have different versions" :red]
+   ::seed ["has a different seed" "have different seeds" :yellow]
    ::sources ["has updated sources" "have updated sources" :red]
    ::deps ["has updated external dependencies" "have updated external dependencies" :yellow]
    ::upstream ["is downstream of an affected project" "are downstream of affected projects" :yellow]
