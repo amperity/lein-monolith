@@ -7,7 +7,9 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 
-...
+### Added
+- Subprojects may include a `:monolith/fingerprint-seed` value as a way to force
+  fingerprint invalidations when desired.
 
 ## [1.3.0] - 2019-10-07
 

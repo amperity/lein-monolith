@@ -165,7 +165,8 @@
   (let [project-name (dep/project-name project)]
     (or (@cache project-name)
         (let [prints
-              {::sources (hash-sources project)
+              {::seed (str (:monolith/fingerprint-seed project 0))
+               ::sources (hash-sources project)
                ::deps (hash-dependencies project)
                ::upstream (hash-upstream-projects
                             project dep-map subprojects cache)}
