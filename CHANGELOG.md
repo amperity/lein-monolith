@@ -9,6 +9,13 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 
 ...
 
+## [1.3.2] - 2019-10-21
+
+### Fixed
+- Subproject dependency calculation now includes dependencies declared in the
+  project's profiles.
+  [#51](https://github.com/amperity/lein-monolith/pull/51)
+
 ## [1.3.1] - 2019-10-14
 
 ### Fixed
@@ -208,7 +215,8 @@ instead of loading them all before running any commands.
 
 Initial project release
 
-[Unreleased]: https://github.com/amperity/lein-monolith/compare/1.3.1...HEAD
+[Unreleased]: https://github.com/amperity/lein-monolith/compare/1.3.2...HEAD
+[1.3.2]: https://github.com/amperity/lein-monolith/compare/1.3.1...1.3.2
 [1.3.1]: https://github.com/amperity/lein-monolith/compare/1.3.0...1.3.1
 [1.3.0]: https://github.com/amperity/lein-monolith/compare/1.2.2...1.3.0
 [1.2.2]: https://github.com/amperity/lein-monolith/compare/1.2.1...1.2.2

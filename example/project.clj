@@ -2,7 +2,7 @@
   :description "Overarching example project."
 
   :plugins
-  [[lein-monolith "1.3.2-SNAPSHOT"]
+  [[lein-monolith "1.3.2"]
    [lein-pprint "1.2.0"]]
 
   :dependencies
