@@ -93,14 +93,28 @@
 
 ;; ## Dependency Graphs
 
+(defn- collect-dependencies
+  "Merges the project's top-level dependencies with all dependencies listed in
+  the project's profiles to ensure the project has the proper dependency closure
+  for compilation ordering."
+  [project]
+  (->>
+    project
+    (:profiles)
+    (vals)
+    (cons project)
+    (mapcat :dependencies)
+    (map (comp condense-name first))
+    (set)))
+
+
 (defn dependency-map
   "Converts a map of project names to definitions into a map of project names
   to sets of projects that node depends on."
   [projects]
   (->>
     (vals projects)
-    (map #(set (map (comp condense-name first)
-                    (:dependencies %))))
+    (map collect-dependencies)
     (zipmap (keys projects))))
 
 
