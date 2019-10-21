@@ -44,6 +44,10 @@
                    foo/d {:dependencies [[foo/b "1.0.0"]
                                          [foo/c "1.0.0"]]}}]
     (is (= '{foo/a #{}, foo/b #{foo/a}, foo/c #{foo/a}, foo/d #{foo/b foo/c}}
+           (dep/dependency-map projects))))
+  (let [projects '{foo/a {:dependencies []}
+                   foo/b {:dependencies [] :profiles {:test {:dependencies [[foo/a]]}}}}]
+    (is (= `{foo/a #{}, foo/b #{foo/a}}
            (dep/dependency-map projects)))))
 
 
