@@ -7,7 +7,9 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 
-...
+### Fixed
+- When an exception is thrown during an `each :endure` iteration, the stack
+  trace is printed immediately instead of swallowing the error.
 
 ## [1.3.2] - 2019-10-21
 
