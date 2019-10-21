@@ -1,6 +1,7 @@
 (ns lein-monolith.task.each
   (:require
     [clojure.java.io :as io]
+    [clojure.stacktrace :as cst]
     [clojure.string :as str]
     [lein-monolith.color :refer [colorize]]
     [lein-monolith.config :as config]
@@ -282,7 +283,12 @@
             (lein/warn (format "\n%s %s\n"
                                (colorize [:bold :red] "Resume with:")
                                (str/join " " resume-args)))))
-        (when-not (:endure opts)
+        (if (:endure opts)
+          (lein/warn (format "\n%s: %s\n%s"
+                             (colorize [:bold :red] "ERROR")
+                             (ex-message ex)
+                             (with-out-str
+                               (cst/print-cause-trace ex))))
           (throw ex))
         (assoc @results :success false, :error ex))
       (finally
