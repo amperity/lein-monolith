@@ -236,6 +236,13 @@
         (binding [*task-file-output* file-output-stream]
           (with-redefs [leiningen.core.eval/sh run-with-output]
             (apply-subproject-task monolith subproject task)))
+        (catch Exception ex
+          (.write file-output-stream
+                  (.getBytes (format "\nERROR: %s\n%s"
+                                     (ex-message ex)
+                                     (with-out-str
+                                       (cst/print-cause-trace ex)))))
+          (throw ex))
         (finally
           ; Write task footer
           (.write file-output-stream
