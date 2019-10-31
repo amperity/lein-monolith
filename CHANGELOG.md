@@ -15,6 +15,8 @@ This project adheres to [Semantic Versioning](http://semver.org/).
   [#56](https://github.com/amperity/lein-monolith/pull/56)
 - Subtasks of `do` are resolved before parallel execution, which should ensure
   they are fully loaded before they are called.
+- Prevent a potential race condition when combining the `:parallel` and
+  `:output` options in the `each` subtask.
 
 ## [1.3.2] - 2019-10-21
 
