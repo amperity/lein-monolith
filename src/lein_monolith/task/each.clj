@@ -235,8 +235,7 @@
       (try
         ; Run task with output capturing.
         (binding [*task-file-output* file-output-stream]
-          (with-redefs [leiningen.core.eval/sh run-with-output]
-            (apply-subproject-task monolith subproject task)))
+          (apply-subproject-task monolith subproject task))
         (catch Exception ex
           (.write file-output-stream
                   (.getBytes (format "\nERROR: %s\n%s"
@@ -250,6 +249,30 @@
                   (.getBytes (format "\n[%s] Elapsed: %s\n"
                                      (java.util.Date.)
                                      (u/human-duration (:elapsed @results))))))))))
+
+
+(defn- resolve-tasks
+  "Perform an initial resolution of the task to prevent metadata-related
+  arglist errors when namespaces are loaded in parallel."
+  [task+args]
+  (let [task (first task+args)]
+    (lein/resolve-task task)
+    ;; Some tasks pull in other tasks, so also resolve them.
+    (condp = task
+      "do"
+      (doseq [subtask+args (lein-do/group-args (rest task+args))]
+        (resolve-tasks subtask+args))
+
+      "update-in"
+      (let [subtask+args (rest (drop-while #(not= "--" %) task+args))]
+        (resolve-tasks subtask+args))
+
+      "with-profile"
+      (let [subtask+args (drop 2 task+args)]
+        (resolve-tasks subtask+args))
+
+      ;; default no-op
+      nil)))
 
 
 (defn- run-task!
@@ -314,33 +337,8 @@
   (mapv (comp (partial run-task! ctx) second) targets))
 
 
-(defn- resolve-tasks
-  "Perform an initial resolution of the task to prevent metadata-related
-  arglist errors when namespaces are loaded in parallel."
-  [task+args]
-  (let [task (first task+args)]
-    (lein/resolve-task task)
-    ;; Some tasks pull in other tasks, so also resolve them.
-    (condp = task
-      "do"
-      (doseq [subtask+args (lein-do/group-args (rest task+args))]
-        (resolve-tasks subtask+args))
-
-      "update-in"
-      (let [subtask+args (rest (drop-while #(not= "--" %) task+args))]
-        (resolve-tasks subtask+args))
-
-      "with-profile"
-      (let [subtask+args (drop 2 task+args)]
-        (resolve-tasks subtask+args))
-
-      ;; default no-op
-      nil)))
-
-
-(defn- run-parallel!
-  "Runs the tasks for targets in multiple worker threads, chained by dependency
-  order. Returns a vector of result maps in the order the tasks finished executing."
+(defn- run-parallel*
+  "Internal helper for `run-parallel!` which sets up the actual project threads."
   [ctx threads targets]
   (let [task-name (first (:task ctx))
         deps (partial dep/upstream-keys (dep/dependency-map (:subprojects ctx)))
@@ -363,6 +361,19 @@
         {} targets)
       (as-> computations
         (mapv (comp deref computations second) targets)))))
+
+
+(defn- run-parallel!
+  "Runs the tasks for targets in multiple worker threads, chained by dependency
+  order. Returns a vector of result maps in the order the tasks finished executing."
+  [ctx threads targets]
+  (if (get-in ctx [:opts :output])
+    ;; NOTE: this is done here rather than inside each task so that tasks
+    ;; starting across threads don't have a chance to see the `sh` var between
+    ;; rebindings.
+    (with-redefs [leiningen.core.eval/sh run-with-output]
+      (run-parallel* ctx threads targets))
+    (run-parallel* ctx threads targets)))
 
 
 (defn run-tasks
