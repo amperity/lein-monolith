@@ -14,6 +14,7 @@
     [leiningen.core.main :as lein]
     [leiningen.core.project :as project]
     [leiningen.core.utils :refer [rebind-io!]]
+    [leiningen.do :as lein-do]
     [manifold.deferred :as d]
     [manifold.executor :as executor])
   (:import
@@ -313,6 +314,19 @@
   (mapv (comp (partial run-task! ctx) second) targets))
 
 
+(defn- resolve-tasks
+  "Perform an initial resolution of the task to prevent metadata-related
+  arglist errors when namespaces are loaded in parallel."
+  [task+args]
+  (let [task (first task+args)]
+    (lein/resolve-task task)
+    ;; A 'do' task pulls in other tasks, so also resolve them.
+    (when (= "do" task)
+      (doseq [[subtask & args] (lein-do/group-args (rest task+args))]
+        (prn ::resolve-tasks subtask args)
+        (lein/resolve-task subtask)))))
+
+
 (defn- run-parallel!
   "Runs the tasks for targets in multiple worker threads, chained by dependency
   order. Returns a vector of result maps in the order the tasks finished executing."
@@ -320,9 +334,7 @@
   (let [task-name (first (:task ctx))
         deps (partial dep/upstream-keys (dep/dependency-map (:subprojects ctx)))
         thread-pool (executor/fixed-thread-executor threads)]
-    ; Perform an initial resolution of the task to prevent metadata-related
-    ; arglist errors when namespaces are loaded in parallel.
-    (lein/resolve-task (first (:task ctx)))
+    (resolve-tasks (:task ctx))
     (->
       (reduce
         (fn future-builder
