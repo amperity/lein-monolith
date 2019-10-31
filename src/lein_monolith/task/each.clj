@@ -323,7 +323,6 @@
     ;; A 'do' task pulls in other tasks, so also resolve them.
     (when (= "do" task)
       (doseq [[subtask & args] (lein-do/group-args (rest task+args))]
-        (prn ::resolve-tasks subtask args)
         (lein/resolve-task subtask)))))
 
 
