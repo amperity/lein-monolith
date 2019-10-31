@@ -8,6 +8,11 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 ## [Unreleased]
 
 ### Fixed
+- When an exception is thrown during an `each :output` iteration, the stack
+  trace is printed in the output file in addition to the combined output.
+  [#56](https://github.com/amperity/lein-monolith/pull/56)
+
+### Fixed
 - When an exception is thrown during an `each :endure` iteration, the stack
   trace is printed immediately instead of swallowing the error.
 
