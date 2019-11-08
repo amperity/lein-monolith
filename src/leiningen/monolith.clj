@@ -52,6 +52,24 @@
   (info/lint project (if (seq args) (opts-only {:deps 0} args) {:deps true})))
 
 
+(defn deps
+  "Print a list of subprojects and the (internal) projects they depend on.
+  Targeting options may be used to scope down the projects listed.
+
+  Options:
+    :internal <bool>   Whether to show dependencies on internal projects (default: true)
+    :external <bool>   Whether to show dependencies on external projects (default: false)
+    :bare              Only print the project names and dependencies, one per line
+    (targets)          Standard target selection options are supported"
+  [project args]
+  (let [opts (opts-only (assoc target/selection-opts
+                               :internal 1
+                               :external 1
+                               :bare 0)
+                        args)]
+    (info/deps project opts)))
+
+
 (defn deps-on
   "Print a list of subprojects which depend on the given package(s). Defaults
   to the current project if none are provided.
@@ -237,13 +255,14 @@
 
 (defn monolith
   "Tasks for working with Leiningen projects inside a monorepo."
-  {:subtasks [#'info #'lint #'deps-on #'deps-of #'graph
+  {:subtasks [#'info #'lint #'deps #'deps-on #'deps-of #'graph
               #'with-all #'each #'link #'unlink
               #'changed #'mark-fresh #'clear-fingerprints]}
   [project command & args]
   (case command
     "info"               (info project args)
     "lint"               (lint project args)
+    "deps"               (deps project args)
     "deps-on"            (deps-on project args)
     "deps-of"            (deps-of project args)
     "graph"              (graph project args)
