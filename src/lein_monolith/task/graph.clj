@@ -30,6 +30,12 @@
 (defn graph
   "Generate a graph of subprojects and their interdependencies."
   [project opts]
+  ;; NOTE: This is pulled in on-demand here because Rhizome needs to load the
+  ;; JVM's graphical context in order to render the hierarchy images. This has
+  ;; the unfortunate side-effect of popping up a Java applet in most OS's task
+  ;; bars, which can then steal focus away from the terminal. To keep this from
+  ;; happening on _every_ invocation of lein-monolith, only load it when then
+  ;; user actually wants to make graphs.
   (require 'rhizome.viz)
   (let [graph->dot (ns-resolve 'rhizome.dot 'graph->dot)
         dot->image (ns-resolve 'rhizome.viz 'dot->image)

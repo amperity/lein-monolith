@@ -79,9 +79,9 @@
   "Generate a graph of subprojects and their interdependencies.
 
   Options:
-    :image-path    Path to save the graph image to (default: `project-hierarchy.png`)
-    :dot-path      Path to save the raw dot file to (default: not output)
-    (targets)      Standard target selection options are supported"
+    :image-path <path>   Path to save the graph image to (default: `project-hierarchy.png`)
+    :dot-path <path>     Path to save the raw dot file to (default: not output)
+    (targets)            Standard target selection options are supported"
   [project args]
   (graph/graph
     project
