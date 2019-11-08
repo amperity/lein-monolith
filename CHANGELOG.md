@@ -18,6 +18,11 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 - Prevent a potential race condition when combining the `:parallel` and
   `:output` options in the `each` subtask.
 
+### Added
+- The `graph` subtask supports an `:image-path` option to explicitly specify the
+  graph image output, as well as a `:dot-path` option to also write the raw dot
+  definition for the graph.
+
 ## [1.3.2] - 2019-10-21
 
 ### Fixed
