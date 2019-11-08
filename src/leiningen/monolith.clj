@@ -37,7 +37,8 @@
   "Show information about the monorepo configuration.
 
   Options:
-    :bare        Only print the project names and directories, one per line"
+    :bare        Only print the project names and directories, one per line
+    (targets)    Standard target selection options are supported"
   [project args]
   (info/info project (opts-only (merge target/selection-opts {:bare 0}) args)))
 
@@ -75,9 +76,19 @@
 
 
 (defn graph
-  "Generate a graph of subprojects and their interdependencies."
+  "Generate a graph of subprojects and their interdependencies.
+
+  Options:
+    :image-path <path>   Path to save the graph image to (default: `project-hierarchy.png`)
+    :dot-path <path>     Path to save the raw dot file to (default: not output)
+    (targets)            Standard target selection options are supported"
   [project args]
-  (graph/graph project (opts-only target/selection-opts args)))
+  (graph/graph
+    project
+    (opts-only (assoc target/selection-opts
+                      :image-path 1
+                      :dot-path 1)
+               args)))
 
 
 (defn ^:higher-order with-all
