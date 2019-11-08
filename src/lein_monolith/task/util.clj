@@ -1,6 +1,7 @@
 (ns lein-monolith.task.util
   "Utility functions for task code."
   (:require
+    [clojure.string :as str]
     [lein-monolith.config :as config]
     [leiningen.core.main :as lein]))
 
@@ -41,6 +42,16 @@
           :else
           (recur (assoc opts kw (vec (take arg-count (rest args))))
                  (drop (inc arg-count) args)))))))
+
+
+(defn parse-bool
+  "Parse a boolean option with some slack for human-friendliness."
+  [x]
+  (case (str/lower-case (str x))
+    ("true" "t" "yes" "y") true
+    ("false" "f" "no" "n") false
+    (throw (IllegalArgumentException.
+             (format "%s is not a valid boolean value" (pr-str x))))))
 
 
 (defn globalize-opts
