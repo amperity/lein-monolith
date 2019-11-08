@@ -27,6 +27,7 @@ test_monolith() {
 
 test_monolith info
 test_monolith lint
+test_monolith deps
 test_monolith deps-of example/app-a
 test_monolith deps-on example/lib-a
 test_monolith with-all pprint :dependencies :source-paths

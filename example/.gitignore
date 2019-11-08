@@ -2,3 +2,4 @@
 /checkouts
 /.lein-*
 /.nrepl-port
+/*.bak
