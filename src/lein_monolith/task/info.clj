@@ -64,6 +64,23 @@
         (dep/select-dependency dep-name coords)))))
 
 
+(defn deps
+  "Print a list of subprojects and the (internal) projects they depend on.
+  Targeting options may be used to scope down the projects listed."
+  [project opts]
+  (let [[monolith subprojects] (u/load-monolith! project)
+        targets (target/select monolith subprojects opts)
+        dependencies (dep/dependency-map subprojects)]
+    (doseq [project-name targets]
+      (doseq [dependency (get dependencies project-name)]
+        (when (if (contains? subprojects dependency)
+                (u/parse-bool (:internal opts "true"))
+                (u/parse-bool (:external opts "false")))
+          (if (:bare opts)
+            (printf "%s\t%s\n" project-name dependency)
+            (println (colorize :bold project-name) "->" dependency)))))))
+
+
 (defn deps-on
   "Print a list of subprojects which depend on the given package(s). Defaults
   to the current project if none are provided."
