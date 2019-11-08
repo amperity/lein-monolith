@@ -5,10 +5,19 @@
     [lein-monolith.dependency :as dep]
     [lein-monolith.target :as target]
     [lein-monolith.task.util :as u]
-    [leiningen.core.main :as lein]))
+    [leiningen.core.main :as lein])
+  (:import
+    java.io.File))
 
 
-(def image-name "project-hierarchy.png")
+(def default-image-name
+  "project-hierarchy.png")
+
+
+(defn- mkparent!
+  "Ensure the parent directory exists for the given file."
+  [^File file]
+  (.. file getCanonicalFile getParentFile mkdir))
 
 
 (defn cluster->descriptor
@@ -22,22 +31,29 @@
   "Generate a graph of subprojects and their interdependencies."
   [project opts]
   (require 'rhizome.viz)
-  (let [visualize! (ns-resolve 'rhizome.viz 'save-graph)
+  (let [graph->dot (ns-resolve 'rhizome.dot 'graph->dot)
+        dot->image (ns-resolve 'rhizome.viz 'dot->image)
+        save-image (ns-resolve 'rhizome.viz 'save-image)
         [monolith subprojects] (u/load-monolith! project)
         targets (target/select monolith subprojects opts)
         dependencies (dep/dependency-map subprojects)
-        graph-file (io/file (:target-path monolith) image-name)]
+        dot-str (graph->dot
+                  targets
+                  dependencies
+                  :vertical? false
+                  :node->descriptor #(array-map :label (name %))
+                  :node->cluster (fn [id]
+                                   (when-let [root (get-in subprojects [id :root])]
+                                     (str/join "/" (butlast (str/split root #"/")))))
+                  :cluster->descriptor (partial cluster->descriptor (:root monolith)))]
     (when (empty? targets)
       (lein/abort "No targets selected to graph!"))
-    (.mkdir (.getParentFile graph-file))
-    (visualize!
-      targets
-      dependencies
-      :vertical? false
-      :node->descriptor #(array-map :label (name %))
-      :node->cluster (fn [id]
-                       (when-let [root (get-in subprojects [id :root])]
-                         (str/join "/" (butlast (str/split root #"/")))))
-      :cluster->descriptor (partial cluster->descriptor (:root monolith))
-      :filename (str graph-file))
-    (lein/info "Generated dependency graph in" (str graph-file))))
+    (when-let [dot-file (some-> (:dot-path opts) io/file)]
+      (mkparent! dot-file)
+      (spit dot-file dot-str)
+      (lein/info "Wrote dependency graph data to" (str dot-file)))
+    (when-let [graph-file (or (some-> (:image-path opts) io/file)
+                              (io/file (:target-path monolith) default-image-name))]
+      (mkparent! graph-file)
+      (save-image (dot->image dot-str) (str graph-file))
+      (lein/info "Generated dependency graph image at" (str graph-file)))))
