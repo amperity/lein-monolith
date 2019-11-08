@@ -18,6 +18,10 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 - Prevent a potential race condition when combining the `:parallel` and
   `:output` options in the `each` subtask.
 
+### Added
+- New `deps` subtask supports listing all project dependencies in the monorepo.
+  The output should be suitable for other tooling to consume.
+
 ## [1.3.2] - 2019-10-21
 
 ### Fixed
