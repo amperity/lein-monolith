@@ -7,6 +7,10 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 
+...
+
+## [1.4.0] - 2019-11-08
+
 ### Fixed
 - When an exception is thrown during an `each :endure` iteration, the stack
   trace is printed immediately instead of swallowing the error.
@@ -231,7 +235,8 @@ instead of loading them all before running any commands.
 
 Initial project release
 
-[Unreleased]: https://github.com/amperity/lein-monolith/compare/1.3.2...HEAD
+[Unreleased]: https://github.com/amperity/lein-monolith/compare/1.4.0...HEAD
+[1.4.0]: https://github.com/amperity/lein-monolith/compare/1.3.2...1.4.0
 [1.3.2]: https://github.com/amperity/lein-monolith/compare/1.3.1...1.3.2
 [1.3.1]: https://github.com/amperity/lein-monolith/compare/1.3.0...1.3.1
 [1.3.0]: https://github.com/amperity/lein-monolith/compare/1.2.2...1.3.0
