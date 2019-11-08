@@ -19,6 +19,9 @@ This project adheres to [Semantic Versioning](http://semver.org/).
   `:output` options in the `each` subtask.
 
 ### Added
+- The `graph` subtask supports an `:image-path` option to explicitly specify the
+  graph image output, as well as a `:dot-path` option to also write the raw dot
+  definition for the graph.
 - New `deps` subtask supports listing all project dependencies in the monorepo.
   The output should be suitable for other tooling to consume.
 
