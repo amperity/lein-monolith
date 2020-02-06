@@ -165,6 +165,69 @@
           (recur (conj result node)
                  (into (pop queue) (set/difference consumers result))))))))
 
+(defn unique-cycles
+  "Return a set of all unique cycles in dependency graph m."
+  [m]
+  {:pre [(map? m)]
+   :post [(set? %)]}
+  (let [path->cycles (fn path->cycles [path]
+                       {:pre [(seq path)]}
+                       (let [k (peek path)
+                             mks (set (keys m))
+                             vs (m k)
+                             path-set (set path)]
+                         (mapcat (fn [v]
+                                   (cond
+                                     ; found the cycle
+                                     (path-set v) [(into []
+                                                         ; drop non-cyclic prefix
+                                                         (drop-while (complement #{v}))
+                                                         (conj path v))]
+                                     :else (path->cycles
+                                             (conj path v))))
+                                 vs)))
+        all-cycles (mapcat #(path->cycles [%]) (keys m))
+        ; remove duplicate cycles (that involve the same deps)
+        [cycles-vecs _] (reduce (fn [[cycles-vecs cycle-sets] c]
+                                  (let [cset (set c)]
+                                    (if (cycle-sets cset)
+                                      [cycles-vecs cycle-sets]
+                                      [(conj cycles-vecs c)
+                                       (conj cycle-sets cset)])))
+                                [#{} #{}]
+                                all-cycles)]
+    cycles-vecs))
+
+
+(defn pretty-cycle
+  "Returns a pretty-printed string representation of cycle c.
+  
+  eg. (println (pretty-cycle [1 2 3 1])) =>
+      + 1
+      ^ + 2
+      |  + 3
+      |_/"
+  [c]
+  {:pre [(vector? c)
+         (apply = ((juxt first peek) c))]}
+  (str/join (map-indexed (fn [indent el]
+                           (condp = indent
+                             (dec (count c))
+                             ; draw:
+                             ;|___/
+                             (str 
+                               \|
+                               (str/join (repeat (max 1 (- indent 2)) \_))
+                               \/)
+
+                             (str 
+                               (case (int indent)
+                                 0 ""
+                                 1 \^
+                                 \|)
+                               (str/join (repeat indent \space))
+                               "+ " (pr-str el) "\n")))
+                         c)))
 
 (defn topological-sort
   "Returns a sequence of the keys in the map `m`, ordered such that no key `k1`
@@ -176,8 +239,20 @@
      ; should appear *later* in the sequence.
      (let [roots (apply set/difference (set (keys m)) (map set (vals m)))]
        (when (empty? roots)
-         (throw (ex-info "Cannot sort the keys in the given map, cycle detected!"
-                         {:input m})))
+         (let [sort-cycles #(->> %
+                                 (group-by count)
+                                 (into (sorted-map))
+                                 vals
+                                 (mapcat identity))
+               cs (-> m
+                      unique-cycles
+                      sort-cycles)]
+           (assert (seq cs) "Found cycle but failed to reproduce")
+           (throw (ex-info (str "Dependency cycle"
+                                (when (next cs) "s")
+                                " detected!\n\n"
+                                (str/join "\n\n" (map pretty-cycle cs)))
+                           {:cycles cs}))))
        (concat (topological-sort (apply dissoc m roots))
                (sort roots)))))
   ([m ks]

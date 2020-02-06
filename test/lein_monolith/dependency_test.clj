@@ -1,7 +1,10 @@
 (ns lein-monolith.dependency-test
   (:require
+    [clojure.set :as set]
+    [clojure.string :as str]
     [clojure.test :refer :all]
-    [lein-monolith.dependency :as dep]))
+    [lein-monolith.dependency :as dep])
+  (:import [clojure.lang IExceptionInfo]))
 
 
 (deftest coordinate-utilities
@@ -70,11 +73,143 @@
   (let [deps {:a #{}, :b #{:a}, :c #{:a}, :d #{:b :c}}]
     (is (= #{:a :b :c :d} (dep/downstream-keys deps :a)))))
 
+(defn maps-like [n m]
+  (map #(into (array-map) (shuffle (seq %))) (repeat n m)))
+
+; Int -> [Deps SmallestCycles]
+(defn gen-dep-cycle
+  "Create a dependency cycle of the specified size
+  that also includes a cycle of length 3 (ie. between two deps).
+  Returns a vector of the dependencies and a set of its
+  smallest dependency cycles."
+  [size]
+  {:pre [(<= 5 size)]}
+  ;comments assume size == 50
+  (let [[cstart cend] ((juxt identity inc) (quot size 2))]
+    [(into {}
+           (map (fn [a]
+                  [a
+                   (condp = a
+                     (dec size) #{0} ; 0->1-*>49->0
+                     cend #{cstart} ; 24->25->24
+                     (into #{} (range (inc a) size)))]))
+           (range size))
+     #{[cstart cend cstart]
+       [cend cstart cend]}]))
+
+(defn cycle-actually-occurs [deps c]
+  {:pre [(vector? c)
+         (seq c)
+         (map? deps)
+         (= (first c) (peek c))]}
+  (boolean
+    (reduce (fn [downstream el]
+              (or (some-> el downstream deps)
+                  (reduced nil)))
+            (deps (first c))
+            (next c))))
+
+(deftest cycle-actually-occurs-test
+  (is (cycle-actually-occurs {1 #{2} 2 #{1}} [1 2 1]))
+  (is (not (cycle-actually-occurs {1 #{2} 2 #{3} 3 #{}} [1 2 1])))
+  )
+
+(deftest unique-cycles-test
+  (is (= #{} (dep/unique-cycles {})))
+  (is (= #{[2 2]} (dep/unique-cycles {2 #{2}})))
+  (is (= #{} (dep/unique-cycles {1 #{2}})))
+  (doseq [size [5 10 #_15]] ;gen cycles of these sizes (higher is very slow)
+    (let [[deps smallest-cycles] (gen-dep-cycle size)]
+      (doseq [c (maps-like 10 deps)] ;shuffle deps order <..> times
+        (let [actual (dep/unique-cycles c)]
+          (every? #(is (cycle-actually-occurs deps %)
+                       (str "Cycle doesn't occur:\n"
+                            "deps: " deps \newline
+                            "claimed cycle: " %))
+                  actual)
+          (is (seq (set/intersection smallest-cycles actual))
+              (str "Missing smallest cycle(s) for size " size ": "
+                   (pr-str actual))))))))
+
+(defn check-cycle-error [deps smlest-cycles]
+  (doseq [deps (maps-like 10 deps)]
+    (let [^Exception e (try (dep/topological-sort deps)
+                            (catch Exception e e))]
+      (is (instance? IExceptionInfo e)
+          (str "Didn't throw an exception\ndeps: " deps))
+      (is (re-find #"Dependency cycles? detected" (.getMessage e)))
+      ; pretty printed dependency cycle appears in msg
+      #_
+      (is (some (fn [c]
+                  (re-find (re-pattern
+                             (apply str (str/join " -> " c)))
+                           (.getMessage e)))
+                smlest-cycles)
+          (str "Didn't print out smallest cycle:\n"
+               "deps: " deps "\n"
+               "smallest-cycles: " smlest-cycles "\n"
+               "actual message: " (.getMessage e)))
+      (is (->> e ex-data :cycles (some smlest-cycles))
+          (str "Didn't include smallest cycle:\n"
+               "deps: " deps "\n"
+               "smallest-cycles: " smlest-cycles "\n"
+               "actual cycles: " (->> e ex-data :cycles) "\n"
+               "actual message: " (.getMessage e))))))
 
 (deftest topological-sorting
   (let [deps {:a #{}, :b #{:a}, :c #{:a :b} :x #{:b} :y #{:c}}]
     (is (= [:a :b :c :x :y] (dep/topological-sort deps)))
     (is (= [:b :c :x] (dep/topological-sort deps [:x :c :b]))))
-  (let [deps {:a #{:b}, :b #{:c}, :c #{:a}}]
-    (is (thrown-with-msg? Exception #"cycle detected"
-          (dep/topological-sort deps)))))
+  (check-cycle-error {:a #{:b}, :b #{:c}, :c #{:a}}
+                     #{[:a :b :c :a]
+                       [:b :c :a :b]
+                       [:c :a :b :c]})
+  (doseq [size [5 10]] ;gen cycles of these sizes (higher is very slow)
+    (let [[deps smallest-cycles] (gen-dep-cycle size)]
+      (doseq [c (maps-like 5 deps)] ;shuffle deps order <..> times
+        (check-cycle-error c smallest-cycles)))))
+
+(comment
+  (println
+    (dep/topological-sort
+      {:a #{:b},
+       :b #{:c :a},
+       :c #{:d},
+       :d #{:a :b}}))
+  )
+
+(deftest pretty-cycle-test
+  (let [cycle+pretty
+        {[1 2 1]
+         ["+ 1"
+          "^ + 2"
+          "|_/"]
+
+         [1 2 3 1]
+         ["+ 1"
+          "^ + 2"
+          "|  + 3"
+          "|_/"]
+
+         [1 2 3 4 1]
+         ["+ 1"
+          "^ + 2"
+          "|  + 3"
+          "|   + 4"
+          "|__/"]
+         
+         [1 2 3 4 5 1]
+         ["+ 1"
+          "^ + 2"
+          "|  + 3"
+          "|   + 4"
+          "|    + 5"
+          "|___/"]}]
+    (every? (fn [[c strs]]
+              (let [expected (str/join \newline strs)
+                    actual (dep/pretty-cycle c)]
+                (is (= expected actual)
+                    (str "Pretty representation of cycle " c ":\n"
+                         "Expected:\n" expected "\n\n"
+                         "Actual:\n" actual))))
+            cycle+pretty)))
