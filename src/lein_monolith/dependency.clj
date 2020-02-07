@@ -210,24 +210,29 @@
   [c]
   {:pre [(vector? c)
          (apply = ((juxt first peek) c))]}
-  (str/join (map-indexed (fn [indent el]
-                           (condp = indent
-                             (dec (count c))
-                             ; draw:
-                             ;|___/
-                             (str 
-                               \|
-                               (str/join (repeat (max 1 (- indent 2)) \_))
-                               \/)
+  (if (= 2 (count c))
+    (str/join \newline
+              [(str "+ " (pr-str (peek c)))
+               "^\\"
+               "|_|"])
+    (str/join (map-indexed (fn [indent el]
+                             (condp = indent
+                               (dec (count c))
+                               ; draw:
+                               ;|___/
+                               (str 
+                                 \|
+                                 (str/join (repeat (max 1 (- indent 2)) \_))
+                                 \/)
 
-                             (str 
-                               (case (int indent)
-                                 0 ""
-                                 1 \^
-                                 \|)
-                               (str/join (repeat indent \space))
-                               "+ " (pr-str el) "\n")))
-                         c)))
+                               (str 
+                                 (case (int indent)
+                                   0 ""
+                                   1 \^
+                                   \|)
+                                 (str/join (repeat indent \space))
+                                 "+ " (pr-str el) "\n")))
+                           c))))
 
 (defn topological-sort
   "Returns a sequence of the keys in the map `m`, ordered such that no key `k1`
