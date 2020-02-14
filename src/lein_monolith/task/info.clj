@@ -1,6 +1,5 @@
 (ns lein-monolith.task.info
   (:require
-    [clojure.string :as str]
     [lein-monolith.color :refer [colorize]]
     [lein-monolith.config :as config]
     [lein-monolith.dependency :as dep]
@@ -55,8 +54,7 @@
 (defn lint
   "Check various aspects of the monolith and warn about possible problems."
   [project opts]
-  (let [[monolith subprojects] (u/load-monolith! project)]
-    ; TODO: lack of :pedantic? :abort
+  (let [[_ subprojects] (u/load-monolith! project)]
     (when (:deps opts)
       (doseq [[dep-name coords] (->> (vals subprojects)
                                      (mapcat dep/sourced-dependencies)
@@ -85,16 +83,17 @@
   "Print a list of subprojects which depend on the given package(s). Defaults
   to the current project if none are provided."
   [project opts project-names]
-  (let [[monolith subprojects] (u/load-monolith! project)
+  (let [[_ subprojects] (u/load-monolith! project)
         dep-map (dep/dependency-map subprojects)
         resolved-names (map (partial dep/resolve-name! (keys dep-map))
                             project-names)]
     (doseq [dep-name resolved-names]
       (when-not (:bare opts)
         (lein/info "\nSubprojects which depend on" (colorize [:bold :yellow] dep-name)))
-      (doseq [subproject-name (dep/topological-sort dep-map)
-              :let [{:keys [version dependencies]} (get subprojects subproject-name)]]
-        (when-let [spec (first (filter (comp #{dep-name} dep/condense-name first) dependencies))]
+      (doseq [subproject-name (dep/topological-sort dep-map)]
+        (when-let [spec (->> (get-in subprojects [subproject-name :dependencies])
+                             (filter (comp #{dep-name} dep/condense-name first))
+                             (first))]
           (if (:bare opts)
             (println subproject-name (first spec) (second spec))
             (println "  " (colorize :bold subproject-name)
@@ -105,7 +104,7 @@
   "Print a list of subprojects which given package(s) depend on. Defaults to
   the current project if none are provided."
   [project opts project-names]
-  (let [[monolith subprojects] (u/load-monolith! project)
+  (let [[_ subprojects] (u/load-monolith! project)
         dep-map (dep/dependency-map subprojects)
         resolved-names (map (partial dep/resolve-name! (keys dep-map))
                             project-names)]

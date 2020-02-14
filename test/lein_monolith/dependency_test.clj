@@ -1,6 +1,6 @@
 (ns lein-monolith.dependency-test
   (:require
-    [clojure.test :refer :all]
+    [clojure.test :refer [deftest testing is]]
     [lein-monolith.dependency :as dep]))
 
 

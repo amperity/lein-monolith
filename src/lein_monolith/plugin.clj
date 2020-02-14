@@ -2,8 +2,6 @@
   "This namespace runs inside of Leiningen on all projects and handles profile
   creation for `with-all` and `inherit` functionality."
   (:require
-    [clojure.java.io :as jio]
-    [clojure.string :as str]
     [lein-monolith.config :as config]
     [lein-monolith.dependency :as dep]
     [leiningen.core.main :as lein]
@@ -31,23 +29,17 @@
 (defn merged-profile
   "Constructs a profile map containing merged (re)source and test paths."
   [subprojects]
-  (let [add-paths (fn update-paths
-                    [profile project k]
-                    (update profile k concat
-                            (map (partial str (:root project) "/")
-                                 (get project k))))]
-    (->
-      (reduce-kv
-        (fn [profile project-name project]
-          (-> profile
-              (add-profile-paths project :resource-paths)
-              (add-profile-paths project :source-paths)
-              (add-profile-paths project :test-paths)))
-        {:dependencies (subproject-dependencies subprojects)
-         :resource-paths []
-         :source-paths []
-         :test-paths []}
-        subprojects))))
+  (reduce-kv
+    (fn [profile _ project]
+      (-> profile
+          (add-profile-paths project :resource-paths)
+          (add-profile-paths project :source-paths)
+          (add-profile-paths project :test-paths)))
+    {:dependencies (subproject-dependencies subprojects)
+     :resource-paths []
+     :source-paths []
+     :test-paths []}
+    subprojects))
 
 
 (defn inherited-profile

@@ -1,6 +1,6 @@
 (ns lein-monolith.task.util-test
   (:require
-    [clojure.test :refer :all]
+    [clojure.test :refer [deftest testing is]]
     [lein-monolith.task.util :as u]))
 
 
