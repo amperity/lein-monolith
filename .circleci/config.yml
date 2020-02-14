@@ -75,6 +75,7 @@ workflows:
   build:
     jobs:
       - style
+      - lint
       - test
       - examples:
           requires:
