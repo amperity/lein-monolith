@@ -105,7 +105,7 @@
 (defn- select-projects
   "Returns a vector of pairs of index numbers and symbols naming the selected
   subprojects."
-  [monolith subprojects fprints project-name opts]
+  [monolith subprojects fprints opts]
   (let [dependencies (dep/dependency-map subprojects)
         targets (target/select monolith subprojects opts)
         start-from (some->> (:start opts)
@@ -340,17 +340,16 @@
 (defn- run-parallel*
   "Internal helper for `run-parallel!` which sets up the actual project threads."
   [ctx threads targets]
-  (let [task-name (first (:task ctx))
-        deps (partial dep/upstream-keys (dep/dependency-map (:subprojects ctx)))
+  (let [deps (partial dep/upstream-keys (dep/dependency-map (:subprojects ctx)))
         thread-pool (executor/fixed-thread-executor threads)]
     (resolve-tasks (:task ctx))
     (->
       (reduce
         (fn future-builder
-          [computations [i target]]
+          [computations [_ target]]
           (let [upstream-futures (keep computations (deps target))
                 task-runner (fn task-runner
-                              [dependency-results]
+                              [_]
                               (d/future-with thread-pool
                                 (lein/debug "Starting project" target)
                                 (run-task! ctx target)))
@@ -358,7 +357,8 @@
                               (d/chain (apply d/zip upstream-futures) task-runner)
                               (task-runner nil))]
             (assoc computations target task-future)))
-        {} targets)
+        {}
+        targets)
       (as-> computations
         (mapv (comp deref computations second) targets)))))
 
@@ -387,7 +387,6 @@
                opts)
         targets (select-projects
                   monolith subprojects fprints
-                  (dep/project-name project)
                   (u/globalize-opts project opts))
         n (inc (or (first (last targets)) -1))
         start-time (System/nanoTime)]

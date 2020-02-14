@@ -9,8 +9,7 @@
     java.io.File
     (java.nio.file
       Files
-      LinkOption
-      Paths)))
+      LinkOption)))
 
 
 (defn- create-symlink!
@@ -57,7 +56,7 @@
   "Create symlinks in the checkouts directory pointing to all internal
   dependencies in the current project."
   [project opts project-names]
-  (let [[monolith subprojects] (u/load-monolith! project)
+  (let [[_ subprojects] (u/load-monolith! project)
         dep-map (dep/dependency-map subprojects)
         selected-names (into #{}
                              (map (partial dep/resolve-name! (keys dep-map)))

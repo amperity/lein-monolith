@@ -3,20 +3,17 @@
     [clojure.edn :as edn]
     [clojure.java.io :as io]
     [clojure.pprint :refer [pprint]]
-    [clojure.set :as set]
     [clojure.string :as str]
     [lein-monolith.color :refer [colorize]]
     [lein-monolith.dependency :as dep]
     [lein-monolith.plugin :as plugin]
     [lein-monolith.target :as target]
     [lein-monolith.task.util :as u]
-    [leiningen.core.main :as lein]
-    [leiningen.core.project :as project])
+    [leiningen.core.main :as lein])
   (:import
     (java.io
       File
-      InputStream
-      PushbackInputStream)
+      InputStream)
     java.security.MessageDigest
     java.util.Base64))
 
@@ -187,9 +184,9 @@
 
 (comment
   ;; Example .lein-monolith-fingerprints
-  {"build" {foo/bar {::sources "abcde"
-                     ,,,
-                     ::final "vwxyz"}
+  {"build" {'foo/bar {::sources "abcde"
+                      ,,,
+                      ::final "vwxyz"}
             ,,,}
    ,,,})
 
@@ -297,7 +294,7 @@
 
 (defn explain-str
   [ctx marker project-name]
-  (let [[singular plural color] (reason-details (explain-kw ctx marker project-name))]
+  (let [[singular _ color] (reason-details (explain-kw ctx marker project-name))]
     (colorize color singular)))
 
 
