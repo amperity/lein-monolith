@@ -187,7 +187,11 @@
                                        (conj path v))))
                                  vs)))
         all-cycles (mapcat #(path->cycles [%]) (keys m))
-        ; remove duplicate cycles (that involve the same deps)
+        ; remove duplicate cycles (that involve the same deps) -- like
+        ;   (into #{}
+        ;         (map (comp first val))
+        ;         (group-by set all-cycles))
+        ; but in a single pass.
         [cycles-vecs _] (reduce (fn [[cycles-vecs cycle-sets] c]
                                   (let [cset (set c)]
                                     (if (cycle-sets cset)
