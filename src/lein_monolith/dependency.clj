@@ -242,14 +242,9 @@
      ; should appear *later* in the sequence.
      (let [roots (apply set/difference (set (keys m)) (map set (vals m)))]
        (when (empty? roots)
-         (let [sort-cycles #(->> %
-                                 (group-by count)
-                                 (into (sorted-map))
-                                 vals
-                                 (mapcat identity))
-               cs (-> m
-                      unique-cycles
-                      sort-cycles)]
+         (let [cs (->> m
+                       unique-cycles
+                       (sort-by count))]
            (assert (seq cs) "Found cycle but failed to reproduce")
            (throw (ex-info (str "Dependency cycle"
                                 (when (next cs) "s")
