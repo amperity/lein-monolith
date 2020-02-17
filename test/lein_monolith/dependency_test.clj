@@ -111,8 +111,7 @@
 
 (deftest cycle-actually-occurs-test
   (is (cycle-actually-occurs {1 #{2} 2 #{1}} [1 2 1]))
-  (is (not (cycle-actually-occurs {1 #{2} 2 #{3} 3 #{}} [1 2 1])))
-  )
+  (is (not (cycle-actually-occurs {1 #{2} 2 #{3} 3 #{}} [1 2 1]))))
 
 (deftest unique-cycles-test
   (is (= #{} (dep/unique-cycles {})))
@@ -139,16 +138,6 @@
           (str "Didn't throw an exception\ndeps: " deps))
       (is (re-find #"Dependency cycles? detected" (.getMessage e)))
       ; pretty printed dependency cycle appears in msg
-      #_
-      (is (some (fn [c]
-                  (re-find (re-pattern
-                             (apply str (str/join " -> " c)))
-                           (.getMessage e)))
-                smlest-cycles)
-          (str "Didn't print out smallest cycle:\n"
-               "deps: " deps "\n"
-               "smallest-cycles: " smlest-cycles "\n"
-               "actual message: " (.getMessage e)))
       (is (->> e ex-data :cycles (some smlest-cycles))
           (str "Didn't include smallest cycle:\n"
                "deps: " deps "\n"
@@ -168,15 +157,6 @@
     (let [[deps smallest-cycles] (gen-dep-cycle size)]
       (doseq [c (maps-like 5 deps)] ;shuffle deps order <..> times
         (check-cycle-error c smallest-cycles)))))
-
-(comment
-  (println
-    (dep/topological-sort
-      {:a #{:b},
-       :b #{:c :a},
-       :c #{:d},
-       :d #{:a :b}}))
-  )
 
 (deftest pretty-cycle-test
   (let [cycle+pretty
@@ -213,8 +193,6 @@
     (every? (fn [[c strs]]
               (let [expected (str/join \newline strs)
                     actual (dep/pretty-cycle c)]
-                (is (= expected actual)
-                    (str "Pretty representation of cycle " c ":\n"
-                         "Expected:\n" expected "\n\n"
-                         "Actual:\n" actual))))
+                (testing (str "Pretty representation of cycle " c)
+                  (is (= expected actual)))))
             cycle+pretty)))
