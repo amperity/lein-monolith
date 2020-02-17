@@ -209,7 +209,7 @@
       |_/"
   [c]
   {:pre [(vector? c)
-         (apply = ((juxt first peek) c))]}
+         (= (first c) (peek c))]}
   (if (= 2 (count c))
     (str/join \newline
               [(str "+ " (pr-str (peek c)))
