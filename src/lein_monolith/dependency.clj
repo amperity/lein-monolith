@@ -216,15 +216,13 @@
                "^\\"
                "|_|"])
     (str/join (map-indexed (fn [indent el]
-                             (condp = indent
-                               (dec (count c))
+                             (if (= indent (dec (count c)))
                                ; draw:
                                ;|___/
                                (str 
                                  \|
                                  (str/join (repeat (max 1 (- indent 2)) \_))
                                  \/)
-
                                (str 
                                  (case (int indent)
                                    0 ""
