@@ -170,21 +170,21 @@
   [m]
   {:pre [(map? m)]
    :post [(set? %)]}
-  (let [path->cycles (fn path->cycles [path]
+  (let [mks (set (keys m))
+        path->cycles (fn path->cycles [path]
                        {:pre [(seq path)]}
                        (let [k (peek path)
-                             mks (set (keys m))
                              vs (m k)
                              path-set (set path)]
                          (mapcat (fn [v]
-                                   (cond
+                                   (if (path-set v)
                                      ; found the cycle
-                                     (path-set v) [(into []
-                                                         ; drop non-cyclic prefix
-                                                         (drop-while (complement #{v}))
-                                                         (conj path v))]
-                                     :else (path->cycles
-                                             (conj path v))))
+                                     [(into []
+                                            ; drop non-cyclic prefix
+                                            (drop-while (complement #{v}))
+                                            (conj path v))]
+                                     (path->cycles
+                                       (conj path v))))
                                  vs)))
         all-cycles (mapcat #(path->cycles [%]) (keys m))
         ; remove duplicate cycles (that involve the same deps)
