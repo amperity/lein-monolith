@@ -2,7 +2,7 @@
   (:require
     [clojure.set :as set]
     [clojure.string :as str]
-    [clojure.test :refer :all]
+    [clojure.test :refer [deftest testing is]]
     [lein-monolith.dependency :as dep])
   (:import [clojure.lang IExceptionInfo]))
 
