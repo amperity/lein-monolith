@@ -4,7 +4,9 @@
     [clojure.string :as str]
     [clojure.test :refer [deftest testing is]]
     [lein-monolith.dependency :as dep])
-  (:import [clojure.lang IExceptionInfo]))
+  (:import
+    (clojure.lang
+      IExceptionInfo)))
 
 
 (deftest coordinate-utilities
@@ -73,7 +75,9 @@
   (let [deps {:a #{}, :b #{:a}, :c #{:a}, :d #{:b :c}}]
     (is (= #{:a :b :c :d} (dep/downstream-keys deps :a)))))
 
-(defn maps-like [n m]
+
+(defn maps-like
+  [n m]
   (map #(into (array-map) (shuffle (seq %))) (repeat n m)))
 
 ; Int -> [Deps SmallestCycles]
@@ -97,7 +101,9 @@
      #{[cstart cend cstart]
        [cend cstart cend]}]))
 
-(defn cycle-actually-occurs [deps c]
+
+(defn cycle-actually-occurs
+  [deps c]
   {:pre [(vector? c)
          (seq c)
          (map? deps)
@@ -109,9 +115,11 @@
             (deps (first c))
             (next c))))
 
+
 (deftest cycle-actually-occurs-test
   (is (cycle-actually-occurs {1 #{2} 2 #{1}} [1 2 1]))
   (is (not (cycle-actually-occurs {1 #{2} 2 #{3} 3 #{}} [1 2 1]))))
+
 
 (deftest unique-cycles-test
   (is (= #{} (dep/unique-cycles {})))
@@ -130,6 +138,7 @@
               (str "Missing smallest cycle(s) for size " size ": "
                    (pr-str actual))))))))
 
+
 (defn check-cycle-error [deps smlest-cycles]
   (doseq [deps (maps-like 10 deps)]
     (let [^Exception e (try (dep/topological-sort deps)
@@ -145,6 +154,7 @@
                "actual cycles: " (->> e ex-data :cycles) "\n"
                "actual message: " (.getMessage e))))))
 
+
 (deftest topological-sorting
   (let [deps {:a #{}, :b #{:a}, :c #{:a :b} :x #{:b} :y #{:c}}]
     (is (= [:a :b :c :x :y] (dep/topological-sort deps)))
@@ -157,6 +167,7 @@
     (let [[deps smallest-cycles] (gen-dep-cycle size)]
       (doseq [c (maps-like 5 deps)] ;shuffle deps order <..> times
         (check-cycle-error c smallest-cycles)))))
+
 
 (deftest pretty-cycle-test
   (let [cycle+pretty

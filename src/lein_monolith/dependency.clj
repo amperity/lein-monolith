@@ -165,13 +165,14 @@
           (recur (conj result node)
                  (into (pop queue) (set/difference consumers result))))))))
 
+
 (defn unique-cycles
   "Return a set of all unique cycles in dependency graph m."
   [m]
   {:pre [(map? m)]
    :post [(set? %)]}
-  (let [mks (set (keys m))
-        path->cycles (fn path->cycles [path]
+  (let [path->cycles (fn path->cycles
+                       [path]
                        {:pre [(seq path)]}
                        (let [k (peek path)
                              vs (m k)
@@ -223,11 +224,11 @@
                              (if (= indent (dec (count c)))
                                ; draw:
                                ;|___/
-                               (str 
+                               (str
                                  \|
                                  (str/join (repeat (max 1 (- indent 2)) \_))
                                  \/)
-                               (str 
+                               (str
                                  (case (int indent)
                                    0 ""
                                    1 \^
@@ -235,6 +236,7 @@
                                  (str/join (repeat indent \space))
                                  "+ " (pr-str el) "\n")))
                            c))))
+
 
 (defn topological-sort
   "Returns a sequence of the keys in the map `m`, ordered such that no key `k1`
