@@ -2,6 +2,7 @@
   "This namespace runs inside of Leiningen on all projects and handles profile
   creation for `with-all` and `inherit` functionality."
   (:require
+    [clojure.java.io :as io]
     [lein-monolith.config :as config]
     [lein-monolith.dependency :as dep]
     [leiningen.core.main :as lein]
@@ -42,6 +43,51 @@
     subprojects))
 
 
+(defn- with-meta*
+  "Returns an object of the same type and value as obj, with map m as its
+  metadata if the object can hold metadata."
+  [obj m]
+  (if (instance? clojure.lang.IObj obj)
+    (with-meta obj m)
+    obj))
+
+
+(defn- string->path
+  [s]
+  (-> s io/file (.toPath)))
+
+
+(defn- relativize
+  [root path]
+  (let [root-path (string->path root)
+        path-path (string->path path)]
+    (str (if (.startsWith path-path root-path)
+           (.relativize root-path path-path)
+           path))))
+
+
+(defn- relativize-path
+  [{:keys [root] :as project} key]
+  (cond (re-find #"-path$" (name key))
+        (update project key (partial relativize root))
+
+        (re-find #"-paths$" (name key))
+        (update project key #(with-meta* (map (partial relativize root) %)
+                               (meta %)))
+
+        :else project))
+
+
+(defn- relativize-paths
+  [project]
+  (reduce relativize-path project (keys project)))
+
+
+(defn- select-properties
+  [monolith properties]
+  (select-keys (relativize-paths monolith) properties))
+
+
 (defn inherited-profile
   "Constructs a profile map containing the inherited properties from a parent
   project map."
@@ -54,14 +100,14 @@
 
       ; Inherit the base properties specified in the parent.
       (true? setting)
-      (select-keys monolith base-properties)
+      (select-properties monolith base-properties)
 
       ; Provide additional properties to inherit, or replace if metadata is set.
       (vector? setting)
       (->> (if (:replace (meta setting))
              setting
              (distinct (concat base-properties setting)))
-           (select-keys monolith))
+           (select-properties monolith))
 
       :else
       (throw (ex-info (str "Unknown value type for monolith inherit setting: "

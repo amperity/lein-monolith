@@ -12,9 +12,12 @@
   {:unit (complement :integration)
    :integration :integration}
 
+  :source-paths ^:replace ["src" "dev"]
+
   :monolith
   {:inherit
    [:test-selectors
+    :source-paths
     :env]
 
    :inherit-leaky
