@@ -9,6 +9,7 @@
 
   :dependencies
   [[manifold "0.1.8"]
+   [meta-merge "1.0.0"]
    [rhizome "0.2.9"]]
 
   :hiera

@@ -5,7 +5,8 @@
     [lein-monolith.config :as config]
     [lein-monolith.dependency :as dep]
     [leiningen.core.main :as lein]
-    [leiningen.core.project :as project]))
+    [leiningen.core.project :as project]
+    [meta-merge.core :refer [meta-merge]]))
 
 
 ;; ## Profile Generation
@@ -42,6 +43,17 @@
     subprojects))
 
 
+(defn- inherit-properties
+  [monolith properties]
+  (reduce
+    (fn [m property]
+      (meta-merge m (if (map? property)
+                      property
+                      (select-keys monolith [property]))))
+    {}
+    properties))
+
+
 (defn inherited-profile
   "Constructs a profile map containing the inherited properties from a parent
   project map."
@@ -54,14 +66,14 @@
 
       ; Inherit the base properties specified in the parent.
       (true? setting)
-      (select-keys monolith base-properties)
+      (inherit-properties monolith base-properties)
 
       ; Provide additional properties to inherit, or replace if metadata is set.
       (vector? setting)
       (->> (if (:replace (meta setting))
              setting
              (distinct (concat base-properties setting)))
-           (select-keys monolith))
+           (inherit-properties monolith))
 
       :else
       (throw (ex-info (str "Unknown value type for monolith inherit setting: "
