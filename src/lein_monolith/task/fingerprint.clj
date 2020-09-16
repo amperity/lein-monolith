@@ -163,6 +163,7 @@
     (or (@cache project-name)
         (let [prints
               {::version (str (:version project))
+               ::java-version (System/getProperty "java.version")
                ::seed (str (:monolith/fingerprint-seed project 0))
                ::sources (hash-sources project)
                ::deps (hash-dependencies project)
