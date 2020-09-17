@@ -9,6 +9,12 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 
 ...
 
+## [1.5.0] - 2020-09-17
+
+### Added
+- Subproject fingerprints now includes the Java version in the calculation.
+  [#71](https://github.com/amperity/lein-monolith/pull/71)
+
 ## [1.4.0] - 2019-11-08
 
 ### Fixed
