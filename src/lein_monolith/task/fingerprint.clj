@@ -163,6 +163,7 @@
     (or (@cache project-name)
         (let [prints
               {::version (str (:version project))
+               ::java-version (System/getProperty "java.version")
                ::seed (str (:monolith/fingerprint-seed project 0))
                ::sources (hash-sources project)
                ::deps (hash-dependencies project)
@@ -285,6 +286,7 @@
   {::up-to-date ["is up-to-date" "are up-to-date" :green]
    ::new-project ["is a new project" "are new projects" :red]
    ::version ["has a different version" "have different versions" :red]
+   ::java-version ["has a different java version" "have different java versions" :red]
    ::seed ["has a different seed" "have different seeds" :yellow]
    ::sources ["has updated sources" "have updated sources" :red]
    ::deps ["has updated external dependencies" "have updated external dependencies" :yellow]
@@ -345,7 +347,7 @@
                    (colorize :bold marker)
                    "fingerprints:\n")
         (let [reasons (group-by (partial explain-kw ctx marker) targets)]
-          (doseq [k [::unknown ::new-project ::sources ::resources ::deps ::upstream ::up-to-date]]
+          (doseq [k [::unknown ::new-project ::sources ::resources ::deps ::version ::java-version ::upstream ::up-to-date]]
             (when-let [projs (seq (k reasons))]
               (let [[singular plural color] (reason-details k)
                     c (count projs)]
