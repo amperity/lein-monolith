@@ -4,6 +4,16 @@
     [lein-monolith.task.util :as u]))
 
 
+(deftest shell-escaping
+  (is (= "nil" (u/shell-escape nil)))
+  (is (= "123" (u/shell-escape 123)))
+  (is (= "foo" (u/shell-escape "foo")))
+  (is (= ":abc" (u/shell-escape :abc)))
+  (is (= "'[123 true]'" (u/shell-escape [123 true])))
+  (is (= "'\\'foo'" (u/shell-escape "'foo")))
+  (is (= "'\"xyz\"'" (u/shell-escape "\"xyz\""))))
+
+
 (deftest kw-arg-parsing
   (testing "empty arguments"
     (is (= [{} []]

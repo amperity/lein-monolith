@@ -6,6 +6,19 @@
     [leiningen.core.main :as lein]))
 
 
+(defn shell-escape
+  "Escape the provided argument for use in a shell."
+  [arg]
+  (let [s (if (string? arg)
+            arg
+            (pr-str arg))]
+    (if (or (str/includes? s " ")
+            (str/includes? s "'")
+            (str/includes? s "\""))
+      (str \' (str/escape s {\' "\\'"}) \')
+      s)))
+
+
 (defn parse-kw-args
   "Given a sequence of string arguments, parse out expected keywords. Returns
   a vector with a map of keywords to values (or `true` for flags) followed by

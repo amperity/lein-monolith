@@ -306,11 +306,13 @@
       (assoc @results :success true)
       (catch Exception ex
         (when-not (or (:parallel opts) (:endure opts))
-          (let [resume-args (concat
-                              ["lein monolith each"]
-                              (opts->args (dissoc opts :start))
-                              [:start target]
-                              (:task ctx))]
+          (let [resume-args (into
+                              ["lein" "monolith" "each"]
+                              (map u/shell-escape)
+                              (concat
+                                (opts->args (dissoc opts :start))
+                                [:start target]
+                                (:task ctx)))]
             (lein/warn (format "\n%s %s\n"
                                (colorize [:bold :red] "Resume with:")
                                (str/join " " resume-args)))))
