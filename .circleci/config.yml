@@ -17,7 +17,7 @@ jobs:
       - run:
           name: Install cljstyle CLI
           environment:
-            CLJSTYLE_VERSION: 0.12.0
+            CLJSTYLE_VERSION: 0.13.0
           command: |
             wget https://github.com/greglook/cljstyle/releases/download/${CLJSTYLE_VERSION}/cljstyle_${CLJSTYLE_VERSION}_linux.tar.gz
             tar -xzf cljstyle_${CLJSTYLE_VERSION}_linux.tar.gz
@@ -32,7 +32,7 @@ jobs:
       - run:
           name: Install clj-kondo
           environment:
-            CLJ_KONDO_VERSION: 2019.12.14
+            CLJ_KONDO_VERSION: 2020.09.09
           command: |
             wget https://github.com/borkdude/clj-kondo/releases/download/v${CLJ_KONDO_VERSION}/clj-kondo-${CLJ_KONDO_VERSION}-linux-amd64.zip
             unzip clj-kondo-${CLJ_KONDO_VERSION}-linux-amd64.zip
