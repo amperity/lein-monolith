@@ -209,7 +209,8 @@
         subproject
         (reduce-kv
           (fn inject-profile [p k v] (assoc-in p [:profiles k] v))
-          subproject inherited)
+          subproject
+          inherited)
         (config/debug-profile "init-subproject"
           (locking init-lock
             (project/init-project subproject (cons :default (keys inherited)))))
@@ -254,22 +255,22 @@
 (defn- resolve-tasks
   "Perform an initial resolution of the task to prevent metadata-related
   arglist errors when namespaces are loaded in parallel."
-  [task+args]
-  (let [task (first task+args)]
+  [project task+args]
+  (let [[task args] (lein/task-args task+args project)]
     (lein/resolve-task task)
     ;; Some tasks pull in other tasks, so also resolve them.
     (condp = task
       "do"
-      (doseq [subtask+args (lein-do/group-args (rest task+args))]
-        (resolve-tasks subtask+args))
+      (doseq [subtask+args (lein-do/group-args args)]
+        (resolve-tasks project subtask+args))
 
       "update-in"
-      (let [subtask+args (rest (drop-while #(not= "--" %) task+args))]
-        (resolve-tasks subtask+args))
+      (let [subtask+args (rest (drop-while #(not= "--" %) args))]
+        (resolve-tasks project subtask+args))
 
       "with-profile"
-      (let [subtask+args (drop 2 task+args)]
-        (resolve-tasks subtask+args))
+      (let [subtask+args (rest args)]
+        (resolve-tasks project subtask+args))
 
       ;; default no-op
       nil)))
@@ -344,7 +345,7 @@
   [ctx threads targets]
   (let [deps (partial dep/upstream-keys (dep/dependency-map (:subprojects ctx)))
         thread-pool (executor/fixed-thread-executor threads)]
-    (resolve-tasks (:task ctx))
+    (resolve-tasks (:monolith ctx) (:task ctx))
     (->
       (reduce
         (fn future-builder
