@@ -66,15 +66,16 @@
       :else result)))
 
 
-(defn unscope-coord
+(defn clean-coord
   "Removes the `:scope` entry from a leiningen dependency coordinate vector,
   if it is present. Preserves any metadata on the coordinate."
   [coord]
-  (-> coord
-      (->> (partition-all 2)
-           (mapcat #(when-not (= :scope (first %)) %)))
-      (vec)
-      (with-meta (meta coord))))
+  (into (empty coord)
+        (comp
+          (partition-all 2)
+          (remove (comp #{:scope :exclusions} first))
+          cat)
+        coord))
 
 
 (defn with-source
@@ -274,30 +275,21 @@
     (map #(with-source % pn) (:dependencies project))))
 
 
-(defn select-dependency
-  "Given a dependency name and a collection of specs for that dependency, either
-  select one for use or return nil on conflicts."
+(defn lint-dependency
+  "Given a dependency name and a collection of specs for that dependency, warn
+  if there are multiple distinct dep coordinates."
   [dep-name specs]
-  (let [specs (map unscope-coord specs)
-        default-choice (first specs)
+  (let [specs (mapv clean-coord specs)
         projects-for-specs (reduce (fn [m d]
                                      (update m d (fnil conj []) (dep-source d)))
-                                   {} specs)]
-    (if (= 1 (count (distinct specs)))
-      ; Only one (unique) dependency spec declared, use it.
-      default-choice
-      ; Multiple versions or specs declared! Warn and use the default.
-      (do
-        (->> (str "WARN: Multiple dependency specs found for "
-                  (condense-name dep-name) " in "
-                  (count (distinct (map dep-source specs)))
-                  " projects - using " (pr-str default-choice) " from "
-                  (dep-source default-choice))
-             (colorize :red)
-             (lein/warn))
-        (doseq [[spec projects] projects-for-specs]
-          (lein/warn (format "%-50s from %s"
-                             (pr-str spec)
-                             (str/join " " (sort projects)))))
-        (lein/warn "")
-        default-choice))))
+                                   {}
+                                   specs)]
+    (when (not= 1 (count (distinct specs)))
+      (lein/warn (colorize :red (format "WARN: Multiple dependency specs found for %s in %d projects"
+                                        (condense-name dep-name)
+                                        (count (distinct (map dep-source specs))))))
+      (doseq [[spec projects] projects-for-specs]
+        (lein/warn (format "%-50s from %s"
+                           (pr-str spec)
+                           (str/join " " (sort projects)))))
+      (lein/warn ""))))
