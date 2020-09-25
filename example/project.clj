@@ -1,6 +1,10 @@
 (defproject example/all "MONOLITH"
   :description "Overarching example project."
 
+  :aliases
+  {"version+" ["version"]
+   "version++" ["version+"]}
+
   :plugins
   [[lein-monolith "1.5.1-SNAPSHOT"]
    [lein-pprint "1.2.0"]]
@@ -14,7 +18,8 @@
 
   :monolith
   {:inherit
-   [:test-selectors
+   [:aliases
+    :test-selectors
     :env]
 
    :inherit-leaky
