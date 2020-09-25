@@ -2,7 +2,7 @@
   (:require
     [clojure.set :as set]
     [clojure.string :as str]
-    [clojure.test :refer [deftest testing is]]
+    [clojure.test :refer [deftest testing is are]]
     [lein-monolith.dependency :as dep])
   (:import
     (clojure.lang
@@ -125,7 +125,7 @@
   (is (= #{} (dep/unique-cycles {})))
   (is (= #{[2 2]} (dep/unique-cycles {2 #{2}})))
   (is (= #{} (dep/unique-cycles {1 #{2}})))
-  (doseq [size [5 10 #_15]] ;gen cycles of these sizes (higher is very slow)
+  (doseq [size [5 10]] ;gen cycles of these sizes (higher is very slow)
     (let [[deps smallest-cycles] (gen-dep-cycle size)]
       (doseq [c (maps-like 10 deps)] ;shuffle deps order <..> times
         (let [actual (dep/unique-cycles c)]
@@ -139,7 +139,8 @@
                    (pr-str actual))))))))
 
 
-(defn check-cycle-error [deps smlest-cycles]
+(defn check-cycle-error
+  [deps smlest-cycles]
   (doseq [deps (maps-like 10 deps)]
     (let [^Exception e (try (dep/topological-sort deps)
                             (catch Exception e e))]
@@ -170,40 +171,34 @@
 
 
 (deftest pretty-cycle-test
-  (let [cycle+pretty
-        {[1 1]
-         ["+ 1"
-          "^\\"
-          "|_|"]
+  (are [c strs] (= (str/join \newline strs) (dep/pretty-cycle c))
+    [1 1]
+    ["+ 1"
+     "^\\"
+     "|_|"]
 
-         [1 2 1]
-         ["+ 1"
-          "^ + 2"
-          "|_/"]
+    [1 2 1]
+    ["+ 1"
+     "^ + 2"
+     "|_/"]
 
-         [1 2 3 1]
-         ["+ 1"
-          "^ + 2"
-          "|  + 3"
-          "|_/"]
+    [1 2 3 1]
+    ["+ 1"
+     "^ + 2"
+     "|  + 3"
+     "|_/"]
 
-         [1 2 3 4 1]
-         ["+ 1"
-          "^ + 2"
-          "|  + 3"
-          "|   + 4"
-          "|__/"]
-         
-         [1 2 3 4 5 1]
-         ["+ 1"
-          "^ + 2"
-          "|  + 3"
-          "|   + 4"
-          "|    + 5"
-          "|___/"]}]
-    (every? (fn [[c strs]]
-              (let [expected (str/join \newline strs)
-                    actual (dep/pretty-cycle c)]
-                (testing (str "Pretty representation of cycle " c)
-                  (is (= expected actual)))))
-            cycle+pretty)))
+    [1 2 3 4 1]
+    ["+ 1"
+     "^ + 2"
+     "|  + 3"
+     "|   + 4"
+     "|__/"]
+
+    [1 2 3 4 5 1]
+    ["+ 1"
+     "^ + 2"
+     "|  + 3"
+     "|   + 4"
+     "|    + 5"
+     "|___/"]))
