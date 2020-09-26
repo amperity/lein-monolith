@@ -12,10 +12,17 @@
   {:unit (complement :integration)
    :integration :integration}
 
+  :test-paths ^:replace
+  ["test/unit"
+   "test/integration"]
+
   :monolith
   {:inherit
    [:test-selectors
     :env]
+
+   :inherit-raw
+   [:test-paths]
 
    :inherit-leaky
    [:repositories

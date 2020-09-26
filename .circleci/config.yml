@@ -51,6 +51,7 @@ jobs:
       - run: lein deps
       - run: lein check
       - run: lein with-profile +ci test2junit
+      - run: rm -r ~/.m2/repository/lein-monolith
       - store_test_results:
           path: test-results
       - save_cache:

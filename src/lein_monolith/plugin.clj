@@ -7,8 +7,31 @@
     [leiningen.core.main :as lein]
     [leiningen.core.project :as project]))
 
-
 ;; ## Profile Generation
+
+(def profile-config
+  "Configuration for inherited profiles. Structured as a vector of pairs to
+  maintain ordering."
+  [[:monolith/inherited
+    {:ks {:inherit :inherit
+          :subproject :monolith/inherit}}]
+
+   [:monolith/inherited-raw
+    {:info {:raw true}
+     :ks {:inherit :inherit-raw
+          :subproject :monolith/inherit-raw}}]
+
+   [:monolith/leaky
+    {:info {:leaky true}
+     :ks {:inherit :inherit-leaky
+          :subproject :monolith/inherit-leaky}}]
+
+   [:monolith/leaky-raw
+    {:info {:leaky true
+            :raw true}
+     :ks {:inherit :inherit-leaky-raw
+          :subproject :monolith/inherit-leaky-raw}}]])
+
 
 (defn- subproject-dependencies
   "Given a map of internal projects, return a vector of dependency coordinates
@@ -17,71 +40,106 @@
   (mapv #(vector (key %) (:version (val %))) subprojects))
 
 
-(defn- add-profile-paths
-  "Update a profile paths entry by adding the absolute paths from the given
-  project. Returns the updated profile."
-  [profile project k]
-  (update profile k into
-          (map (partial str (:root project) "/")
-               (get project k))))
-
-
-(defn merged-profile
-  "Constructs a profile map containing merged (re)source and test paths."
-  [subprojects]
-  (reduce-kv
-    (fn [profile _ project]
-      (-> profile
-          (add-profile-paths project :resource-paths)
-          (add-profile-paths project :source-paths)
-          (add-profile-paths project :test-paths)))
-    {:dependencies (subproject-dependencies subprojects)
-     :resource-paths []
-     :source-paths []
-     :test-paths []}
-    subprojects))
-
-
-(defn inherited-profile
+(defn- inherited-profile
   "Constructs a profile map containing the inherited properties from a parent
   project map."
-  [monolith inherit-key setting]
-  (when-let [base-properties (get-in monolith [:monolith inherit-key])]
-    (cond
-      ; Don't inherit anything
-      (not setting)
-      nil
+  [monolith subproject ks]
+  (when-let [base-properties (get-in monolith [:monolith (:inherit ks)])]
+    (let [setting (->> subproject
+                       :monolith/inherit
+                       boolean
+                       (get (:subproject ks) subproject))]
+      (cond
+        ; Don't inherit anything
+        (not setting)
+        nil
 
-      ; Inherit the base properties specified in the parent.
-      (true? setting)
-      (select-keys monolith base-properties)
+        ; Inherit the base properties specified in the parent.
+        (true? setting)
+        (select-keys monolith base-properties)
 
-      ; Provide additional properties to inherit, or replace if metadata is set.
-      (vector? setting)
-      (->> (if (:replace (meta setting))
-             setting
-             (distinct (concat base-properties setting)))
-           (select-keys monolith))
+        ; Provide additional properties to inherit, or replace if metadata is set.
+        (vector? setting)
+        (->> (if (:replace (meta setting))
+               setting
+               (distinct (concat base-properties setting)))
+             (select-keys monolith))
 
-      :else
-      (throw (ex-info (str "Unknown value type for monolith inherit setting: "
-                           (pr-str setting))
-                      {:inherit setting})))))
+        :else
+        (throw (ex-info (str "Unknown value type for monolith inherit setting: "
+                             (pr-str setting))
+                        {:inherit setting}))))))
 
 
 (defn build-inherited-profiles
   "Returns a map from profile keys to inherited profile maps."
   [monolith subproject]
-  (let [inherit-profile (inherited-profile
-                          monolith :inherit
-                          (:monolith/inherit subproject))
-        leaky-profile (inherited-profile
-                        monolith :inherit-leaky
-                        (:monolith/leaky subproject (boolean (:monolith/inherit subproject))))]
-    (cond-> nil
-      inherit-profile (assoc :monolith/inherited inherit-profile)
-      leaky-profile (assoc :monolith/leaky (vary-meta leaky-profile assoc :leaky true)))))
+  (reduce
+    (fn [acc [profile-key {:keys [info ks]}]]
+      (let [profile (some-> (if (:raw info)
+                              (get-in (meta monolith) [:monolith :raw])
+                              monolith)
+                            (inherited-profile subproject ks)
+                            (vary-meta merge (select-keys info [:leaky])))]
+        (if profile
+          (assoc acc profile-key profile)
+          acc)))
+    nil
+    profile-config))
 
+
+(def ^:private init-lock
+  "An object to lock on to ensure that projects are not initialized
+  concurrently. This prevents the mysterious 'unbound fn' errors that sometimes
+  crop up during parallel execution."
+  (Object.))
+
+
+(defn init-subproject
+  "Reads and fully initializes a subproject with inherited monolith profiles."
+  [monolith subproject]
+  (let [inherited (build-inherited-profiles monolith subproject)
+        subproject (reduce-kv
+                     (fn inject-profile [p k v] (assoc-in p [:profiles k] v))
+                     subproject inherited)]
+    (config/debug-profile "init-subproject"
+      (locking init-lock
+        (project/init-project subproject (cons :default (keys inherited)))))))
+
+
+(def ^:private path-keys
+  "Project map keys for (re)source and test paths."
+  #{:resource-paths :source-paths :test-paths})
+
+
+(defn- add-profile-paths
+  "Update a profile paths entry by adding the paths from the given project.
+  Returns the updated profile."
+  [project profile k]
+  (update profile k (fn combine-colls
+                      [coll]
+                      (-> coll
+                          set
+                          (into (get project k))
+                          (vary-meta assoc :replace true)))))
+
+
+(defn merged-profile
+  "Constructs a profile map containing merged (re)source and test paths."
+  [monolith subprojects]
+  (let [profile
+        (reduce-kv
+          (fn [profile _project-name subproject]
+            (reduce (->> subproject
+                         (init-subproject monolith)
+                         (partial add-profile-paths))
+                    profile
+                    path-keys))
+          (select-keys monolith path-keys)
+          subprojects)]
+    (as-> profile v
+          (reduce (fn sort-paths [acc k] (update acc k sort)) v path-keys)
+          (assoc v :dependencies (subproject-dependencies subprojects)))))
 
 
 ;; ## Profile Utilities
@@ -128,8 +186,10 @@
   [project]
   (if (:monolith/inherit project)
     ; Monolith subproject, add inherited profile.
-    (if (or (profile-active? project :monolith/inherited)
-            (profile-active? project :monolith/leaky))
+    (if (some (fn this-profile-active?
+                [[profile-key]]
+                (profile-active? project profile-key))
+              profile-config)
       ; Already activated, return project.
       (do (lein/debug "One or both inherited profiles are already active!")
           project)

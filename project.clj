@@ -19,7 +19,8 @@
 
   :profiles
   {:dev
-   {:plugins [[lein-cloverage "1.0.9"]]
+   {:source-paths ["dev"]
+    :plugins [[lein-cloverage "1.0.9"]]
     :dependencies [[org.clojure/clojure "1.9.0"]]}
 
    :ci

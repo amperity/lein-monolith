@@ -122,7 +122,12 @@
   (let [[opts [task & args]] (u/parse-kw-args target/selection-opts args)
         [monolith subprojects] (u/load-monolith! project)
         targets (target/select monolith subprojects opts)
-        profile (plugin/merged-profile (select-keys subprojects targets))]
+        profile (plugin/merged-profile monolith (select-keys subprojects targets))
+        project (reduce-kv
+                 (fn remove-replace-meta
+                   [proj k _v]
+                   (update proj k vary-meta dissoc :replace))
+                 project profile)]
     (lein/apply-task
       task
       (plugin/add-active-profile project :monolith/all profile)

@@ -38,6 +38,14 @@
           next-files)))))
 
 
+(defn- add-raw-to-meta
+  "Attaches the raw monolith project as metadata to an initialized project.
+  It's necessary to have a reference to the raw project so unprocessed values
+  can be inherited with inherit-raw and inherit-leaky-raw."
+  [raw monolith]
+  (vary-meta monolith assoc-in [:monolith :raw] raw))
+
+
 (defn find-monolith
   "Returns the loaded project map for the monolith metaproject, or nil if not
   found.
@@ -47,13 +55,17 @@
   are loaded to check for the `:monolith` entry."
   [project]
   (if (:monolith project)
-    project
+    (-> (:root project)
+        (io/file "project.clj")
+        str
+        project/read-raw
+        (add-raw-to-meta project))
     (some (fn check-project
             [file]
             (lein/debug "Reading candidate project file" (str file))
             (let [super (project/read-raw (str file))]
               (when (:monolith super)
-                super)))
+                (add-raw-to-meta super (project/init-project super)))))
           (find-up (:root project) "project.clj"))))
 
 
