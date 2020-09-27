@@ -1,4 +1,4 @@
-(defproject example/lib-a "1.0.0"
+(defproject lein-monolith/example.lib-a "1.0.0"
   :description "Example library with no internal dependencies."
   :monolith/inherit true
 
