@@ -12,10 +12,10 @@
 
 (defn- inherited-tags
   "Builds tags for printing with the inherited properties, e.g. `(leaky, raw)`."
-  [{:keys [leaky raw]}]
+  [types]
   (some->> (cond-> []
-             leaky (conj "leaky")
-             raw (conj "raw"))
+             (:leaky types) (conj "leaky")
+             (:raw types) (conj "raw"))
            seq
            (str/join ", ")
            (format " (%s)")))
@@ -25,9 +25,9 @@
   "Show information about the inherited profiles present within the monorepo
   configuration."
   [monolith]
-  (doseq [[_profile-key {:keys [info ks]}] plugin/profile-config]
+  (doseq [[_profile-key {:keys [types ks]}] plugin/profile-config]
     (when-let [inherited (get-in monolith [:monolith (:inherit ks)])]
-      (println (str "Inherited properties" (inherited-tags info) ":"))
+      (println (str "Inherited properties" (inherited-tags types) ":"))
       (doseq [kw inherited] (println (colorize [:bold :yellow] kw)))
       (newline))))
 

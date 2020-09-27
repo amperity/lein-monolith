@@ -13,22 +13,22 @@
   "Configuration for inherited profiles. Structured as a vector of pairs to
   maintain ordering."
   [[:monolith/inherited
-    {:ks {:inherit :inherit
+    {:types #{}
+     :ks {:inherit :inherit
           :subproject :monolith/inherit}}]
 
    [:monolith/inherited-raw
-    {:info {:raw true}
+    {:types #{:raw}
      :ks {:inherit :inherit-raw
           :subproject :monolith/inherit-raw}}]
 
    [:monolith/leaky
-    {:info {:leaky true}
+    {:types #{:leaky}
      :ks {:inherit :inherit-leaky
           :subproject :monolith/inherit-leaky}}]
 
    [:monolith/leaky-raw
-    {:info {:leaky true
-            :raw true}
+    {:types #{:leaky :raw}
      :ks {:inherit :inherit-leaky-raw
           :subproject :monolith/inherit-leaky-raw}}]])
 
@@ -75,12 +75,16 @@
   "Returns a map from profile keys to inherited profile maps."
   [monolith subproject]
   (reduce
-    (fn [acc [profile-key {:keys [info ks]}]]
-      (let [profile (some-> (if (:raw info)
+    (fn [acc [profile-key {:keys [types ks]}]]
+      (let [profile (some-> (if (:raw types)
                               (get-in (meta monolith) [:monolith :raw])
                               monolith)
                             (inherited-profile subproject ks)
-                            (vary-meta merge (select-keys info [:leaky])))]
+                            (vary-meta
+                              (fn mark-leaky
+                                [m]
+                                (cond-> m
+                                  (:leaky types) (assoc :leaky true)))))]
         (if profile
           (assoc acc profile-key profile)
           acc)))
