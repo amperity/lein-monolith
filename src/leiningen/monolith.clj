@@ -124,10 +124,10 @@
         targets (target/select monolith subprojects opts)
         profile (plugin/merged-profile monolith (select-keys subprojects targets))
         project (reduce-kv
-                 (fn remove-replace-meta
-                   [proj k _v]
-                   (update proj k vary-meta dissoc :replace))
-                 project profile)]
+                  (fn remove-replace-meta
+                    [proj k _v]
+                    (update proj k vary-meta dissoc :replace))
+                  project profile)]
     (lein/apply-task
       task
       (plugin/add-active-profile project :monolith/all profile)

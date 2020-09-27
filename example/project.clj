@@ -1,6 +1,8 @@
 (defproject lein-monolith/example.all "MONOLITH"
   :description "Overarching example project."
 
+  :pedantic? :abort
+
   :plugins
   [[lein-monolith "1.5.1-SNAPSHOT"]
    [lein-pprint "1.2.0"]]
@@ -16,10 +18,14 @@
   ["test/unit"
    "test/integration"]
 
+  :compile-path
+  "%s/compiled"
+
   :monolith
   {:inherit
    [:test-selectors
-    :env]
+    :env
+    :pedantic]
 
    :inherit-raw
    [:test-paths]
@@ -27,6 +33,9 @@
    :inherit-leaky
    [:repositories
     :managed-dependencies]
+
+   :inherit-leaky-raw
+   [:compile-path]
 
    :project-selectors
    {:deployable :deployable

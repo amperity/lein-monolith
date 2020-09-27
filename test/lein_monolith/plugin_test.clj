@@ -14,7 +14,10 @@
   (let [monolith (config/find-monolith! (read-example-project))
         subproject (project/read "example/apps/app-a/project.clj")
         profiles (sut/build-inherited-profiles monolith subproject)]
-    (is (= #{:monolith/inherited :monolith/inherited-raw :monolith/leaky}
+    (is (= #{:monolith/inherited
+             :monolith/inherited-raw
+             :monolith/leaky
+             :monolith/leaky-raw}
            (set (keys profiles))))
     (is (= {:test-paths ["test/unit" "test/integration"]}
            (:monolith/inherited-raw profiles)))
@@ -23,4 +26,6 @@
               {:url "https://repo1.maven.org/maven2/"
                :snapshots false}]
              ["clojars" {:url "https://repo.clojars.org/"}]]}
-           (:monolith/leaky profiles)))))
+           (:monolith/leaky profiles)))
+    (is (= {:compile-path "%s/compiled"}
+           (:monolith/leaky-raw profiles)))))

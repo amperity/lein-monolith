@@ -32,7 +32,7 @@ test_monolith deps-of lein-monolith/example.app-a
 test_monolith deps-on lein-monolith/example.lib-a
 test_monolith with-all pprint :dependencies :source-paths :test-paths
 test_monolith each pprint :version
-test_monolith each :in example.lib-a pprint :root
+test_monolith each :in example.lib-a pprint :root :compile-path
 test_monolith each :upstream-of example.lib-b pprint :version
 test_monolith each :downstream-of example.lib-a pprint :name
 test_monolith each :parallel 3 :report :endure pprint :group
