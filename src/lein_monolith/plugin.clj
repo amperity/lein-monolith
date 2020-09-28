@@ -42,31 +42,41 @@
     subprojects))
 
 
-(defn inherited-profile
+(defn- select-inherited-properties
+  "Constructs a profile map containing the given inherited properties from the
+  monolith project map."
+  [monolith base-properties setting]
+  (cond
+    ;; Don't inherit anything
+    (not setting)
+    nil
+
+    ;; Inherit the base properties specified in the parent.
+    (true? setting)
+    (select-keys monolith base-properties)
+
+    ;; Provide additional properties to inherit, or replace if metadata is set.
+    (vector? setting)
+    (select-keys monolith
+                 (if (:replace (meta setting))
+                   setting
+                   (distinct (concat base-properties setting))))
+
+    :else
+    (throw (ex-info (str "Unknown value type for monolith inherit setting: "
+                         (pr-str setting))
+                    {:inherit setting}))))
+
+
+(defn- inherited-profile
   "Constructs a profile map containing the inherited properties from a parent
   project map."
   [monolith inherit-key setting]
   (when-let [base-properties (get-in monolith [:monolith inherit-key])]
-    (cond
-      ; Don't inherit anything
-      (not setting)
-      nil
-
-      ; Inherit the base properties specified in the parent.
-      (true? setting)
-      (select-keys monolith base-properties)
-
-      ; Provide additional properties to inherit, or replace if metadata is set.
-      (vector? setting)
-      (->> (if (:replace (meta setting))
-             setting
-             (distinct (concat base-properties setting)))
-           (select-keys monolith))
-
-      :else
-      (throw (ex-info (str "Unknown value type for monolith inherit setting: "
-                           (pr-str setting))
-                      {:inherit setting})))))
+    (when-let [profile (select-inherited-properties monolith base-properties setting)]
+      (when (contains? profile :profiles)
+        (lein/warn "WARN: nested profiles cannot be inherited; ignoring :profiles in monolith" inherit-key))
+      (dissoc profile :profiles))))
 
 
 (defn build-inherited-profiles
