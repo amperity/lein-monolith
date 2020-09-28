@@ -1,8 +1,8 @@
-(defproject example/lib-a "1.0.0"
+(defproject example/lib-a "MONOLITH-SNAPSHOT"
   :description "Example library with no internal dependencies."
   :monolith/inherit true
 
   :pedantic? :abort
 
   :dependencies
-  [[org.clojure/clojure "1.8.0"]])
+  [[org.clojure/clojure "1.10.1"]])

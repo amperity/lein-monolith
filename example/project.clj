@@ -8,6 +8,9 @@
   :dependencies
   [[org.clojure/clojure "1.10.1"]]
 
+  :managed-dependencies
+  [[amperity/greenlight "0.6.0"]]
+
   :test-selectors
   {:unit (complement :integration)
    :integration :integration}
