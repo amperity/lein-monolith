@@ -71,23 +71,32 @@
                         {:inherit setting}))))))
 
 
+(defn- maybe-mark-leaky
+  "Add ^:leaky metadata to a profile if it is of the leaky type."
+  [profile types]
+  (cond-> profile
+    (:leaky types) (vary-meta assoc :leaky true)))
+
+
+(defn- choose-inheritance-source
+  "Choose either the initialized monolith or its raw representation for use when
+  building an inherited profile."
+  [monolith types]
+  (if (:raw types)
+    (get-in (meta monolith) [:monolith :raw])
+    monolith))
+
+
 (defn build-inherited-profiles
   "Returns a map from profile keys to inherited profile maps."
   [monolith subproject]
   (reduce
     (fn [acc [profile-key {:keys [types ks]}]]
-      (let [profile (some-> (if (:raw types)
-                              (get-in (meta monolith) [:monolith :raw])
-                              monolith)
+      (let [profile (some-> (choose-inheritance-source monolith types)
                             (inherited-profile subproject ks)
-                            (vary-meta
-                              (fn mark-leaky
-                                [m]
-                                (cond-> m
-                                  (:leaky types) (assoc :leaky true)))))]
-        (if profile
-          (assoc acc profile-key profile)
-          acc)))
+                            (maybe-mark-leaky types))]
+        (cond-> acc
+          profile (assoc profile-key profile))))
     nil
     profile-config))
 
