@@ -7,3 +7,5 @@ pom.xml
 pom.xml.asc
 *.class
 *.jar
+test-results
+build.xml
