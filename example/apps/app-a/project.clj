@@ -10,6 +10,6 @@
    [example/lib-b "MONOLITH-SNAPSHOT"]]
 
   :profiles
-  {:shared {:source-paths ["/dev/null"]}
+  {:shared {:source-paths ["bench"]}
    :dev [:shared {:dependencies [[clj-stacktrace "0.2.8"]]}]
    :uberjar [:shared {:dependencies [[commons-net "3.6"]]}]})

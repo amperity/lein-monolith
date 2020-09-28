@@ -202,7 +202,7 @@
 
 (defn- apply-subproject-task
   "Applies the task to the given subproject."
-  [monolith subproject task]
+  [subproject task]
   (binding [lein/*exit-process?* false
             eval/*dir* (:root subproject)]
     (let [initialized (config/debug-profile "init-subproject"
@@ -210,13 +210,13 @@
                           (project/init-project
                             (plugin/add-middleware subproject))))]
       (config/debug-profile "apply-task"
-        (lein/resolve-and-apply subproject task)))))
+        (lein/resolve-and-apply initialized task)))))
 
 
 (defn- apply-subproject-task-with-output
   "Applies the task to the given subproject, writing the task output to a file
   in the given directory."
-  [monolith subproject task out-dir results]
+  [subproject task out-dir results]
   (let [out-file (io/file out-dir (:group subproject) (str (:name subproject) ".txt"))]
     (io/make-parents out-file)
     (with-open [file-output-stream (io/output-stream out-file :append true)]
@@ -230,7 +230,7 @@
       (try
         ; Run task with output capturing.
         (binding [*task-file-output* file-output-stream]
-          (apply-subproject-task monolith subproject task))
+          (apply-subproject-task subproject task))
         (catch Exception ex
           (.write file-output-stream
                   (.getBytes (format "\nERROR: %s\n%s"
@@ -290,9 +290,9 @@
                            "")))
       (if-let [out-dir (get-in ctx [:opts :output])]
         ; Capture output to file.
-        (apply-subproject-task-with-output (:monolith ctx) subproject (:task ctx) out-dir results)
+        (apply-subproject-task-with-output subproject (:task ctx) out-dir results)
         ; Run without output capturing.
-        (apply-subproject-task (:monolith ctx) subproject (:task ctx)))
+        (apply-subproject-task subproject (:task ctx)))
       (when (:refresh opts)
         (fingerprint/save! fprints marker target)
         (lein/info (format "Saved %s fingerprint for %s"
