@@ -53,6 +53,9 @@ jobs:
       - run: lein with-profile +ci test2junit
       - store_test_results:
           path: test-results
+      - run: lein jar
+      - store_artifacts:
+          path: target
       - save_cache:
           key: v1-test-{{ checksum "project.clj" }}
           paths:
