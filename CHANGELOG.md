@@ -13,6 +13,9 @@ This project adheres to [Semantic Versioning](http://semver.org/).
   will be properly quoted for shells.
   [#27](https://github.com/amperity/lein-monolith/issues/27)
   [#72](https://github.com/amperity/lein-monolith/pull/72)
+- The `each` task is now compatible with composite profiles.
+  [#29](https://github.com/amperity/lein-monolith/issues/29)
+  [#77](https://github.com/amperity/lein-monolith/pull/77)
 
 
 ## [1.5.0] - 2020-09-17
