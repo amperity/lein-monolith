@@ -9,7 +9,8 @@
     java.io.File
     (java.nio.file
       Files
-      LinkOption)))
+      LinkOption
+      Path)))
 
 
 (defn- create-symlink!
@@ -18,6 +19,18 @@
   (Files/createSymbolicLink
     source target
     (make-array java.nio.file.attribute.FileAttribute 0)))
+
+
+(defn- resolve-symlink
+  "Read a symlink at the given path and return the canonical path to its
+  target."
+  [^Path link]
+  (let [target (Files/readSymbolicLink link)]
+    (if (.isAbsolute target)
+      (.toRealPath target (into-array LinkOption []))
+      (-> (.getParent link)
+          (.resolve target)
+          (.toRealPath (into-array LinkOption []))))))
 
 
 (defn- link-checkout!
@@ -106,13 +119,8 @@
                     ;; Check that the file is a symlink and points to a known
                     ;; subproject that we want to remove.
                     (when (Files/isSymbolicLink link-path)
-                      (let [link-target (Files/readSymbolicLink link-path)
-                            abs-target (if (.isAbsolute link-target)
-                                         link-target
-                                         (-> (.toPath checkouts-dir)
-                                             (.resolve link-target)
-                                             (.toRealPath (into-array LinkOption []))))
-                            target-name (root->subproject (str abs-target))]
+                      (let [link-target (resolve-symlink link-path)
+                            target-name (root->subproject (str link-target))]
                         (and target-name
                              (or (empty? selected-names)
                                  (contains? selected-names target-name))))))
