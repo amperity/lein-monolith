@@ -167,12 +167,13 @@ override them, you can pass the `:force` option.
 
 ```
 lein monolith link [:deep :force] [project...]
-lein monolith unlink
+lein monolith unlink [:all] [project...]
 ```
 
 In general, it's recommended to only link between the projects you're actually
 actively working on, otherwise Leiningen has to recursively trace the full tree
 of checkouts before running things.
+
 
 ## License
 
