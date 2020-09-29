@@ -26,6 +26,13 @@ This project adheres to [Semantic Versioning](http://semver.org/).
   [#36](https://github.com/amperity/lein-monolith/issues/36)
   [#74](https://github.com/amperity/lein-monolith/pull/74)
 
+### Changed
+- The `unlink` task will now only remove internal checkouts by default. It also
+  accepts an `:all` option to remove external checkouts, as well as a list of
+  project names to specifically unlink.
+  [#66](https://github.com/amperity/lein-monolith/issues/66)
+  [#80](https://github.com/amperity/lein-monolith/pull/80)
+
 
 ## [1.5.0] - 2020-09-17
 
