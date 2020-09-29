@@ -148,4 +148,4 @@
   (let [mw-sym 'lein-monolith.plugin/middleware]
     (if (some #{mw-sym} (:middleware project))
       project
-      (update project :middleware (fnil into []) [mw-sym]))))
+      (update project :middleware (fnil conj []) mw-sym))))
