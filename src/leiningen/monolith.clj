@@ -192,18 +192,27 @@
     :deep        Link all subprojects this project transitively depends on"
   [project args]
   (when (:monolith project)
-    (lein/abort "The 'link' task does not need to be run for the monolith project!"))
+    (lein/abort "The 'link' task cannot be run for the monolith project!"))
   (let [[opts project-names] (opts+projects {:force 0, :deep 0} project args)
-        subproject-names (remove #(= (dep/project-name project) %)
+        target-names (remove #(= (dep/project-name project) %)
                                  project-names)]
-    (checkouts/link project opts
-                    subproject-names)))
+    (checkouts/link project opts target-names)))
 
 
 (defn unlink
-  "Remove the checkouts directory from a project."
-  [project]
-  (checkouts/unlink project))
+  "Remove internal checkout links from a project. Optionally, a set of project
+  names may be specified to remove links only for those projects.
+
+  Options:
+    :all         Remove all checkouts, not just internal ones."
+  [project args]
+  (when (:monolith project)
+    (lein/abort "The 'unlink' task cannot be run for the monolith project!"))
+  (let [[opts project-names] (opts+projects {:all 0} project args)
+        target-names (remove #(= (dep/project-name project) %)
+                                 project-names)]
+    (checkouts/unlink project opts target-names)))
+
 
 
 ;; ## Fingerprinting
@@ -269,7 +278,7 @@
     "with-all"           (with-all project args)
     "each"               (each project args)
     "link"               (link project args)
-    "unlink"             (unlink project)
+    "unlink"             (unlink project args)
     "changed"            (changed project args)
     "mark-fresh"         (mark-fresh project args)
     "clear-fingerprints" (clear-fingerprints project args)
