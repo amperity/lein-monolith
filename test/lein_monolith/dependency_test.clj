@@ -28,14 +28,14 @@
       (is (= 'example/bar (dep/resolve-name projects 'bar)))
       (is (= 'baz/foo (dep/resolve-name projects 'baz/foo)))
       (is (= 'example/baz (dep/resolve-name projects 'baz)))))
-  (testing "unscope-coord"
-    (is (= '[example/foo "1.0"] (dep/unscope-coord '[example/foo "1.0"])))
-    (is (= '[example/bar "0.5.0" :exclusions [foo]]
-           (dep/unscope-coord '[example/bar "0.5.0" :exclusions [foo]])))
-    (is (= '[example/bar "0.5.0" :exclusions [foo]]
-           (dep/unscope-coord '[example/bar "0.5.0" :exclusions [foo] :scope :test])))
+  (testing "clean-coord"
+    (is (= '[example/foo "1.0"] (dep/clean-coord '[example/foo "1.0"])))
+    (is (= '[example/bar "0.5.0"]
+           (dep/clean-coord '[example/bar "0.5.0" :exclusions [foo]])))
+    (is (= '[example/bar "0.5.0"]
+           (dep/clean-coord '[example/bar "0.5.0" :exclusions [foo] :scope :test])))
     (is (= '[example/baz "0.1.0-SNAPSHOT"]
-           (dep/unscope-coord '[example/baz "0.1.0-SNAPSHOT" :scope :test]))))
+           (dep/clean-coord '[example/baz "0.1.0-SNAPSHOT" :scope :test]))))
   (testing "source-metadata"
     (is (nil? (dep/dep-source [:foo "123"])))
     (is (= [:foo "123"] (dep/with-source [:foo "123"] 'example/bar)))

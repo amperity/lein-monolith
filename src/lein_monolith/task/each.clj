@@ -194,18 +194,17 @@
 
 (defn- apply-subproject-task
   "Applies the task to the given subproject."
-  [monolith subproject task]
+  [subproject task]
   (binding [lein/*exit-process?* false]
-    (let [subproject (plugin/init-subproject monolith subproject)]
+    (let [initialized (plugin/init-subproject subproject)]
       (config/debug-profile "apply-task"
-        (binding [eval/*dir* (:root subproject)]
-          (lein/resolve-and-apply subproject task))))))
+        (lein/resolve-and-apply initialized task)))))
 
 
 (defn- apply-subproject-task-with-output
   "Applies the task to the given subproject, writing the task output to a file
   in the given directory."
-  [monolith subproject task out-dir results]
+  [subproject task out-dir results]
   (let [out-file (io/file out-dir (:group subproject) (str (:name subproject) ".txt"))]
     (io/make-parents out-file)
     (with-open [file-output-stream (io/output-stream out-file :append true)]
@@ -219,7 +218,7 @@
       (try
         ; Run task with output capturing.
         (binding [*task-file-output* file-output-stream]
-          (apply-subproject-task monolith subproject task))
+          (apply-subproject-task subproject task))
         (catch Exception ex
           (.write file-output-stream
                   (.getBytes (format "\nERROR: %s\n%s"
@@ -238,22 +237,22 @@
 (defn- resolve-tasks
   "Perform an initial resolution of the task to prevent metadata-related
   arglist errors when namespaces are loaded in parallel."
-  [task+args]
-  (let [task (first task+args)]
+  [project task+args]
+  (let [[task args] (lein/task-args task+args project)]
     (lein/resolve-task task)
     ;; Some tasks pull in other tasks, so also resolve them.
     (condp = task
       "do"
-      (doseq [subtask+args (lein-do/group-args (rest task+args))]
-        (resolve-tasks subtask+args))
+      (doseq [subtask+args (lein-do/group-args args)]
+        (resolve-tasks project subtask+args))
 
       "update-in"
-      (let [subtask+args (rest (drop-while #(not= "--" %) task+args))]
-        (resolve-tasks subtask+args))
+      (let [subtask+args (rest (drop-while #(not= "--" %) args))]
+        (resolve-tasks project subtask+args))
 
       "with-profile"
-      (let [subtask+args (drop 2 task+args)]
-        (resolve-tasks subtask+args))
+      (let [subtask+args (rest args)]
+        (resolve-tasks project subtask+args))
 
       ;; default no-op
       nil)))
@@ -279,9 +278,9 @@
                            "")))
       (if-let [out-dir (get-in ctx [:opts :output])]
         ; Capture output to file.
-        (apply-subproject-task-with-output (:monolith ctx) subproject (:task ctx) out-dir results)
+        (apply-subproject-task-with-output subproject (:task ctx) out-dir results)
         ; Run without output capturing.
-        (apply-subproject-task (:monolith ctx) subproject (:task ctx)))
+        (apply-subproject-task subproject (:task ctx)))
       (when (:refresh opts)
         (fingerprint/save! fprints marker target)
         (lein/info (format "Saved %s fingerprint for %s"
@@ -328,7 +327,7 @@
   [ctx threads targets]
   (let [deps (partial dep/upstream-keys (dep/dependency-map (:subprojects ctx)))
         thread-pool (executor/fixed-thread-executor threads)]
-    (resolve-tasks (:task ctx))
+    (resolve-tasks (:monolith ctx) (:task ctx))
     (->
       (reduce
         (fn future-builder

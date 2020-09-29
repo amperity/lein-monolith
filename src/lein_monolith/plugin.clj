@@ -4,6 +4,7 @@
   (:require
     [lein-monolith.config :as config]
     [lein-monolith.dependency :as dep]
+    [leiningen.core.eval :as eval]
     [leiningen.core.main :as lein]
     [leiningen.core.project :as project]))
 
@@ -40,37 +41,6 @@
   (mapv #(vector (key %) (:version (val %))) subprojects))
 
 
-(defn- inherited-profile
-  "Constructs a profile map containing the inherited properties from a parent
-  project map."
-  [monolith subproject ks]
-  (when-let [base-properties (get-in monolith [:monolith (:inherit ks)])]
-    (let [setting (->> subproject
-                       :monolith/inherit
-                       boolean
-                       (get (:subproject ks) subproject))]
-      (cond
-        ; Don't inherit anything
-        (not setting)
-        nil
-
-        ; Inherit the base properties specified in the parent.
-        (true? setting)
-        (select-keys monolith base-properties)
-
-        ; Provide additional properties to inherit, or replace if metadata is set.
-        (vector? setting)
-        (->> (if (:replace (meta setting))
-               setting
-               (distinct (concat base-properties setting)))
-             (select-keys monolith))
-
-        :else
-        (throw (ex-info (str "Unknown value type for monolith inherit setting: "
-                             (pr-str setting))
-                        {:inherit setting}))))))
-
-
 (defn- maybe-mark-leaky
   "Add ^:leaky metadata to a profile if it is of the leaky type."
   [profile types]
@@ -85,6 +55,45 @@
   (if (:raw types)
     (get-in (meta monolith) [:monolith :raw])
     monolith))
+
+
+(defn- select-inherited-properties
+  "Constructs a profile map containing the inherited properties from a parent
+  project map."
+  [monolith base-properties subproject subproject-key]
+  (let [default (boolean (:monolith/inherit subproject))
+        setting (get subproject-key subproject default)]
+    (cond
+      ;; Don't inherit anything
+      (not setting)
+      nil
+
+      ;; Inherit the base properties specified in the parent.
+      (true? setting)
+      (select-keys monolith base-properties)
+
+      ;; Provide additional properties to inherit, or replace if metadata is set.
+      (vector? setting)
+      (select-keys monolith
+                   (if (:replace (meta setting))
+                     setting
+                     (distinct (concat base-properties setting))))
+
+      :else
+      (throw (ex-info (str "Unknown value type for monolith inherit setting: "
+                           (pr-str setting))
+                      {:inherit setting})))))
+
+
+(defn- inherited-profile
+  "Constructs a profile map containing the inherited properties from a parent
+  project map."
+  [monolith subproject {inherit-key :inherit subproject-key :subproject}]
+  (when-let [base-properties (get-in monolith [:monolith inherit-key])]
+    (when-let [profile (select-inherited-properties monolith base-properties subproject subproject-key)]
+      (when (contains? profile :profiles)
+        (lein/warn "WARN: nested profiles cannot be inherited; ignoring :profiles in monolith" inherit-key))
+      (dissoc profile :profiles))))
 
 
 (defn build-inherited-profiles
@@ -108,16 +117,17 @@
   (Object.))
 
 
+(declare add-middleware)
+
+
 (defn init-subproject
   "Reads and fully initializes a subproject with inherited monolith profiles."
-  [monolith subproject]
-  (let [inherited (build-inherited-profiles monolith subproject)
-        subproject (reduce-kv
-                     (fn inject-profile [p k v] (assoc-in p [:profiles k] v))
-                     subproject inherited)]
+  [subproject]
+  (binding [eval/*dir* (:root subproject)]
     (config/debug-profile "init-subproject"
       (locking init-lock
-        (project/init-project subproject (cons :default (keys inherited)))))))
+        (project/init-project
+          (add-middleware subproject))))))
 
 
 (def ^:private path-keys
@@ -144,7 +154,7 @@
         (reduce-kv
           (fn [profile _project-name subproject]
             (reduce (->> subproject
-                         (init-subproject monolith)
+                         (init-subproject)
                          (partial add-profile-paths))
                     profile
                     path-keys))
@@ -212,3 +222,13 @@
         (reduce-kv add-active-profile project profiles)))
     ; Normal project, don't activate.
     project))
+
+
+(defn add-middleware
+  "Update the given project to include the plugin middleware. Appends the
+  middleware symbol if it is not already present."
+  [project]
+  (let [mw-sym 'lein-monolith.plugin/middleware]
+    (if (some #{mw-sym} (:middleware project))
+      project
+      (update project :middleware (fnil conj []) mw-sym))))

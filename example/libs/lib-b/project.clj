@@ -1,6 +1,7 @@
-(defproject lein-monolith/example.lib-b "0.2.0"
+(defproject lein-monolith/example.lib-b "MONOLITH-SNAPSHOT"
   :description "Example lib depending on lib-a."
+  :monolith/inherit [:aliases]
 
   :dependencies
-  [[lein-monolith/example.lib-a "1.0.0"]
-   [org.clojure/clojure "1.8.0"]])
+  [[org.clojure/clojure "1.10.1"]
+   [lein-monolith/example.lib-a "MONOLITH-SNAPSHOT"]])

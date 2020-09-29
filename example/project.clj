@@ -3,12 +3,19 @@
 
   :pedantic? :abort
 
+  :aliases
+  {"version+" ["version"]
+   "version++" ["version+"]}
+
   :plugins
   [[lein-monolith "1.5.1-SNAPSHOT"]
    [lein-pprint "1.2.0"]]
 
   :dependencies
   [[org.clojure/clojure "1.10.1"]]
+
+  :managed-dependencies
+  [[amperity/greenlight "0.6.0"]]
 
   :test-selectors
   {:unit (complement :integration)
@@ -23,9 +30,10 @@
 
   :monolith
   {:inherit
-   [:test-selectors
+   [:aliases
     :env
-    :pedantic]
+    :pedantic
+    :test-selectors]
 
    :inherit-raw
    [:test-paths]

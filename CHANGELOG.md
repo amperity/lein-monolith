@@ -8,11 +8,28 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 
+### Changed
+- The `lint` task now only considers dependency names and versions for
+  detecting conflicts, which should improve the signal-to-noise ratio.
+  [#73](https://github.com/amperity/lein-monolith/pull/73)
+- The `unlink` task will now only remove internal checkouts by default. It also
+  accepts an `:all` option to remove external checkouts, as well as a list of
+  project names to specifically unlink.
+  [#66](https://github.com/amperity/lein-monolith/issues/66)
+  [#80](https://github.com/amperity/lein-monolith/pull/80)
+
 ### Fixed
 - When the `each` task provides a command to resume execution, the arguments
   will be properly quoted for shells.
   [#27](https://github.com/amperity/lein-monolith/issues/27)
   [#72](https://github.com/amperity/lein-monolith/pull/72)
+- The `each` task is now compatible with composite profiles.
+  [#29](https://github.com/amperity/lein-monolith/issues/29)
+  [#77](https://github.com/amperity/lein-monolith/pull/77)
+- When `each` is used with `:parallel`, task aliases are now correctly resolved
+  before iteration starts.
+  [#36](https://github.com/amperity/lein-monolith/issues/36)
+  [#74](https://github.com/amperity/lein-monolith/pull/74)
 
 
 ## [1.5.0] - 2020-09-17
