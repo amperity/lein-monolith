@@ -149,3 +149,13 @@
         (reduce-kv add-active-profile project profiles)))
     ; Normal project, don't activate.
     project))
+
+
+(defn add-middleware
+  "Update the given project to include the plugin middleware. Appends the
+  middleware symbol if it is not already present."
+  [project]
+  (let [mw-sym 'lein-monolith.plugin/middleware]
+    (if (some #{mw-sym} (:middleware project))
+      project
+      (update project :middleware (fnil conj []) mw-sym))))
