@@ -8,6 +8,11 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 
+### Changed
+- The `lint` task now only considers dependency names and versions for
+  detecting conflicts, which should improve the signal-to-noise ratio.
+  [#73](https://github.com/amperity/lein-monolith/pull/73)
+
 ### Fixed
 - When the `each` task provides a command to resume execution, the arguments
   will be properly quoted for shells.
