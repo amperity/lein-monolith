@@ -195,7 +195,7 @@
     (lein/abort "The 'link' task cannot be run for the monolith project!"))
   (let [[opts project-names] (opts+projects {:force 0, :deep 0} project args)
         target-names (remove #(= (dep/project-name project) %)
-                                 project-names)]
+                             project-names)]
     (checkouts/link project opts target-names)))
 
 
@@ -210,7 +210,7 @@
     (lein/abort "The 'unlink' task cannot be run for the monolith project!"))
   (let [[opts project-names] (opts+projects {:all 0} project args)
         target-names (remove #(= (dep/project-name project) %)
-                                 project-names)]
+                             project-names)]
     (checkouts/unlink project opts target-names)))
 
 

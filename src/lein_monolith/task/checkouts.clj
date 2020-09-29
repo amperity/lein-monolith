@@ -9,8 +9,7 @@
     java.io.File
     (java.nio.file
       Files
-      LinkOption
-      Path)))
+      LinkOption)))
 
 
 (defn- create-symlink!
@@ -93,7 +92,7 @@
   (when-let [checkouts-dir (some-> (:root project) (io/file "checkouts"))]
     (when (.exists checkouts-dir)
       (lein/debug "Unlinking checkouts in" (str checkouts-dir))
-      (let [[ _ subprojects] (u/load-monolith! project)
+      (let [[_ subprojects] (u/load-monolith! project)
             root->subproject (into {}
                                    (map (juxt (comp str :root val) key))
                                    subprojects)
