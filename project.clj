@@ -18,5 +18,11 @@
    :ignore-ns #{clojure manifold}}
 
   :profiles
-  {:dev {:plugins [[lein-cloverage "1.0.9"]]
-         :dependencies [[org.clojure/clojure "1.9.0"]]}})
+  {:dev
+   {:plugins [[lein-cloverage "1.0.9"]]
+    :dependencies [[org.clojure/clojure "1.9.0"]]}
+
+   :ci
+   {:plugins [[test2junit "1.4.2"]]
+    :test2junit-silent true
+    :test2junit-output-dir "test-results/clojure.test"}})

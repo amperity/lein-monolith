@@ -50,7 +50,9 @@ jobs:
             - v1-test-
       - run: lein deps
       - run: lein check
-      - run: lein test
+      - run: lein with-profile +ci test2junit
+      - store_test_results:
+          path: test-results
       - save_cache:
           key: v1-test-{{ checksum "project.clj" }}
           paths:

@@ -8,6 +8,11 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 
+### Changed
+- The `lint` task now only considers dependency names and versions for
+  detecting conflicts, which should improve the signal-to-noise ratio.
+  [#73](https://github.com/amperity/lein-monolith/pull/73)
+
 ### Fixed
 - When the `each` task provides a command to resume execution, the arguments
   will be properly quoted for shells.
@@ -16,6 +21,10 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 - The `each` task is now compatible with composite profiles.
   [#29](https://github.com/amperity/lein-monolith/issues/29)
   [#77](https://github.com/amperity/lein-monolith/pull/77)
+- When `each` is used with `:parallel`, task aliases are now correctly resolved
+  before iteration starts.
+  [#36](https://github.com/amperity/lein-monolith/issues/36)
+  [#74](https://github.com/amperity/lein-monolith/pull/74)
 
 
 ## [1.5.0] - 2020-09-17

@@ -59,7 +59,7 @@
       (doseq [[dep-name coords] (->> (vals subprojects)
                                      (mapcat dep/sourced-dependencies)
                                      (group-by first))]
-        (dep/select-dependency dep-name coords)))))
+        (dep/lint-dependency dep-name coords)))))
 
 
 (defn deps
