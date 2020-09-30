@@ -62,7 +62,7 @@
   project map."
   [monolith base-properties subproject subproject-key]
   (let [default (boolean (:monolith/inherit subproject))
-        setting (get subproject-key subproject default)]
+        setting (subproject-key subproject default)]
     (cond
       ;; Don't inherit anything
       (not setting)
