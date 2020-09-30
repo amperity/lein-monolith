@@ -25,6 +25,8 @@
     java.io.OutputStream))
 
 
+;; ## Task Options
+
 (def task-opts
   (merge
     target/selection-opts
@@ -74,55 +76,8 @@
       [:start start])))
 
 
-(defn- print-report
-  "Reports information about the tasks given a results map."
-  [results elapsed]
-  (let [task-time (reduce + (keep :elapsed results))
-        speedup (/ task-time elapsed)]
-    (lein/info (format "\n%s  %11s"
-                       (colorize [:bold :cyan] "Run time:")
-                       (u/human-duration elapsed)))
-    (lein/info (format "%s %11s"
-                       (colorize [:bold :cyan] "Task time:")
-                       (u/human-duration task-time)))
-    (lein/info (format "%s   %11.1f"
-                       (colorize [:bold :cyan] "Speedup:")
-                       speedup))
-    (lein/info (->> results
-                    (sort-by :elapsed)
-                    (reverse)
-                    (take 8)
-                    (map #(format "%-45s %s %11s"
-                                  (colorize [:bold :yellow] (:name %))
-                                  (if (:success %) " " "!")
-                                  (u/human-duration (:elapsed %))))
-                    (str/join "\n")
-                    (str \newline
-                         (colorize [:bold :cyan] "Slowest projects:")
-                         \newline)))))
 
-
-(defn- select-projects
-  "Returns a vector of pairs of index numbers and symbols naming the selected
-  subprojects."
-  [monolith subprojects fprints opts]
-  (let [dependencies (dep/dependency-map subprojects)
-        targets (target/select monolith subprojects opts)
-        start-from (some->> (:start opts)
-                            (read-string)
-                            (dep/resolve-name! (keys subprojects)))
-        marker (:changed opts)]
-    (->
-      ; Sort project names by dependency order.
-      (dep/topological-sort dependencies targets)
-      (cond->>
-        ; Skip projects until the starting project, if provided.
-        start-from (drop-while (partial not= start-from))
-        ; Skip projects whose fingerprint hasn't changed.
-        marker (filter (partial fingerprint/changed? fprints marker)))
-      ; Pair names up with an index [[i project-sym] ...]
-      (->> (map-indexed vector)))))
-
+;; ## Output Handling
 
 (defn- tee-output-stream
   "Constructs a proxy of an OutputStream that will write a copy of the bytes
@@ -273,7 +228,7 @@
 (defn- run-task!
   "Runs the given task, returning a map of information about the run."
   [ctx target]
-  ; Try to reclaim some memory before running the task.
+  ;; Try to reclaim some memory before running the task.
   (System/gc)
   (let [start (System/nanoTime)
         opts (:opts ctx)
@@ -289,9 +244,9 @@
                            (str " (" (fingerprint/explain-str fprints marker target) ")")
                            "")))
       (if-let [out-dir (get-in ctx [:opts :output])]
-        ; Capture output to file.
+        ;; Capture output to file.
         (apply-subproject-task-with-output subproject (:task ctx) out-dir results)
-        ; Run without output capturing.
+        ;; Run without output capturing.
         (apply-subproject-task subproject (:task ctx)))
       (when (:refresh opts)
         (fingerprint/save! fprints marker target)
@@ -334,8 +289,9 @@
   (mapv (comp (partial run-task! ctx) second) targets))
 
 
-(defn- run-parallel*
-  "Internal helper for `run-parallel!` which sets up the actual project threads."
+(defn- run-parallel!
+  "Runs the tasks for targets in multiple worker threads, chained by dependency
+  order. Returns a vector of result maps in the order the tasks finished executing."
   [ctx threads targets]
   (let [deps (partial dep/upstream-keys (dep/dependency-map (:subprojects ctx)))
         thread-pool (executor/fixed-thread-executor threads)]
@@ -360,17 +316,59 @@
         (mapv (comp deref computations second) targets)))))
 
 
-(defn- run-parallel!
-  "Runs the tasks for targets in multiple worker threads, chained by dependency
-  order. Returns a vector of result maps in the order the tasks finished executing."
-  [ctx threads targets]
-  (if (get-in ctx [:opts :output])
-    ;; NOTE: this is done here rather than inside each task so that tasks
-    ;; starting across threads don't have a chance to see the `sh` var between
-    ;; rebindings.
-    (with-redefs [leiningen.core.eval/sh run-with-output]
-      (run-parallel* ctx threads targets))
-    (run-parallel* ctx threads targets)))
+
+;; ## Task Entry
+
+(defn- select-projects
+  "Returns a vector of pairs of index numbers and symbols naming the selected
+  subprojects."
+  [monolith subprojects fprints opts]
+  (let [dependencies (dep/dependency-map subprojects)
+        targets (target/select monolith subprojects opts)
+        start (when-let [start (:start opts)]
+                (dep/resolve-name! (keys subprojects) (read-string start)))
+        marker (:changed opts)]
+    (->
+      ;; Sort project names by dependency order.
+      (dep/topological-sort dependencies targets)
+      (cond->>
+        ;; Skip projects until the starting project, if provided.
+        start
+        (drop-while (partial not= start))
+        ;; Skip projects whose fingerprint hasn't changed.
+        marker
+        (filter (partial fingerprint/changed? fprints marker)))
+      ;; Pair names up with an index [[i project-sym] ...]
+      (->>
+        (map-indexed vector)))))
+
+
+(defn- print-report
+  "Reports information about the tasks given a results map."
+  [results elapsed]
+  (let [task-time (reduce + (keep :elapsed results))
+        speedup (/ task-time elapsed)]
+    (lein/info (format "\n%s  %11s"
+                       (colorize [:bold :cyan] "Run time:")
+                       (u/human-duration elapsed)))
+    (lein/info (format "%s %11s"
+                       (colorize [:bold :cyan] "Task time:")
+                       (u/human-duration task-time)))
+    (lein/info (format "%s   %11.1f"
+                       (colorize [:bold :cyan] "Speedup:")
+                       speedup))
+    (lein/info (->> results
+                    (sort-by :elapsed)
+                    (reverse)
+                    (take 8)
+                    (map #(format "%-45s %s %11s"
+                                  (colorize [:bold :yellow] (:name %))
+                                  (if (:success %) " " "!")
+                                  (u/human-duration (:elapsed %))))
+                    (str/join "\n")
+                    (str \newline
+                         (colorize [:bold :cyan] "Slowest projects:")
+                         \newline)))))
 
 
 (defn run-tasks
@@ -379,8 +377,7 @@
   (let [[monolith subprojects] (u/load-monolith! project)
         fprints (fingerprint/context monolith subprojects)
         opts (if-let [marker (:refresh opts)]
-               (-> opts
-                   (assoc :changed marker))
+               (assoc opts :changed marker)
                opts)
         targets (select-projects
                   monolith subprojects fprints
