@@ -23,19 +23,12 @@
   lein-monolith, fetching the example project's dependencies, and installing all
   of the example project's subprojects."
   []
-  (let [out (StringWriter.)]
-    (try
-      (binding [lein/*exit-process?* false
-                *out* out
-                *err* out]
-        (install/install (project/read "project.clj"))
-        (let [[monolith subprojects] (u/load-monolith! (read-example-project))]
-          (deps/deps monolith)
-          (doseq [[_project-name project] subprojects]
-            (each/run-tasks project {} ["install"]))))
-      (catch Exception e
-        (println (str out))
-        (throw e)))))
+  (binding [lein/*exit-process?* false]
+    (install/install (project/read "project.clj"))
+    (let [[monolith subprojects] (u/load-monolith! (read-example-project))]
+      (deps/deps monolith)
+      (doseq [[_project-name project] subprojects]
+        (each/run-tasks project {} ["install"])))))
 
 
 (defn use-example-project

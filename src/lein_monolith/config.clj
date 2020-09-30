@@ -43,7 +43,7 @@
   It's necessary to have a reference to the raw project so unprocessed values
   can be inherited with inherit-raw and inherit-leaky-raw."
   [raw monolith]
-  (vary-meta monolith assoc-in [:monolith :raw] raw))
+  (vary-meta monolith assoc :monolith/raw raw))
 
 
 (defn find-monolith
@@ -65,7 +65,7 @@
             (lein/debug "Reading candidate project file" (str file))
             (let [super (project/read-raw (str file))]
               (when (:monolith super)
-                (add-raw-to-meta super (project/init-project super)))))
+                (add-raw-to-meta super super))))
           (find-up (:root project) "project.clj"))))
 
 

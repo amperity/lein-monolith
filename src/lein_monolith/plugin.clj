@@ -53,7 +53,7 @@
   building an inherited profile."
   [monolith types]
   (if (:raw types)
-    (get-in (meta monolith) [:monolith :raw])
+    (:monolith/raw (meta monolith))
     monolith))
 
 

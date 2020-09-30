@@ -25,7 +25,8 @@
             [["central"
               {:url "https://repo1.maven.org/maven2/"
                :snapshots false}]
-             ["clojars" {:url "https://repo.clojars.org/"}]]}
+             ["clojars" {:url "https://repo.clojars.org/"}]]
+            :managed-dependencies [['amperity/greenlight "0.6.0"]]}
            (:monolith/leaky profiles)))
     (is (= {:compile-path "%s/compiled"}
            (:monolith/leaky-raw profiles)))))

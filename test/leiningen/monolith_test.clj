@@ -51,7 +51,8 @@
           "resources"]
          (relativize-pprint-output :resource-paths)))
 
-  (is (= ["apps/app-a/src"
+  (is (= ["apps/app-a/bench"
+          "apps/app-a/src"
           "libs/lib-a/src"
           "libs/lib-b/src"
           "src"]
@@ -61,7 +62,8 @@
           "apps/app-a/test/unit"
           "libs/lib-a/test/integration"
           "libs/lib-a/test/unit"
-          "libs/lib-b/test"
+          "libs/lib-b/test/integration"
+          "libs/lib-b/test/unit"
           "test/integration"
           "test/unit"]
          (relativize-pprint-output :test-paths))))

@@ -1,8 +1,6 @@
 (defproject lein-monolith/example.all "MONOLITH"
   :description "Overarching example project."
 
-  :pedantic? :abort
-
   :aliases
   {"version+" ["version"]
    "version++" ["version+"]}
@@ -32,7 +30,6 @@
   {:inherit
    [:aliases
     :env
-    :pedantic
     :test-selectors]
 
    :inherit-raw
