@@ -22,7 +22,8 @@
       ClosingPipe
       Pipe
       RevivableInputStream)
-    java.io.OutputStream))
+    java.io.OutputStream
+    java.time.Instant))
 
 
 ;; ## Task Options
@@ -77,6 +78,53 @@
 
 
 
+;; ## Task Initialization
+
+(def ^:private init-lock
+  "An object to lock on to ensure that projects are not initialized
+  concurrently. This prevents the mysterious 'unbound fn' errors that sometimes
+  crop up during parallel execution."
+  (Object.))
+
+
+(defn- resolve-tasks
+  "Perform an initial resolution of the task to prevent metadata-related
+  arglist errors when namespaces are loaded in parallel."
+  [project task+args]
+  (let [[task args] (lein/task-args task+args project)]
+    (lein/resolve-task task)
+    ;; Some tasks pull in other tasks, so also resolve them.
+    (condp = task
+      "do"
+      (doseq [subtask+args (lein-do/group-args args)]
+        (resolve-tasks project subtask+args))
+
+      "update-in"
+      (let [subtask+args (rest (drop-while #(not= "--" %) args))]
+        (resolve-tasks project subtask+args))
+
+      "with-profile"
+      (let [subtask+args (rest args)]
+        (resolve-tasks project subtask+args))
+
+      ;; default no-op
+      nil)))
+
+
+(defn- apply-subproject-task
+  "Applies the task to the given subproject."
+  [subproject task]
+  (binding [lein/*exit-process?* false
+            eval/*dir* (:root subproject)]
+    (let [initialized (config/debug-profile "init-subproject"
+                        (locking init-lock
+                          (project/init-project
+                            (plugin/add-middleware subproject))))]
+      (config/debug-profile "apply-task"
+        (lein/resolve-and-apply initialized task)))))
+
+
+
 ;; ## Output Handling
 
 (defn- tee-output-stream
@@ -106,7 +154,7 @@
 
     (close
       []
-      ; no-op
+      ;; no-op
       nil)))
 
 
@@ -148,26 +196,6 @@
           exit-value)))))
 
 
-(def ^:private init-lock
-  "An object to lock on to ensure that projects are not initialized
-  concurrently. This prevents the mysterious 'unbound fn' errors that sometimes
-  crop up during parallel execution."
-  (Object.))
-
-
-(defn- apply-subproject-task
-  "Applies the task to the given subproject."
-  [subproject task]
-  (binding [lein/*exit-process?* false
-            eval/*dir* (:root subproject)]
-    (let [initialized (config/debug-profile "init-subproject"
-                        (locking init-lock
-                          (project/init-project
-                            (plugin/add-middleware subproject))))]
-      (config/debug-profile "apply-task"
-        (lein/resolve-and-apply initialized task)))))
-
-
 (defn- apply-subproject-task-with-output
   "Applies the task to the given subproject, writing the task output to a file
   in the given directory."
@@ -178,7 +206,7 @@
       ; Write task header
       (.write file-output-stream
               (.getBytes (format "[%s] Applying task to %s/%s: %s\n\n"
-                                 (java.util.Date.)
+                                 (Instant/now)
                                  (:group subproject)
                                  (:name subproject)
                                  (str/join " " task))))
@@ -197,32 +225,8 @@
           ; Write task footer
           (.write file-output-stream
                   (.getBytes (format "\n[%s] Elapsed: %s\n"
-                                     (java.util.Date.)
+                                     (Instant/now)
                                      (u/human-duration (:elapsed @results))))))))))
-
-
-(defn- resolve-tasks
-  "Perform an initial resolution of the task to prevent metadata-related
-  arglist errors when namespaces are loaded in parallel."
-  [project task+args]
-  (let [[task args] (lein/task-args task+args project)]
-    (lein/resolve-task task)
-    ;; Some tasks pull in other tasks, so also resolve them.
-    (condp = task
-      "do"
-      (doseq [subtask+args (lein-do/group-args args)]
-        (resolve-tasks project subtask+args))
-
-      "update-in"
-      (let [subtask+args (rest (drop-while #(not= "--" %) args))]
-        (resolve-tasks project subtask+args))
-
-      "with-profile"
-      (let [subtask+args (rest args)]
-        (resolve-tasks project subtask+args))
-
-      ;; default no-op
-      nil)))
 
 
 (defn- run-task!
@@ -316,8 +320,30 @@
         (mapv (comp deref computations second) targets)))))
 
 
+(defn- run-all*
+  "Run all tasks, using the `:parallel` option to determine whether to run them
+  serially or concurrently."
+  [ctx targets]
+  (if-let [threads (get-in ctx [:opts :parallel])]
+    (run-parallel! ctx (Integer/parseInt threads) targets)
+    (run-linear! ctx targets)))
 
-;; ## Task Entry
+
+(defn- run-all!
+  "Run all tasks, using the `:parallel` and `:output` options to determine
+  behavior."
+  [ctx targets]
+  (if (get-in ctx [:opts :output])
+    ;; NOTE: this is done here rather than inside each task so that tasks
+    ;; starting across threads don't have a chance to see the `sh` var between
+    ;; rebindings.
+    (with-redefs [leiningen.core.eval/sh run-with-output]
+      (run-all* ctx targets))
+    (run-all* ctx targets)))
+
+
+
+;; ## Each Task
 
 (defn- select-projects
   "Returns a vector of pairs of index numbers and symbols naming the selected
@@ -398,9 +424,7 @@
                    :num-targets n
                    :task task
                    :opts opts}
-              results (if-let [threads (:parallel opts)]
-                        (run-parallel! ctx (Integer/parseInt threads) targets)
-                        (run-linear! ctx targets))
+              results (run-all! ctx targets)
               elapsed (/ (- (System/nanoTime) start-time) 1000000.0)]
           (when (:report opts)
             (print-report results elapsed))
