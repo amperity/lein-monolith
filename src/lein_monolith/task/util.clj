@@ -79,6 +79,14 @@
       (:downstream opts) (update :downstream-of conj (:name project)))))
 
 
+(defn stopwatch
+  "Construct a timer which will contain the number of milliseconds elapsed
+  between its creation and when it is dereferenced."
+  []
+  (let [start (System/nanoTime)]
+    (delay (/ (- (System/nanoTime) start) 1e6))))
+
+
 (defn human-duration
   "Renders a duration in milliseconds in hour:minute:second.ms format."
   [duration]

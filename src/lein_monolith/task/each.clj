@@ -22,7 +22,9 @@
       ClosingPipe
       Pipe
       RevivableInputStream)
-    java.io.OutputStream
+    (java.io
+      ByteArrayOutputStream
+      OutputStream)
     java.time.Instant))
 
 
@@ -126,7 +128,21 @@
 
 ;; ## Output Handling
 
-(declare apply-subproject-task)
+(def ^:private output-lock
+  "An object to lock on to ensure that project output is not interleaved when
+  running in silent mode."
+  (Object.))
+
+
+(def ^:private ^:dynamic *task-capture-output*
+  "If bound, write task output to this stream *instead* of the standard output
+  and error streams."
+  nil)
+
+
+(def ^:private ^:dynamic *task-file-output*
+  "If bound, copy task output to this stream to record it to a log file."
+  nil)
 
 
 (defn- tee-output-stream
@@ -160,18 +176,12 @@
       nil)))
 
 
-(def ^:dynamic *task-file-output* nil)
-
-
 (defn- run-with-output
   "A version of `leiningen.core.eval/sh` that streams in/out/err, teeing output
   to the given file."
   [& cmd]
   (when eval/*pump-in*
     (rebind-io!))
-  (when-not *task-file-output*
-    (throw (IllegalStateException.
-             (str "Cannot run task without bound *task-file-output*: " (pr-str cmd)))))
   (let [cmd (into-array String cmd)
         env (into-array String (@#'eval/overridden-env eval/*env*))
         proc (.exec (Runtime/getRuntime)
@@ -183,8 +193,16 @@
     (with-open [out (.getInputStream proc)
                 err (.getErrorStream proc)
                 in (.getOutputStream proc)]
-      (let [pump-out (doto (Pipe. out (tee-output-stream System/out *task-file-output*)) .start)
-            pump-err (doto (Pipe. err (tee-output-stream System/err *task-file-output*)) .start)
+      (let [out-dest (cond-> (or *task-capture-output* System/out)
+                       *task-file-output*
+                       (tee-output-stream *task-file-output*))
+            err-dest (cond-> (or *task-capture-output* System/err)
+                       *task-file-output*
+                       (tee-output-stream *task-file-output*))
+            pump-out (doto (Pipe. out ^OutputStream out-dest)
+                       (.start))
+            pump-err (doto (Pipe. err ^OutputStream err-dest)
+                       (.start))
             pump-in (ClosingPipe. System/in in)]
         (when eval/*pump-in* (.start pump-in))
         (.join pump-out)
@@ -198,11 +216,12 @@
           exit-value)))))
 
 
-(defn- apply-subproject-task-with-output
-  "Applies the task to the given subproject, writing the task output to a file
-  in the given directory."
-  [subproject task out-dir results]
-  (let [out-file (io/file out-dir (:group subproject) (str (:name subproject) ".txt"))]
+(defn- apply-with-output
+  "Applies the function to the given subproject, writing the task output to a
+  file in the given directory."
+  [out-dir f subproject task]
+  (let [out-file (io/file out-dir (:group subproject) (str (:name subproject) ".txt"))
+        elapsed (u/stopwatch)]
     (io/make-parents out-file)
     (with-open [file-output-stream (io/output-stream out-file :append true)]
       ;; Write task header
@@ -215,7 +234,7 @@
       (try
         ;; Run task with output capturing.
         (binding [*task-file-output* file-output-stream]
-          (apply-subproject-task subproject task))
+          (f subproject task))
         (catch Exception ex
           (.write file-output-stream
                   (.getBytes (format "\nERROR: %s\n%s"
@@ -228,7 +247,7 @@
           (.write file-output-stream
                   (.getBytes (format "\n[%s] Elapsed: %s\n"
                                      (Instant/now)
-                                     (u/human-duration (:elapsed @results))))))))))
+                                     (u/human-duration @elapsed)))))))))
 
 
 
@@ -249,31 +268,41 @@
   [ctx target]
   ;; Try to reclaim some memory before running the task.
   (System/gc)
-  (let [start (System/nanoTime)
+  (let [subproject (get-in ctx [:subprojects target])
         opts (:opts ctx)
-        subproject (get-in ctx [:subprojects target])
-        results (delay {:name target
-                        :elapsed (/ (- (System/nanoTime) start) 1000000.0)})
         marker (:changed opts)
-        fprints (:fingerprints ctx)]
+        fprints (:fingerprints ctx)
+        elapsed (u/stopwatch)
+        task-output (when (:silent opts)
+                      (ByteArrayOutputStream.))]
     (try
       (lein/info (format "\nApplying to %s%s"
                          (colorize [:bold :yellow] target)
                          (if marker
                            (str " (" (fingerprint/explain-str fprints marker target) ")")
                            "")))
-      (if-let [out-dir (get-in ctx [:opts :output])]
-        ;; Capture output to file.
-        (apply-subproject-task-with-output subproject (:task ctx) out-dir results)
-        ;; Run without output capturing.
-        (apply-subproject-task subproject (:task ctx)))
+      ;; Bind appropriate output options and apply the task.
+      (binding [*task-capture-output* task-output]
+        (if-let [out-dir (get-in ctx [:opts :output])]
+          (apply-with-output out-dir apply-subproject-task subproject (:task ctx))
+          (apply-subproject-task subproject (:task ctx))))
+      ;; Save updated fingerprint if refreshing.
       (when (:refresh opts)
         (fingerprint/save! fprints marker target)
         (lein/info (format "Saved %s fingerprint for %s"
                            (colorize :bold marker)
                            (colorize [:bold :yellow] target))))
-      (assoc @results :success true)
+      ;; Return successful task result.
+      {:name target
+       :elapsed @elapsed
+       :success true}
       (catch Exception ex
+        ;; When silent, grab output lock and print task output.
+        (when (:silent opts)
+          (locking output-lock
+            (print (str task-output))
+            (flush)))
+        ;; Print convenience resume tip for user.
         (when-not (or (:parallel opts) (:endure opts))
           (let [resume-args (into
                               ["lein" "monolith" "each"]
@@ -285,6 +314,7 @@
             (lein/warn (format "\n%s %s\n"
                                (colorize [:bold :red] "Resume with:")
                                (str/join " " resume-args)))))
+        ;; Fail or continue depending on whether endure is enabled.
         (if (:endure opts)
           (lein/warn (format "\n%s: %s\n%s"
                              (colorize [:bold :red] "ERROR")
@@ -292,13 +322,16 @@
                              (with-out-str
                                (cst/print-cause-trace ex))))
           (throw ex))
-        (assoc @results :success false, :error ex))
+        {:name target
+         :elapsed @elapsed
+         :success false
+         :error ex})
       (finally
         (lein/info (format "Completed %s (%s/%s) in %s"
                            (colorize [:bold :yellow] target)
                            (colorize :cyan (swap! (:completions ctx) inc))
                            (colorize :cyan (:num-targets ctx))
-                           (colorize [:bold :cyan] (u/human-duration (:elapsed @results)))))))))
+                           (colorize [:bold :cyan] (u/human-duration @elapsed))))))))
 
 
 (defn- run-linear!
@@ -423,37 +456,36 @@
                opts)
         targets (select-projects
                   monolith subprojects fprints
-                  (u/globalize-opts project opts))
-        n (inc (or (first (last targets)) -1))
-        start-time (System/nanoTime)]
-    (if (empty? targets)
-      (lein/info "Target selection matched zero subprojects; nothing to do")
-      (do
-        (lein/info "Applying"
-                   (colorize [:bold :cyan] (str/join " " task))
-                   "to" (colorize :cyan (count targets))
-                   "subprojects...")
-        (let [ctx {:monolith monolith
-                   :subprojects subprojects
-                   :fingerprints fprints
-                   :completions (atom (ffirst targets))
-                   :num-targets n
-                   :task task
-                   :opts opts}
-              results (run-all! ctx targets)
-              elapsed (/ (- (System/nanoTime) start-time) 1000000.0)]
-          (when (:report opts)
-            (print-report results elapsed))
-          (if-let [failures (seq (map :name (remove :success results)))]
-            (lein/abort (format "\n%s: Applied %s to %s projects in %s with %d failures: %s"
-                                (colorize [:bold :red] "FAILURE")
-                                (colorize [:bold :cyan] (str/join " " task))
-                                (colorize :cyan (count targets))
-                                (u/human-duration elapsed)
-                                (count failures)
-                                (str/join " " failures)))
-            (lein/info (format "\n%s: Applied %s to %s projects in %s"
-                               (colorize [:bold :green] "SUCCESS")
-                               (colorize [:bold :cyan] (str/join " " task))
-                               (colorize :cyan (count targets))
-                               (u/human-duration elapsed)))))))))
+                  (u/globalize-opts project opts))]
+    (if (seq targets)
+      (lein/info "Applying"
+                 (colorize [:bold :cyan] (str/join " " task))
+                 "to" (colorize :cyan (count targets))
+                 "subprojects...")
+      (lein/info "Target selection matched zero subprojects; nothing to do"))
+    (when (seq targets)
+      (let [elapsed (u/stopwatch)
+            results (run-all!
+                      {:monolith monolith
+                       :subprojects subprojects
+                       :fingerprints fprints
+                       :completions (atom (ffirst targets))
+                       :num-targets (inc (or (first (last targets)) -1))
+                       :task task
+                       :opts opts}
+                      targets)]
+        (when (:report opts)
+          (print-report results @elapsed))
+        (if-let [failures (seq (map :name (remove :success results)))]
+          (lein/abort (format "\n%s: Applied %s to %s projects in %s with %d failures: %s"
+                              (colorize [:bold :red] "FAILURE")
+                              (colorize [:bold :cyan] (str/join " " task))
+                              (colorize :cyan (count targets))
+                              (u/human-duration @elapsed)
+                              (count failures)
+                              (str/join " " failures)))
+          (lein/info (format "\n%s: Applied %s to %s projects in %s"
+                             (colorize [:bold :green] "SUCCESS")
+                             (colorize [:bold :cyan] (str/join " " task))
+                             (colorize :cyan (count targets))
+                             (u/human-duration @elapsed))))))))
