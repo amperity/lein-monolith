@@ -149,6 +149,7 @@
     :parallel <threads>        Run tasks in parallel across a fixed thread pool.
     :endure                    Continue executing the task even if some subprojects fail.
     :report                    Print a detailed timing report after running tasks.
+    :silent                    Don't print project output unless the task fails.
     :output <path>             Save each project's individual output in the given directory.
 
   Targeting Options:

@@ -34,6 +34,7 @@
     {:parallel 1
      :endure 0
      :report 0
+     :silent 0
      :output 1
      :upstream 0
      :downstream 0
@@ -53,6 +54,8 @@
       [:endure])
     (when (:report opts)
       [:report])
+    (when (:silent opts)
+      [:silent])
     (when-let [out-dir (:output opts)]
       [:output out-dir])
     (when-let [in (seq (:in opts))]
@@ -78,13 +81,22 @@
 
 
 
-;; ## Task Initialization
+;; ## Project Initialization
 
 (def ^:private init-lock
   "An object to lock on to ensure that projects are not initialized
   concurrently. This prevents the mysterious 'unbound fn' errors that sometimes
   crop up during parallel execution."
   (Object.))
+
+
+(defn- init-project
+  "Initialize the given subproject to prepare to run a task in it."
+  [subproject]
+  (locking init-lock
+    (config/debug-profile "init-subproject"
+      (project/init-project
+        (plugin/add-middleware subproject)))))
 
 
 (defn- resolve-tasks
@@ -94,7 +106,7 @@
   (let [[task args] (lein/task-args task+args project)]
     (lein/resolve-task task)
     ;; Some tasks pull in other tasks, so also resolve them.
-    (condp = task
+    (case task
       "do"
       (doseq [subtask+args (lein-do/group-args args)]
         (resolve-tasks project subtask+args))
@@ -111,21 +123,11 @@
       nil)))
 
 
-(defn- apply-subproject-task
-  "Applies the task to the given subproject."
-  [subproject task]
-  (binding [lein/*exit-process?* false
-            eval/*dir* (:root subproject)]
-    (let [initialized (config/debug-profile "init-subproject"
-                        (locking init-lock
-                          (project/init-project
-                            (plugin/add-middleware subproject))))]
-      (config/debug-profile "apply-task"
-        (lein/resolve-and-apply initialized task)))))
-
-
 
 ;; ## Output Handling
+
+(declare apply-subproject-task)
+
 
 (defn- tee-output-stream
   "Constructs a proxy of an OutputStream that will write a copy of the bytes
@@ -203,7 +205,7 @@
   (let [out-file (io/file out-dir (:group subproject) (str (:name subproject) ".txt"))]
     (io/make-parents out-file)
     (with-open [file-output-stream (io/output-stream out-file :append true)]
-      ; Write task header
+      ;; Write task header
       (.write file-output-stream
               (.getBytes (format "[%s] Applying task to %s/%s: %s\n\n"
                                  (Instant/now)
@@ -211,7 +213,7 @@
                                  (:name subproject)
                                  (str/join " " task))))
       (try
-        ; Run task with output capturing.
+        ;; Run task with output capturing.
         (binding [*task-file-output* file-output-stream]
           (apply-subproject-task subproject task))
         (catch Exception ex
@@ -222,11 +224,24 @@
                                        (cst/print-cause-trace ex)))))
           (throw ex))
         (finally
-          ; Write task footer
+          ;; Write task footer
           (.write file-output-stream
                   (.getBytes (format "\n[%s] Elapsed: %s\n"
                                      (Instant/now)
                                      (u/human-duration (:elapsed @results))))))))))
+
+
+
+;; ## Task Execution
+
+(defn- apply-subproject-task
+  "Applies the task to the given subproject."
+  [subproject task]
+  (binding [lein/*exit-process?* false
+            eval/*dir* (:root subproject)]
+    (let [initialized (init-project subproject)]
+      (config/debug-profile "apply-task"
+        (lein/resolve-and-apply initialized task)))))
 
 
 (defn- run-task!
@@ -330,10 +345,11 @@
 
 
 (defn- run-all!
-  "Run all tasks, using the `:parallel` and `:output` options to determine
-  behavior."
+  "Run all tasks, using the `:parallel`, `:silent`, and `:output` options to
+  determine behavior."
   [ctx targets]
-  (if (get-in ctx [:opts :output])
+  (if (or (get-in ctx [:opts :silent])
+          (get-in ctx [:opts :output]))
     ;; NOTE: this is done here rather than inside each task so that tasks
     ;; starting across threads don't have a chance to see the `sh` var between
     ;; rebindings.
