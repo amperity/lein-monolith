@@ -210,8 +210,8 @@
   (if (:monolith/inherit project)
     ; Monolith subproject, add inherited profile.
     (if (some (fn this-profile-active?
-                [[profile-key]]
-                (profile-active? project profile-key))
+                [entry]
+                (profile-active? project (first entry)))
               profile-config)
       ; Already activated, return project.
       (do (lein/debug "One or both inherited profiles are already active!")
