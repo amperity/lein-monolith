@@ -212,7 +212,8 @@
             (.kill ^RevivableInputStream System/in)
             (.join pump-in)
             (.resurrect ^RevivableInputStream System/in))
-          (.flush ^OutputStream *task-file-output*)
+          (when *task-file-output*
+            (.flush ^OutputStream *task-file-output*))
           exit-value)))))
 
 
