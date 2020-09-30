@@ -31,3 +31,9 @@ generated build artifacts for the subprojects. The primary examples of these are
 key in the metaproject called `:inherit-leaky`, which follows the format of
 `:inherit` above. Properties in this profile will be included in the built JAR
 and pom files for the subproject.
+
+Lastly, `lein-monolith` supports inheriting unprocessed values, via
+`:inherit-raw` and `:inherit-leaky-raw`. These are of particular use when
+inheriting paths, as Leiningen absolutizes paths upon processing a project map.
+By using raw inheritance, you can safely inherit paths, e.g. `:test-paths` or
+`:source-paths`.

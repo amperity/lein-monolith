@@ -214,7 +214,7 @@
                 (profile-active? project (first entry)))
               profile-config)
       ; Already activated, return project.
-      (do (lein/debug "One or both inherited profiles are already active!")
+      (do (lein/debug "One or more inherited profiles are already active!")
           project)
       ; Find monolith metaproject and generate profile.
       (let [monolith (config/find-monolith! project)
