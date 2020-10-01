@@ -2,7 +2,7 @@
   (:require
     [clojure.test :refer [deftest is]]
     [lein-monolith.config :as config]
-    [lein-monolith.plugin :as sut]
+    [lein-monolith.plugin :as plugin]
     [lein-monolith.test-utils :refer [use-example-project read-example-project]]
     [leiningen.core.project :as project]))
 
@@ -13,7 +13,7 @@
 (deftest build-inherited-profiles-test
   (let [monolith (config/find-monolith! (read-example-project))
         subproject (project/read "example/apps/app-a/project.clj")
-        profiles (sut/build-inherited-profiles monolith subproject)]
+        profiles (plugin/build-inherited-profiles monolith subproject)]
     (is (= #{:monolith/inherited
              :monolith/inherited-raw
              :monolith/leaky

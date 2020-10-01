@@ -3,7 +3,7 @@
     [clojure.java.io :as io]
     [clojure.test :refer [deftest is]]
     [lein-monolith.test-utils :refer [use-example-project read-example-project]]
-    [leiningen.monolith :as sut]))
+    [leiningen.monolith :as monolith]))
 
 
 (use-example-project)
@@ -20,7 +20,7 @@
   [& ks]
   (->> (map str ks)
        (apply vector "pprint")
-       (sut/with-all (read-example-project))
+       (monolith/with-all (read-example-project))
        with-out-str
        read-string))
 
