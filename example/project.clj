@@ -29,8 +29,8 @@
   :monolith
   {:inherit
    [:aliases
-    :env
-    :test-selectors]
+    :test-selectors
+    :env]
 
    :inherit-raw
    [:test-paths]
