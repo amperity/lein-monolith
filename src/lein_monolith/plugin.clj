@@ -86,7 +86,8 @@
       :else
       (throw (ex-info (str "Unknown value type for monolith inherit setting: "
                            (pr-str setting))
-                      {:inherit setting})))))
+                      {:inherit setting
+                       :subproject-key subproject-key})))))
 
 
 (defn- inherited-profile
