@@ -1,4 +1,4 @@
-(defproject lein-monolith/example.all "MONOLITH"
+(defproject lein-monolith.example/all "MONOLITH"
   :description "Overarching example project."
 
   :aliases

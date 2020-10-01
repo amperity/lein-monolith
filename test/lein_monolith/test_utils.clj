@@ -1,15 +1,12 @@
 (ns lein-monolith.test-utils
   (:require
-    [clojure.test :refer [use-fixtures]]
-    [lein-monolith.task.each :as each]
-    [lein-monolith.task.util :as u]
-    [leiningen.core.main :as lein]
-    [leiningen.core.project :as project]
-    [leiningen.deps :as deps]
-    [leiningen.install :as install])
-  (:import
-    (java.io
-      StringWriter)))
+   [clojure.test :refer [use-fixtures]]
+   [lein-monolith.task.each :as each]
+   [lein-monolith.task.util :as u]
+   [leiningen.core.main :as lein]
+   [leiningen.core.project :as project]
+   [leiningen.deps :as deps]
+   [leiningen.install :as install]))
 
 
 (defn read-example-project

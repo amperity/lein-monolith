@@ -1,4 +1,4 @@
-(defproject lein-monolith/example.app-a "MONOLITH-SNAPSHOT"
+(defproject lein-monolith.example/app-a "MONOLITH-SNAPSHOT"
   :description "Example project with internal and external dependencies."
   :monolith/inherit true
   :deployable true
@@ -6,8 +6,8 @@
   :dependencies
   [[org.clojure/clojure "1.10.1"]
    [commons-io "2.5"]
-   [lein-monolith/example.lib-a "MONOLITH-SNAPSHOT"]
-   [lein-monolith/example.lib-b "MONOLITH-SNAPSHOT"]]
+   [lein-monolith.example/lib-a "MONOLITH-SNAPSHOT"]
+   [lein-monolith.example/lib-b "MONOLITH-SNAPSHOT"]]
 
   :profiles
   {:shared {:source-paths ["bench"]}
