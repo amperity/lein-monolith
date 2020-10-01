@@ -6,7 +6,10 @@
     [leiningen.core.main :as lein]
     [leiningen.core.project :as project]
     [leiningen.deps :as deps]
-    [leiningen.install :as install]))
+    [leiningen.install :as install])
+  (:import
+    (java.io
+      StringWriter)))
 
 
 (defn read-example-project
@@ -20,12 +23,19 @@
   lein-monolith, fetching the example project's dependencies, and installing all
   of the example project's subprojects."
   []
-  (binding [lein/*exit-process?* false]
-    (install/install (project/read "project.clj"))
-    (let [[monolith subprojects] (u/load-monolith! (read-example-project))]
-      (deps/deps monolith)
-      (doseq [[_project-name project] subprojects]
-        (each/run-tasks project {} ["install"])))))
+  (let [out (StringWriter.)]
+    (try
+      (binding [lein/*exit-process?* false
+                *out* out
+                *err* out]
+        (install/install (project/read "project.clj"))
+        (let [[monolith subprojects] (u/load-monolith! (read-example-project))]
+          (deps/deps monolith)
+          (doseq [[_project-name project] subprojects]
+            (each/run-tasks project {} ["install"]))))
+      (catch Exception e
+        (.println *err* (str out))
+        (throw e)))))
 
 
 (defn use-example-project
@@ -33,5 +43,5 @@
   monolith tasks can be run against it for testing."
   []
   (use-fixtures :once (fn [f]
-                        (with-out-str (prepare-example-project))
+                        (prepare-example-project)
                         (f))))
