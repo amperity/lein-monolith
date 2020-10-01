@@ -12,6 +12,7 @@
     [lein-monolith.task.util :as u]
     [leiningen.core.eval :as eval]
     [leiningen.core.main :as lein]
+    [leiningen.core.project :as project]
     [leiningen.core.utils :refer [rebind-io!]]
     [leiningen.do :as lein-do]
     [manifold.deferred :as d]
@@ -192,11 +193,22 @@
           exit-value)))))
 
 
+(def ^:private init-lock
+  "An object to lock on to ensure that projects are not initialized
+  concurrently. This prevents the mysterious 'unbound fn' errors that sometimes
+  crop up during parallel execution."
+  (Object.))
+
+
 (defn- apply-subproject-task
   "Applies the task to the given subproject."
   [subproject task]
-  (binding [lein/*exit-process?* false]
-    (let [initialized (plugin/init-subproject subproject)]
+  (binding [lein/*exit-process?* false
+            eval/*dir* (:root subproject)]
+    (let [initialized (config/debug-profile "init-subproject"
+                        (locking init-lock
+                          (project/init-project
+                            (plugin/add-middleware subproject))))]
       (config/debug-profile "apply-task"
         (lein/resolve-and-apply initialized task)))))
 
