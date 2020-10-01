@@ -13,7 +13,9 @@
 
 (def profile-config
   "Configuration for inherited profiles. Structured as a vector of pairs to
-  maintain ordering."
+  maintain ordering. The ordering is significant as the info command consumes
+  this configuration directly, and providing deterministic output ordering is
+  desirable."
   [[:monolith/inherited
     {:types #{}
      :ks {:inherit :inherit
