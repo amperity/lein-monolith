@@ -17,24 +17,24 @@
   this configuration directly, and providing deterministic output ordering is
   desirable."
   [[:monolith/inherited
-    {:types #{}
-     :ks {:inherit :inherit
-          :subproject :monolith/inherit}}]
+    {:inherit-key :inherit
+     :subproject-key :monolith/inherit}]
 
    [:monolith/inherited-raw
-    {:types #{:raw}
-     :ks {:inherit :inherit-raw
-          :subproject :monolith/inherit-raw}}]
+    {:raw? true
+     :inherit-key :inherit-raw
+     :subproject-key :monolith/inherit-raw}]
 
    [:monolith/leaky
-    {:types #{:leaky}
-     :ks {:inherit :inherit-leaky
-          :subproject :monolith/inherit-leaky}}]
+    {:leaky? true
+     :inherit-key :inherit-leaky
+     :subproject-key :monolith/inherit-leaky}]
 
    [:monolith/leaky-raw
-    {:types #{:leaky :raw}
-     :ks {:inherit :inherit-leaky-raw
-          :subproject :monolith/inherit-leaky-raw}}]])
+    {:leaky? true
+     :raw? true
+     :inherit-key :inherit-leaky-raw
+     :subproject-key :monolith/inherit-leaky-raw}]])
 
 
 (defn- subproject-dependencies
@@ -46,16 +46,17 @@
 
 (defn- maybe-mark-leaky
   "Add ^:leaky metadata to a profile if it is of the leaky type."
-  [profile types]
-  (cond-> profile
-    (:leaky types) (vary-meta assoc :leaky true)))
+  [profile {:keys [leaky?]}]
+  (if leaky?
+    (vary-meta profile assoc :leaky true)
+    profile))
 
 
 (defn- choose-inheritance-source
   "Choose either the initialized monolith or its raw representation for use when
   building an inherited profile."
-  [monolith types]
-  (if (:raw types)
+  [monolith {:keys [raw?]}]
+  (if raw?
     (:monolith/raw (meta monolith))
     monolith))
 
@@ -91,7 +92,7 @@
 (defn- inherited-profile
   "Constructs a profile map containing the inherited properties from a parent
   project map."
-  [monolith subproject {inherit-key :inherit subproject-key :subproject}]
+  [monolith subproject {:keys [inherit-key subproject-key]}]
   (when-let [base-properties (get-in monolith [:monolith inherit-key])]
     (when-let [profile (select-inherited-properties monolith base-properties subproject subproject-key)]
       (when (contains? profile :profiles)
@@ -103,12 +104,13 @@
   "Returns a map from profile keys to inherited profile maps."
   [monolith subproject]
   (reduce
-    (fn [acc [profile-key {:keys [types ks]}]]
-      (let [profile (some-> (choose-inheritance-source monolith types)
-                            (inherited-profile subproject ks)
-                            (maybe-mark-leaky types))]
-        (cond-> acc
-          profile (assoc profile-key profile))))
+    (fn [acc [key config]]
+      (let [profile (some-> (choose-inheritance-source monolith config)
+                            (inherited-profile subproject config)
+                            (maybe-mark-leaky config))]
+        (if profile
+          (assoc acc key profile)
+          acc)))
     nil
     profile-config))
 
