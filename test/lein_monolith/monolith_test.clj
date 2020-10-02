@@ -1,4 +1,4 @@
-(ns leiningen.monolith-test
+(ns lein-monolith.monolith-test
   (:require
     [clojure.java.io :as io]
     [clojure.test :refer [deftest is]]
