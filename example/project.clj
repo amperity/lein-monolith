@@ -1,4 +1,4 @@
-(defproject example/all "MONOLITH"
+(defproject lein-monolith.example/all "MONOLITH"
   :description "Overarching example project."
 
   :aliases
@@ -19,15 +19,28 @@
   {:unit (complement :integration)
    :integration :integration}
 
+  :test-paths ^:replace
+  ["test/unit"
+   "test/integration"]
+
+  :compile-path
+  "%s/compiled"
+
   :monolith
   {:inherit
    [:aliases
     :test-selectors
     :env]
 
+   :inherit-raw
+   [:test-paths]
+
    :inherit-leaky
    [:repositories
     :managed-dependencies]
+
+   :inherit-leaky-raw
+   [:compile-path]
 
    :project-selectors
    {:deployable :deployable
