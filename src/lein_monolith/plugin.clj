@@ -230,7 +230,7 @@
   absolutizes any paths in the subproject that may be relative."
   [monolith [_project-name subproject]]
   (-> subproject
-      (project/project-with-profiles (:profiles subproject))
+      (project/project-with-profiles)
       (project/init-profiles (:active-profiles (meta monolith)))
       (middleware monolith)
       (project/absolutize-paths)))
