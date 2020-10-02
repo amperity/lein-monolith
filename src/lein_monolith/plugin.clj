@@ -158,7 +158,8 @@
   ([project]
    (middleware project nil))
   ([project monolith]
-   (if (:monolith/inherit project)
+   (if (and (:monolith/inherit project)
+            (not (contains? (meta project) :monolith/active)))
      ;; Monolith subproject, add inherited profile.
      (if (some (fn this-profile-active?
                  [entry]
@@ -169,20 +170,29 @@
            project)
        ;; Find monolith metaproject and generate profile.
        (let [monolith (or monolith (config/find-monolith! project))
-             profiles (build-inherited-profiles monolith project)]
-         (reduce-kv add-active-profile project profiles)))
+             profiles (build-inherited-profiles monolith project)
+             with-profiles (reduce-kv add-active-profile project profiles)]
+         (vary-meta with-profiles assoc :monolith/active true)))
      ;; Normal project, don't activate.
      project)))
 
 
-(defn add-middleware
+(defn- add-middleware
   "Update the given project to include the plugin middleware. Appends the
   middleware symbol if it is not already present."
-  [project]
+  [subproject]
   (let [mw-sym 'lein-monolith.plugin/middleware]
-    (if (some #{mw-sym} (:middleware project))
-      project
-      (update project :middleware (fnil conj []) mw-sym))))
+    (if (some #{mw-sym} (:middleware subproject))
+      subproject
+      (update subproject :middleware (fnil conj []) mw-sym))))
+
+
+(defn apply-middleware
+  "Update the given project to include the plugin middleware. Appends the
+  middleware symbol if it is not already present, then applies the middleware
+  with the given monolith."
+  [subproject monolith]
+  (middleware (add-middleware subproject) monolith))
 
 
 ;; ## Merged Profiles (`with-all`) Creation

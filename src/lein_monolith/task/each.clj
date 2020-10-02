@@ -202,21 +202,23 @@
 
 (defn- apply-subproject-task
   "Applies the task to the given subproject."
-  [subproject task]
+  [subproject ctx]
   (binding [lein/*exit-process?* false
             eval/*dir* (:root subproject)]
-    (let [initialized (config/debug-profile "init-subproject"
-                        (locking init-lock
-                          (project/init-project
-                            (plugin/add-middleware subproject))))]
+    (let [initialized
+          (config/debug-profile "init-subproject"
+            (locking init-lock
+              (let [with-middleware (plugin/apply-middleware subproject
+                                                             (:monolith ctx))]
+                (project/init-project with-middleware))))]
       (config/debug-profile "apply-task"
-        (lein/resolve-and-apply initialized task)))))
+        (lein/resolve-and-apply initialized (:task ctx))))))
 
 
 (defn- apply-subproject-task-with-output
   "Applies the task to the given subproject, writing the task output to a file
   in the given directory."
-  [subproject task out-dir results]
+  [subproject {:keys [task] :as ctx} out-dir results]
   (let [out-file (io/file out-dir (:group subproject) (str (:name subproject) ".txt"))]
     (io/make-parents out-file)
     (with-open [file-output-stream (io/output-stream out-file :append true)]
@@ -230,7 +232,7 @@
       (try
         ; Run task with output capturing.
         (binding [*task-file-output* file-output-stream]
-          (apply-subproject-task subproject task))
+          (apply-subproject-task subproject ctx))
         (catch Exception ex
           (.write file-output-stream
                   (.getBytes (format "\nERROR: %s\n%s"
@@ -290,9 +292,9 @@
                            "")))
       (if-let [out-dir (get-in ctx [:opts :output])]
         ; Capture output to file.
-        (apply-subproject-task-with-output subproject (:task ctx) out-dir results)
+        (apply-subproject-task-with-output subproject ctx out-dir results)
         ; Run without output capturing.
-        (apply-subproject-task subproject (:task ctx)))
+        (apply-subproject-task subproject ctx))
       (when (:refresh opts)
         (fingerprint/save! fprints marker target)
         (lein/info (format "Saved %s fingerprint for %s"
