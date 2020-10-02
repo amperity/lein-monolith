@@ -208,13 +208,11 @@
 (defn merged-profile
   "Constructs a profile map containing merged (re)source and test paths."
   [monolith subprojects]
-  (let [parent-profiles (:active-profiles (meta monolith))
-        profile
+  (let [profile
         (reduce-kv
           (fn [profile _project-name subproject]
             (let [with-inherited-profiles (middleware subproject monolith)
-                  with-merged-profiles (project/merge-profiles with-inherited-profiles parent-profiles)
-                  project (project/absolutize-paths with-merged-profiles)]
+                  project (project/absolutize-paths with-inherited-profiles)]
               (reduce (partial add-profile-paths project)
                       profile
                       path-keys)))

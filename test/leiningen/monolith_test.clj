@@ -41,12 +41,9 @@
 
 
 (deftest with-all-test
-  (is (= ["apps/app-a/dev-resources"
-          "apps/app-a/resources"
+  (is (= ["apps/app-a/resources"
           "dev-resources"
-          "libs/lib-a/dev-resources"
           "libs/lib-a/resources"
-          "libs/lib-b/dev-resources"
           "libs/lib-b/resources"
           "resources"]
          (relativize-pprint-output :resource-paths)))
