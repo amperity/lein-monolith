@@ -38,6 +38,11 @@ This project adheres to [Semantic Versioning](http://semver.org/).
   canonicalized.
   [#68](https://github.com/amperity/lein-monolith/issues/68)
   [#75](https://github.com/amperity/lein-monolith/pull/75)
+- The `each` task supports a new `:silent` option, which will suppress task
+  output for successful projects. This can be useful in large CI builds where
+  the output is only consulted in the event of failure.
+  [#37](https://github.com/amperity/lein-monolith/issues/37)
+  [#81](https://github.com/amperity/lein-monolith/pull/81)
 
 
 ## [1.5.0] - 2020-09-17
