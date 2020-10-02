@@ -4,7 +4,6 @@
   (:require
     [lein-monolith.config :as config]
     [lein-monolith.dependency :as dep]
-    [leiningen.core.eval :as eval]
     [leiningen.core.main :as lein]
     [leiningen.core.project :as project]))
 
@@ -116,61 +115,6 @@
     profile-config))
 
 
-(def ^:private init-lock
-  "An object to lock on to ensure that projects are not initialized
-  concurrently. This prevents the mysterious 'unbound fn' errors that sometimes
-  crop up during parallel execution."
-  (Object.))
-
-
-(declare add-middleware)
-
-
-(defn init-subproject
-  "Reads and fully initializes a subproject with inherited monolith profiles."
-  [subproject]
-  (binding [eval/*dir* (:root subproject)]
-    (config/debug-profile "init-subproject"
-      (locking init-lock
-        (project/init-project
-          (add-middleware subproject))))))
-
-
-(def ^:private path-keys
-  "Project map keys for (re)source and test paths."
-  #{:resource-paths :source-paths :test-paths})
-
-
-(defn- add-profile-paths
-  "Update a profile paths entry by adding the paths from the given project.
-  Returns the updated profile."
-  [project profile k]
-  (update profile k (fn combine-colls
-                      [coll]
-                      (-> coll
-                          set
-                          (into (get project k))
-                          (vary-meta assoc :replace true)))))
-
-
-(defn merged-profile
-  "Constructs a profile map containing merged (re)source and test paths."
-  [monolith subprojects]
-  (let [profile
-        (reduce-kv
-          (fn [profile _project-name subproject]
-            (reduce (->> subproject
-                         (init-subproject)
-                         (partial add-profile-paths))
-                    profile
-                    path-keys))
-          (select-keys monolith path-keys)
-          subprojects)]
-    (as-> profile v
-          (reduce (fn sort-paths [acc k] (update acc k sort)) v path-keys)
-          (assoc v :dependencies (subproject-dependencies subprojects)))))
-
-
 ;; ## Profile Utilities
 
 (defn profile-active?
@@ -206,28 +150,29 @@
       (activate-profile profile-key)))
 
 
-
 ;; ## Plugin Middleware
 
 (defn middleware
   "Handles inherited properties in monolith subprojects by looking for the
   `:monolith/inherit` key."
-  [project]
-  (if (:monolith/inherit project)
-    ; Monolith subproject, add inherited profile.
-    (if (some (fn this-profile-active?
-                [entry]
-                (profile-active? project (first entry)))
-              profile-config)
-      ; Already activated, return project.
-      (do (lein/debug "One or more inherited profiles are already active!")
-          project)
-      ; Find monolith metaproject and generate profile.
-      (let [monolith (config/find-monolith! project)
-            profiles (build-inherited-profiles monolith project)]
-        (reduce-kv add-active-profile project profiles)))
-    ; Normal project, don't activate.
-    project))
+  ([project]
+   (middleware project nil))
+  ([project monolith]
+   (if (:monolith/inherit project)
+     ;; Monolith subproject, add inherited profile.
+     (if (some (fn this-profile-active?
+                 [entry]
+                 (profile-active? project (first entry)))
+               profile-config)
+       ;; Already activated, return project.
+       (do (lein/debug "One or more inherited profiles are already active!")
+           project)
+       ;; Find monolith metaproject and generate profile.
+       (let [monolith (or monolith (config/find-monolith! project))
+             profiles (build-inherited-profiles monolith project)]
+         (reduce-kv add-active-profile project profiles)))
+     ;; Normal project, don't activate.
+     project)))
 
 
 (defn add-middleware
@@ -238,3 +183,41 @@
     (if (some #{mw-sym} (:middleware project))
       project
       (update project :middleware (fnil conj []) mw-sym))))
+
+
+;; ## Merged Profiles (`with-all`) Creation
+
+
+(def ^:private path-keys
+  "Project map keys for (re)source and test paths."
+  #{:resource-paths :source-paths :test-paths})
+
+
+(defn- add-profile-paths
+  "Update a profile paths entry by adding the paths from the given project.
+  Returns the updated profile."
+  [project profile k]
+  (update profile k (fn combine-colls
+                      [coll]
+                      (-> coll
+                          set
+                          (into (get project k))
+                          (vary-meta assoc :replace true)))))
+
+
+(defn merged-profile
+  "Constructs a profile map containing merged (re)source and test paths."
+  [monolith subprojects]
+  (let [profile
+        (reduce-kv
+          (fn [profile _project-name subproject]
+            (let [with-inherited-profiles (middleware subproject monolith)
+                  project (project/absolutize-paths with-inherited-profiles)]
+              (reduce (partial add-profile-paths project)
+                      profile
+                      path-keys)))
+          (select-keys monolith path-keys)
+          subprojects)]
+    (as-> profile v
+          (reduce (fn sort-paths [acc k] (update acc k sort)) v path-keys)
+          (assoc v :dependencies (subproject-dependencies subprojects)))))
