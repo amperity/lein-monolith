@@ -41,17 +41,23 @@
 
 
 (deftest with-all-test
-  (is (= ["apps/app-a/resources"
-          "dev-resources"
+  (is (= [['lein-monolith.example/lib-a "MONOLITH-SNAPSHOT"]
+          ['lein-monolith.example/app-a "MONOLITH-SNAPSHOT"]
+          ['lein-monolith.example/lib-b "MONOLITH-SNAPSHOT"]]
+         (read-pprint-output :dependencies)))
+
+  (is (= ["apps/app-a/dev-resources"
+          "apps/app-a/resources"
+          "libs/lib-a/dev-resources"
           "libs/lib-a/resources"
-          "libs/lib-b/resources"
-          "resources"]
+          "libs/lib-b/dev-resources"
+          "libs/lib-b/resources"]
          (relativize-pprint-output :resource-paths)))
 
-  (is (= ["apps/app-a/src"
+  (is (= ["apps/app-a/bench"
+          "apps/app-a/src"
           "libs/lib-a/src"
-          "libs/lib-b/src"
-          "src"]
+          "libs/lib-b/src"]
          (relativize-pprint-output :source-paths)))
 
   (is (= ["apps/app-a/test/integration"
@@ -59,7 +65,5 @@
           "libs/lib-a/test/integration"
           "libs/lib-a/test/unit"
           "libs/lib-b/test/integration"
-          "libs/lib-b/test/unit"
-          "test/integration"
-          "test/unit"]
+          "libs/lib-b/test/unit"]
          (relativize-pprint-output :test-paths))))

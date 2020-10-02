@@ -109,6 +109,13 @@
                args)))
 
 
+(defn- assoc-empty-displaceable
+  "Associate a given key with an empty, ^:displace-able version of its value,
+  meant to be suberseded by a value from an incoming profile."
+  [proj k v]
+  (assoc proj k (with-meta (empty v) {:displace true})))
+
+
 (defn ^:higher-order with-all
   "Apply the given task with a merged set of dependencies, sources, and tests
   from all the internal projects.
@@ -123,11 +130,7 @@
         [monolith subprojects] (u/load-monolith! project)
         targets (target/select monolith subprojects opts)
         profile (plugin/merged-profile monolith (select-keys subprojects targets))
-        project (reduce-kv
-                  (fn remove-replace-meta
-                    [proj k _v]
-                    (update proj k vary-meta dissoc :replace))
-                  project profile)]
+        project (reduce-kv assoc-empty-displaceable project profile)]
     (lein/apply-task
       task
       (plugin/add-active-profile project :monolith/all profile)

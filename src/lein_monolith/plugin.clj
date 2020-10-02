@@ -36,13 +36,6 @@
      :subproject-key :monolith/inherit-leaky-raw}]])
 
 
-(defn- subproject-dependencies
-  "Given a map of internal projects, return a vector of dependency coordinates
-  for the subprojects."
-  [subprojects]
-  (mapv #(vector (key %) (:version (val %))) subprojects))
-
-
 (defn- maybe-mark-leaky
   "Add ^:leaky metadata to a profile if it is of the leaky type."
   [profile {:keys [leaky?]}]
@@ -188,36 +181,80 @@
 ;; ## Merged Profiles (`with-all`) Creation
 
 
-(def ^:private path-keys
+(defn- subproject-dependency
+  "Given a map entry of an internal project, return the dependency coordinates
+  for the subproject."
+  [entry]
+  [(key entry) (:version (val entry))])
+
+
+(defn- subproject-dependencies
+  "Given a map of internal projects, return a vector of dependency coordinates
+  for the subprojects."
+  [subprojects]
+  (mapv subproject-dependency subprojects))
+
+
+(def ^:private paths-keys
   "Project map keys for (re)source and test paths."
   #{:resource-paths :source-paths :test-paths})
 
 
-(defn- add-profile-paths
-  "Update a profile paths entry by adding the paths from the given project.
+(defn- add-project-paths
+  ;; Applies a set union to the current set of profile paths and any incoming
+  ;; project paths to ensure complete, unique paths.
+  [profile-paths project-paths]
+  (into (set profile-paths) project-paths))
+
+
+(defn- merge-profile-paths
+  "Update profile paths entries by adding the paths from the given project.
   Returns the updated profile."
-  [project profile k]
-  (update profile k (fn combine-colls
-                      [coll]
-                      (-> coll
-                          set
-                          (into (get project k))
-                          (vary-meta assoc :replace true)))))
+  [profile project]
+  (reduce (fn update-profile-paths
+            [profile paths-key]
+            (update profile paths-key add-project-paths (paths-key project)))
+          profile paths-keys))
+
+
+(defn- finalize-paths
+  "Sorts the paths set stored under a given key and marks the result with
+  ^:replace so Leiningen's meta-merge logic prefers the merged profile paths."
+  [profile key]
+  (with-meta (update profile key sort) {:replace true}))
+
+
+(defn- prep-subproject-for-merging
+  "Ensures that the profiles that are active in the given monolith project are
+  active in the given subproject, then activates the inherited profiles and
+  absolutizes any paths in the subproject that may be relative."
+  [monolith [_project-name subproject]]
+  (-> subproject
+      (project/project-with-profiles (:profiles subproject))
+      (project/init-profiles (:active-profiles (meta monolith)))
+      (middleware monolith)
+      (project/absolutize-paths)))
+
+
+(defn- prep-subprojects-for-merging
+  "Prepares a given subproject map for creating a merged set of (re)source and
+  test paths."
+  [monolith subprojects]
+  (map (partial prep-subproject-for-merging monolith) subprojects))
+
+
+(defn- merged-profile-paths
+  "Constructs a profile map containing merged (re)source and test paths for the
+  given monolith and subprojects."
+  [monolith subprojects]
+  (let [prepped-subprojects (prep-subprojects-for-merging monolith subprojects)
+        profile (reduce merge-profile-paths {} prepped-subprojects)]
+    (reduce finalize-paths profile paths-keys)))
 
 
 (defn merged-profile
-  "Constructs a profile map containing merged (re)source and test paths."
+  "Constructs a profile map containing merged (re)source, test paths, and
+  dependency coordinates for the given monolith and subprojects."
   [monolith subprojects]
-  (let [profile
-        (reduce-kv
-          (fn [profile _project-name subproject]
-            (let [with-inherited-profiles (middleware subproject monolith)
-                  project (project/absolutize-paths with-inherited-profiles)]
-              (reduce (partial add-profile-paths project)
-                      profile
-                      path-keys)))
-          (select-keys monolith path-keys)
-          subprojects)]
-    (as-> profile v
-          (reduce (fn sort-paths [acc k] (update acc k sort)) v path-keys)
-          (assoc v :dependencies (subproject-dependencies subprojects)))))
+  (assoc (merged-profile-paths monolith subprojects)
+         :dependencies (subproject-dependencies subprojects)))
