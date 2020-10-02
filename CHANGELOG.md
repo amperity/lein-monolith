@@ -31,6 +31,14 @@ This project adheres to [Semantic Versioning](http://semver.org/).
   [#36](https://github.com/amperity/lein-monolith/issues/36)
   [#74](https://github.com/amperity/lein-monolith/pull/74)
 
+### Added
+- The monolith settings can now use `:inherit-raw` and `:inherit-leaky-raw` to
+  list keys which should be inherited without interpretation from the
+  metaproject. This is useful for inheriting source paths without them being
+  canonicalized.
+  [#68](https://github.com/amperity/lein-monolith/issues/68)
+  [#75](https://github.com/amperity/lein-monolith/pull/75)
+
 
 ## [1.5.0] - 2020-09-17
 
