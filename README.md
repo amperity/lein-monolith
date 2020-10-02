@@ -111,6 +111,7 @@ In addition to targeting options, `each` accepts:
   is useful in situations such as CI tests, where you don't want a failure to
   halt iteration.
 - `:report` show a detailed timing report after the tasks finish executing.
+- `:silent` suppress task output for successful projects.
 - `:output` path to a directory to save individual build output in.
 
 #### Incremental Builds
