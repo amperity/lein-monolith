@@ -32,6 +32,12 @@ This project adheres to [Semantic Versioning](http://semver.org/).
   [#74](https://github.com/amperity/lein-monolith/pull/74)
 
 ### Added
+- The monolith settings can now use `:inherit-raw` and `:inherit-leaky-raw` to
+  list keys which should be inherited without interpretation from the
+  metaproject. This is useful for inheriting source paths without them being
+  canonicalized.
+  [#68](https://github.com/amperity/lein-monolith/issues/68)
+  [#75](https://github.com/amperity/lein-monolith/pull/75)
 - The `each` task supports a new `:silent` option, which will suppress task
   output for successful projects. This can be useful in large CI builds where
   the output is only consulted in the event of failure.

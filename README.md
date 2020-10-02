@@ -77,14 +77,14 @@ The plugin also provides the `deps-on` task to query which subprojects have a
 certain dependency:
 
 ```
-lein monolith deps-on example/lib-b
+lein monolith deps-on lib-b
 ```
 
 Or you can go the other way with `deps-of` to find the subprojects which a
 certain project depends on:
 
 ```
-lein monolith deps-of example/app-a
+lein monolith deps-of app-a
 ```
 
 ### Subproject Iteration

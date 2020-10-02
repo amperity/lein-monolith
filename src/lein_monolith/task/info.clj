@@ -1,11 +1,35 @@
 (ns lein-monolith.task.info
   (:require
+    [clojure.string :as str]
     [lein-monolith.color :refer [colorize]]
     [lein-monolith.config :as config]
     [lein-monolith.dependency :as dep]
+    [lein-monolith.plugin :as plugin]
     [lein-monolith.target :as target]
     [lein-monolith.task.util :as u]
     [leiningen.core.main :as lein]))
+
+
+(defn- inherited-tags
+  "Builds tags for printing with the inherited properties, e.g. `(leaky, raw)`."
+  [{:keys [leaky? raw?]}]
+  (some->> (cond-> []
+             leaky? (conj "leaky")
+             raw? (conj "raw"))
+           seq
+           (str/join ", ")
+           (format " (%s)")))
+
+
+(defn- print-inherited-info
+  "Show information about the inherited profiles present within the monorepo
+  configuration."
+  [monolith]
+  (doseq [[_profile-key {:keys [inherit-key] :as config}] plugin/profile-config]
+    (when-let [inherited (get-in monolith [:monolith inherit-key])]
+      (println (str "Inherited properties" (inherited-tags config) ":"))
+      (doseq [kw inherited] (println (colorize [:bold :yellow] kw)))
+      (newline))))
 
 
 (defn info
@@ -15,16 +39,7 @@
     (when-not (:bare opts)
       (println "Monolith root:" (:root monolith))
       (newline)
-      (when-let [inherited (get-in monolith [:monolith :inherit])]
-        (println "Inherited properties:")
-        (doseq [kw inherited]
-          (println (colorize [:bold :yellow] kw)))
-        (newline))
-      (when-let [inherited (get-in monolith [:monolith :inherit-leaky])]
-        (println "Inherited (leaky) properties:")
-        (doseq [kw inherited]
-          (println (colorize [:bold :yellow] kw)))
-        (newline))
+      (print-inherited-info monolith)
       (when-let [dirs (get-in monolith [:monolith :project-dirs])]
         (println "Subproject directories:")
         (doseq [dir dirs]

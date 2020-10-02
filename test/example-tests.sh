@@ -28,11 +28,11 @@ test_monolith() {
 test_monolith info
 test_monolith lint
 test_monolith deps
-test_monolith deps-of example/app-a
-test_monolith deps-on example/lib-a
-test_monolith with-all pprint :dependencies :source-paths
+test_monolith deps-of app-a
+test_monolith deps-on lib-a
+test_monolith with-all pprint :dependencies :source-paths :test-paths
 test_monolith each pprint :version
-test_monolith each :in lib-a pprint :root
+test_monolith each :in lib-a pprint :root :compile-path
 test_monolith each :upstream-of lib-b pprint :version
 test_monolith each :downstream-of lib-a pprint :name
 test_monolith each :parallel 3 :report :endure pprint :group
