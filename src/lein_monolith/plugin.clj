@@ -159,14 +159,14 @@
    (middleware project nil))
   ([project monolith]
    (if (or (not (:monolith/inherit project)) (:monolith/active (meta project)))
-     ;; Normal or already activated project, don't activate.
+     ;; Normal project or already activated monolith subproject, don't activate.
      project
-     ;; Monolith subproject, add inherited profile.
+     ;; Monolith subproject has not yet been activated, add inherited profile.
      (if (some (fn this-profile-active?
                  [entry]
                  (profile-active? project (first entry)))
                profile-config)
-       ;; Already activated, return project.
+       ;; One or more profiles already present, return project.
        (do (lein/debug "One or more inherited profiles are already active!")
            project)
        ;; Find monolith metaproject and generate profile.
