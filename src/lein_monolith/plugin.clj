@@ -158,8 +158,9 @@
   ([project]
    (middleware project nil))
   ([project monolith]
-   (if (and (:monolith/inherit project)
-            (not (contains? (meta project) :monolith/active)))
+   (if (or (not (:monolith/inherit project)) (:monolith/active (meta project)))
+     ;; Normal or already activated project, don't activate.
+     project
      ;; Monolith subproject, add inherited profile.
      (if (some (fn this-profile-active?
                  [entry]
@@ -172,9 +173,7 @@
        (let [monolith (or monolith (config/find-monolith! project))
              profiles (build-inherited-profiles monolith project)
              with-profiles (reduce-kv add-active-profile project profiles)]
-         (vary-meta with-profiles assoc :monolith/active true)))
-     ;; Normal project, don't activate.
-     project)))
+         (vary-meta with-profiles assoc :monolith/active true))))))
 
 
 (defn- add-middleware
