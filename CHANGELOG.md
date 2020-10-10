@@ -30,6 +30,9 @@ This project adheres to [Semantic Versioning](http://semver.org/).
   before iteration starts.
   [#36](https://github.com/amperity/lein-monolith/issues/36)
   [#74](https://github.com/amperity/lein-monolith/pull/74)
+- Initializing subprojects in `each` tasks has been optimized to prevent
+  repeated loading of the metaproject.
+  [#82](https://github.com/amperity/lein-monolith/pull/82)
 
 ### Added
 - The monolith settings can now use `:inherit-raw` and `:inherit-leaky-raw` to
