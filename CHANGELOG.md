@@ -11,7 +11,7 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 ...
 
 
-## [1.6.0] - 2020-10-09
+## [1.6.1] - 2020-10-09
 
 ### Changed
 - The `lint` task now only considers dependency names and versions for
@@ -35,9 +35,6 @@ This project adheres to [Semantic Versioning](http://semver.org/).
   before iteration starts.
   [#36](https://github.com/amperity/lein-monolith/issues/36)
   [#74](https://github.com/amperity/lein-monolith/pull/74)
-- Initializing subprojects in `each` tasks has been optimized to prevent
-  repeated loading of the metaproject.
-  [#82](https://github.com/amperity/lein-monolith/pull/82)
 
 ### Added
 - The monolith settings can now use `:inherit-raw` and `:inherit-leaky-raw` to
@@ -305,8 +302,8 @@ instead of loading them all before running any commands.
 Initial project release
 
 
-[Unreleased]: https://github.com/amperity/lein-monolith/compare/1.6.0...HEAD
-[1.6.0]: https://github.com/amperity/lein-monolith/compare/1.5.0...1.6.0
+[Unreleased]: https://github.com/amperity/lein-monolith/compare/1.6.1...HEAD
+[1.6.1]: https://github.com/amperity/lein-monolith/compare/1.5.0...1.6.1
 [1.5.0]: https://github.com/amperity/lein-monolith/compare/1.4.0...1.5.0
 [1.4.0]: https://github.com/amperity/lein-monolith/compare/1.3.2...1.4.0
 [1.3.2]: https://github.com/amperity/lein-monolith/compare/1.3.1...1.3.2
