@@ -94,11 +94,13 @@
 
 (defn- init-project
   "Initialize the given subproject to prepare to run a task in it."
-  [subproject ctx]
+  [ctx target]
   (locking init-lock
     (config/debug-profile "init-subproject"
       (project/init-project
-        (plugin/apply-middleware subproject (:monolith ctx))))))
+        (plugin/apply-middleware
+          (get-in ctx [:subprojects target])
+          (:monolith ctx))))))
 
 
 (defn- resolve-tasks
@@ -256,12 +258,12 @@
 
 (defn- apply-subproject-task
   "Applies the task to the given subproject."
-  [subproject ctx]
+  [ctx target]
   (binding [lein/*exit-process?* false
-            eval/*dir* (:root subproject)]
-    (let [initialized (init-project subproject ctx)]
+            eval/*dir* (get-in ctx [:subprojects target :root])]
+    (let [subproject (init-project ctx target)]
       (config/debug-profile "apply-task"
-        (lein/resolve-and-apply initialized (:task ctx))))))
+        (lein/resolve-and-apply subproject (:task ctx))))))
 
 
 (defn- run-task!
@@ -269,8 +271,7 @@
   [ctx target]
   ;; Try to reclaim some memory before running the task.
   (System/gc)
-  (let [subproject (get-in ctx [:subprojects target])
-        opts (:opts ctx)
+  (let [opts (:opts ctx)
         marker (:changed opts)
         fprints (:fingerprints ctx)
         elapsed (u/stopwatch)
@@ -285,8 +286,8 @@
       ;; Bind appropriate output options and apply the task.
       (binding [*task-capture-output* task-output]
         (if-let [out-dir (get-in ctx [:opts :output])]
-          (apply-with-output out-dir apply-subproject-task subproject ctx)
-          (apply-subproject-task subproject ctx)))
+          (apply-with-output out-dir apply-subproject-task ctx target)
+          (apply-subproject-task ctx target)))
       ;; Save updated fingerprint if refreshing.
       (when (:refresh opts)
         (fingerprint/save! fprints marker target)
