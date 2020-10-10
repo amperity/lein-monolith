@@ -94,11 +94,11 @@
 
 (defn- init-project
   "Initialize the given subproject to prepare to run a task in it."
-  [subproject]
+  [subproject ctx]
   (locking init-lock
     (config/debug-profile "init-subproject"
       (project/init-project
-        (plugin/add-middleware subproject)))))
+        (plugin/apply-middleware subproject (:monolith ctx))))))
 
 
 (defn- resolve-tasks
@@ -220,7 +220,7 @@
 (defn- apply-with-output
   "Applies the function to the given subproject, writing the task output to a
   file in the given directory."
-  [out-dir f subproject task]
+  [out-dir f subproject ctx]
   (let [out-file (io/file out-dir (:group subproject) (str (:name subproject) ".txt"))
         elapsed (u/stopwatch)]
     (io/make-parents out-file)
@@ -231,11 +231,11 @@
                                  (Instant/now)
                                  (:group subproject)
                                  (:name subproject)
-                                 (str/join " " task))))
+                                 (str/join " " (:task ctx)))))
       (try
         ;; Run task with output capturing.
         (binding [*task-file-output* file-output-stream]
-          (f subproject task))
+          (f subproject ctx))
         (catch Exception ex
           (.write file-output-stream
                   (.getBytes (format "\nERROR: %s\n%s"
@@ -256,12 +256,12 @@
 
 (defn- apply-subproject-task
   "Applies the task to the given subproject."
-  [subproject task]
+  [subproject ctx]
   (binding [lein/*exit-process?* false
             eval/*dir* (:root subproject)]
-    (let [initialized (init-project subproject)]
+    (let [initialized (init-project subproject ctx)]
       (config/debug-profile "apply-task"
-        (lein/resolve-and-apply initialized task)))))
+        (lein/resolve-and-apply initialized (:task ctx))))))
 
 
 (defn- run-task!
@@ -285,8 +285,8 @@
       ;; Bind appropriate output options and apply the task.
       (binding [*task-capture-output* task-output]
         (if-let [out-dir (get-in ctx [:opts :output])]
-          (apply-with-output out-dir apply-subproject-task subproject (:task ctx))
-          (apply-subproject-task subproject (:task ctx))))
+          (apply-with-output out-dir apply-subproject-task subproject ctx)
+          (apply-subproject-task subproject ctx)))
       ;; Save updated fingerprint if refreshing.
       (when (:refresh opts)
         (fingerprint/save! fprints marker target)
