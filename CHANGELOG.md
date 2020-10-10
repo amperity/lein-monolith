@@ -8,6 +8,11 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 
+...
+
+
+## [1.6.0] - 2020-10-09
+
 ### Changed
 - The `lint` task now only considers dependency names and versions for
   detecting conflicts, which should improve the signal-to-noise ratio.
@@ -300,7 +305,8 @@ instead of loading them all before running any commands.
 Initial project release
 
 
-[Unreleased]: https://github.com/amperity/lein-monolith/compare/1.5.0...HEAD
+[Unreleased]: https://github.com/amperity/lein-monolith/compare/1.6.0...HEAD
+[1.6.0]: https://github.com/amperity/lein-monolith/compare/1.5.0...1.6.0
 [1.5.0]: https://github.com/amperity/lein-monolith/compare/1.4.0...1.5.0
 [1.4.0]: https://github.com/amperity/lein-monolith/compare/1.3.2...1.4.0
 [1.3.2]: https://github.com/amperity/lein-monolith/compare/1.3.1...1.3.2
