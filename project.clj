@@ -19,8 +19,8 @@
 
   :profiles
   {:dev
-   {:plugins [[lein-cloverage "1.0.9"]]
-    :dependencies [[org.clojure/clojure "1.9.0"]]}
+   {:plugins [[lein-cloverage "1.2.1"]]
+    :dependencies [[org.clojure/clojure "1.10.1"]]}
 
    :ci
    {:plugins [[test2junit "1.4.2"]]
