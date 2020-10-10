@@ -94,13 +94,11 @@
 
 (defn- init-project
   "Initialize the given subproject to prepare to run a task in it."
-  [ctx target]
+  [subproject]
   (locking init-lock
     (config/debug-profile "init-subproject"
       (project/init-project
-        (plugin/apply-middleware
-          (get-in ctx [:subprojects target])
-          (:monolith ctx))))))
+        (plugin/add-middleware subproject)))))
 
 
 (defn- resolve-tasks
@@ -222,7 +220,7 @@
 (defn- apply-with-output
   "Applies the function to the given subproject, writing the task output to a
   file in the given directory."
-  [out-dir f subproject ctx]
+  [out-dir f subproject task]
   (let [out-file (io/file out-dir (:group subproject) (str (:name subproject) ".txt"))
         elapsed (u/stopwatch)]
     (io/make-parents out-file)
@@ -233,11 +231,11 @@
                                  (Instant/now)
                                  (:group subproject)
                                  (:name subproject)
-                                 (str/join " " (:task ctx)))))
+                                 (str/join " " task))))
       (try
         ;; Run task with output capturing.
         (binding [*task-file-output* file-output-stream]
-          (f subproject ctx))
+          (f subproject task))
         (catch Exception ex
           (.write file-output-stream
                   (.getBytes (format "\nERROR: %s\n%s"
@@ -258,12 +256,12 @@
 
 (defn- apply-subproject-task
   "Applies the task to the given subproject."
-  [ctx target]
+  [subproject task]
   (binding [lein/*exit-process?* false
-            eval/*dir* (get-in ctx [:subprojects target :root])]
-    (let [subproject (init-project ctx target)]
+            eval/*dir* (:root subproject)]
+    (let [initialized (init-project subproject)]
       (config/debug-profile "apply-task"
-        (lein/resolve-and-apply subproject (:task ctx))))))
+        (lein/resolve-and-apply initialized task)))))
 
 
 (defn- run-task!
@@ -271,7 +269,8 @@
   [ctx target]
   ;; Try to reclaim some memory before running the task.
   (System/gc)
-  (let [opts (:opts ctx)
+  (let [subproject (get-in ctx [:subprojects target])
+        opts (:opts ctx)
         marker (:changed opts)
         fprints (:fingerprints ctx)
         elapsed (u/stopwatch)
@@ -286,8 +285,8 @@
       ;; Bind appropriate output options and apply the task.
       (binding [*task-capture-output* task-output]
         (if-let [out-dir (get-in ctx [:opts :output])]
-          (apply-with-output out-dir apply-subproject-task ctx target)
-          (apply-subproject-task ctx target)))
+          (apply-with-output out-dir apply-subproject-task subproject (:task ctx))
+          (apply-subproject-task subproject (:task ctx))))
       ;; Save updated fingerprint if refreshing.
       (when (:refresh opts)
         (fingerprint/save! fprints marker target)

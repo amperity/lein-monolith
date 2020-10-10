@@ -150,6 +150,7 @@
       (activate-profile profile-key)))
 
 
+
 ;; ## Plugin Middleware
 
 (defn middleware
@@ -158,25 +159,20 @@
   ([project]
    (middleware project nil))
   ([project monolith]
-   (if (or (not (:monolith/inherit project)) (:monolith/active (meta project)))
+   (if (or (not (:monolith/inherit project))
+           (:monolith/active (meta project)))
      ;; Normal project or already activated monolith subproject, don't activate.
      project
-     ;; Monolith subproject has not yet been activated, add inherited profile.
-     (if (some (fn this-profile-active?
-                 [entry]
-                 (profile-active? project (first entry)))
-               profile-config)
-       ;; One or more profiles already present, return project.
-       (do (lein/debug "One or more inherited profiles are already active!")
-           project)
-       ;; Find monolith metaproject and generate profile.
-       (let [monolith (or monolith (config/find-monolith! project))
-             profiles (build-inherited-profiles monolith project)
-             with-profiles (reduce-kv add-active-profile project profiles)]
-         (vary-meta with-profiles assoc :monolith/active true))))))
+     ;; Monolith subproject has not yet been activated, add inherited profiles.
+     (let [monolith (or monolith (config/find-monolith! project))
+           profiles (build-inherited-profiles monolith project)]
+       (-> project
+           (vary-meta assoc :monolith/active true)
+           (project/add-profiles profiles)
+           (project/merge-profiles (keys profiles)))))))
 
 
-(defn- add-middleware
+(defn add-middleware
   "Update the given project to include the plugin middleware. Appends the
   middleware symbol if it is not already present."
   [subproject]
@@ -186,16 +182,8 @@
       (update subproject :middleware (fnil conj []) mw-sym))))
 
 
-(defn apply-middleware
-  "Update the given project to include the plugin middleware. Appends the
-  middleware symbol if it is not already present, then applies the middleware
-  with the given monolith."
-  [subproject monolith]
-  (middleware (add-middleware subproject) monolith))
 
-
-;; ## Merged Profiles (`with-all`) Creation
-
+;; ## Merged Profiles
 
 (def ^:private path-keys
   "Project map keys for (re)source and test paths."
