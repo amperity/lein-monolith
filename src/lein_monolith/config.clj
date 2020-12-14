@@ -82,11 +82,28 @@
 
 ;; ## Subproject Configuration
 
+(defn- is-project-dir?
+  [dir]
+  (.exists (io/file dir "project.clj")))
+
+
+(defn- all-projects
+  [dir]
+  (let [subdirs (->> (.listFiles dir)
+                     (filter #(.isDirectory ^File %)))
+        grouped (group-by is-project-dir? subdirs)
+        top-projects (get grouped true)
+        all-subdir-project (mapcat all-projects (get grouped false))]
+    (concat top-projects all-subdir-project)))
+
+
 (defn- pick-directories
   "Given a path, use it to find directories. If the path names a directory,
   return a vector containing it. If the path ends in `/*` and the parent is a
   directory, return a sequence of directories which are children of the parent.
-  Otherwise, returns nil."
+  If the path end in `/**` and the parent is a directory, returns a sequence
+  of directories searched recursively which are project (contains project.clj
+  file). Otherwise, returns nil."
   [^File file]
   (cond
     (.isDirectory file)
@@ -96,6 +113,9 @@
     (->> (.getParentFile file)
          (.listFiles)
          (filter #(.isDirectory ^File %)))
+
+    (and (= "**" (.getName file)) (.isDirectory (.getParentFile file)))
+    (all-projects (.getParentFile file))
 
     :else nil))
 

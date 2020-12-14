@@ -48,7 +48,7 @@
 
    :project-dirs
    ["apps/app-a"
-    "libs/*"
+    "libs/**"
     "not-found"]}
 
   :env

@@ -12,6 +12,8 @@ direct subproject directory (containing a `project.clj` file) such as
 `apps/app-a`, or end with a wildcard `*` to indicate that all child directories
 should be searched for projects, like `libs/*`. Note that this only works with a
 single level of wildcard matching at the end of the path.
+If you would like to search recursively you can indicate that using `lib/**`
+and it will search for all subdirectories containing a `project.clj` file.
 
 ## Config Inheritance
 
