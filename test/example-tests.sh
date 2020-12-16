@@ -30,6 +30,7 @@ test_monolith lint
 test_monolith deps
 test_monolith deps-of app-a
 test_monolith deps-on lib-a
+test_monolith deps-of lib-c
 test_monolith with-all pprint :dependencies :source-paths :test-paths
 test_monolith each pprint :version
 test_monolith each :in lib-a pprint :root :compile-path

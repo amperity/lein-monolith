@@ -45,12 +45,14 @@
           "dev-resources"
           "libs/lib-a/resources"
           "libs/lib-b/resources"
+          "libs/subdir/lib-c/resources"
           "resources"]
          (relativize-pprint-output :resource-paths)))
 
   (is (= ["apps/app-a/src"
           "libs/lib-a/src"
           "libs/lib-b/src"
+          "libs/subdir/lib-c/src"
           "src"]
          (relativize-pprint-output :source-paths)))
 
@@ -60,6 +62,8 @@
           "libs/lib-a/test/unit"
           "libs/lib-b/test/integration"
           "libs/lib-b/test/unit"
+          "libs/subdir/lib-c/test/integration"
+          "libs/subdir/lib-c/test/unit"
           "test/integration"
           "test/unit"]
          (relativize-pprint-output :test-paths))))
