@@ -8,7 +8,10 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 
-...
+### Added
+- The `:project-dirs` pattern can now support recursive subdirectories with
+  a double-wildcard `.../**` syntax.
+  [#85](https://github.com/amperity/lein-monolith/pull/85)
 
 
 ## [1.6.1] - 2020-10-09
