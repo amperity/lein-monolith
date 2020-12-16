@@ -47,7 +47,7 @@
     :unstable #(= (first (:version %)) \0)}
 
    :project-dirs
-   ["apps/app-a"
+   ["apps/*"
     "libs/**"
     "not-found"]}
 

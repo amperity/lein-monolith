@@ -82,16 +82,19 @@
 
 ;; ## Subproject Configuration
 
-(defn- is-project-dir?
+(defn- project-dir?
+  "Given a directory returns true if it contains a `project.clj` file"
   [dir]
   (.exists (io/file dir "project.clj")))
 
 
 (defn- all-projects
+  "Given a directory recursively search for all sub directories that contain
+  a `project.clj` file and return that list."
   [dir]
   (let [subdirs (->> (.listFiles dir)
                      (filter #(.isDirectory ^File %)))
-        grouped (group-by is-project-dir? subdirs)
+        grouped (group-by project-dir? subdirs)
         top-projects (get grouped true)
         all-subdir-project (mapcat all-projects (get grouped false))]
     (concat top-projects all-subdir-project)))
