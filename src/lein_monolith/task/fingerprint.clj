@@ -96,7 +96,7 @@
   (->> (concat
          [project]
          (vals (:profiles project)))
-       (mapcat (juxt :source-paths :test-paths :resource-paths))
+       (mapcat (juxt :source-paths :java-source-paths :test-paths :resource-paths))
        (mapcat identity)
        (map (fn absolute-file
               [dir-str]

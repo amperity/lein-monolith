@@ -13,6 +13,10 @@ This project adheres to [Semantic Versioning](http://semver.org/).
   a double-wildcard `.../**` syntax.
   [#85](https://github.com/amperity/lein-monolith/pull/85)
 
+### Fixed
+- Fingerprinting will now correctly track Java files as project source files.
+  [#87](https://github.com/amperity/lein-monolith/pull/87)
+
 
 ## [1.6.1] - 2020-10-09
 
