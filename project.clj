@@ -8,7 +8,7 @@
   :deploy-branches ["master"]
 
   :dependencies
-  [[manifold "0.1.8"]
+  [[manifold "0.2.4"]
    [rhizome "0.2.9"]]
 
   :hiera
@@ -19,8 +19,8 @@
 
   :profiles
   {:dev
-   {:plugins [[lein-cloverage "1.2.1"]]
-    :dependencies [[org.clojure/clojure "1.10.1"]]}
+   {:plugins [[lein-cloverage "1.2.4"]]
+    :dependencies [[org.clojure/clojure "1.10.3"]]}
 
    :ci
    {:plugins [[test2junit "1.4.2"]]

@@ -80,7 +80,8 @@
   [n m]
   (map #(into (array-map) (shuffle (seq %))) (repeat n m)))
 
-; Int -> [Deps SmallestCycles]
+
+;; Int -> [Deps SmallestCycles]
 (defn gen-dep-cycle
   "Create a dependency cycle of the specified size
   that also includes a cycle of length 3 (ie. between two deps).
@@ -88,7 +89,7 @@
   smallest dependency cycles."
   [size]
   {:pre [(<= 5 size)]}
-  ;comments assume size == 50
+  ;; comments assume size == 50
   (let [[cstart cend] ((juxt identity inc) (quot size 2))]
     [(into {}
            (map (fn [a]
@@ -125,9 +126,9 @@
   (is (= #{} (dep/unique-cycles {})))
   (is (= #{[2 2]} (dep/unique-cycles {2 #{2}})))
   (is (= #{} (dep/unique-cycles {1 #{2}})))
-  (doseq [size [5 10]] ;gen cycles of these sizes (higher is very slow)
+  (doseq [size [5 10]] ; gen cycles of these sizes (higher is very slow)
     (let [[deps smallest-cycles] (gen-dep-cycle size)]
-      (doseq [c (maps-like 10 deps)] ;shuffle deps order <..> times
+      (doseq [c (maps-like 10 deps)] ; shuffle deps order <..> times
         (let [actual (dep/unique-cycles c)]
           (every? #(is (cycle-actually-occurs deps %)
                        (str "Cycle doesn't occur:\n"
@@ -147,7 +148,7 @@
       (is (instance? IExceptionInfo e)
           (str "Didn't throw an exception\ndeps: " deps))
       (is (re-find #"Dependency cycles? detected" (.getMessage e)))
-      ; pretty printed dependency cycle appears in msg
+      ;; pretty printed dependency cycle appears in msg
       (is (->> e ex-data :cycles (some smlest-cycles))
           (str "Didn't include smallest cycle:\n"
                "deps: " deps "\n"
@@ -164,9 +165,9 @@
                      #{[:a :b :c :a]
                        [:b :c :a :b]
                        [:c :a :b :c]})
-  (doseq [size [5 10]] ;gen cycles of these sizes (higher is very slow)
+  (doseq [size [5 10]] ; gen cycles of these sizes (higher is very slow)
     (let [[deps smallest-cycles] (gen-dep-cycle size)]
-      (doseq [c (maps-like 5 deps)] ;shuffle deps order <..> times
+      (doseq [c (maps-like 5 deps)] ; shuffle deps order <..> times
         (check-cycle-error c smallest-cycles)))))
 
 

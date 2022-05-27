@@ -49,7 +49,7 @@
           dependencies (dep/dependency-map subprojects)
           targets (target/select monolith subprojects opts)
           prefix-len (inc (count (:root monolith)))]
-      ; IDEA: some kind of stats about dependency graph shape
+      ;; IDEA: some kind of stats about dependency graph shape
       (when-not (:bare opts)
         (printf "Internal projects (%d):\n" (count targets)))
       (doseq [subproject-name (dep/topological-sort dependencies targets)

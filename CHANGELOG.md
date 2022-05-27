@@ -7,7 +7,7 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 
 
 ## [Unreleased]
-
+- Bump dependency versions.
 
 ## [1.7.0] - 2021-06-11
 
