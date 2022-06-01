@@ -6,7 +6,9 @@ follows the conventions of [keepachangelog.com](http://keepachangelog.com/).
 This project adheres to [Semantic Versioning](http://semver.org/).
 
 
-## [Unreleased]
+## [1.7.1]
+
+### Changed
 - Bump dependency versions.
 
 ## [1.7.0] - 2021-06-11
