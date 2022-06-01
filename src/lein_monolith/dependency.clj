@@ -126,14 +126,14 @@
   (loop [result #{}
          queue (conj (clojure.lang.PersistentQueue/EMPTY) root)]
     (cond
-      ; Nothing left to process.
+      ;; Nothing left to process.
       (empty? queue) result
 
-      ; Already seen this node.
+      ;; Already seen this node.
       (contains? result (peek queue))
       (recur result (pop queue))
 
-      ; Add next set of dependencies.
+      ;; Add next set of dependencies.
       :else
       (let [node (peek queue)
             deps (dependencies node)]
@@ -152,14 +152,14 @@
     (loop [result #{}
            queue (conj (clojure.lang.PersistentQueue/EMPTY) root)]
       (cond
-        ; Nothing left to process.
+        ;; Nothing left to process.
         (empty? queue) result
 
-        ; Already seen this node, deps are either present or already queued.
+        ;; Already seen this node, deps are either present or already queued.
         (contains? result (peek queue))
         (recur result (pop queue))
 
-        ; Add next set of dependencies.
+        ;; Add next set of dependencies.
         :else
         (let [node (peek queue)
               consumers (deps-on node)]
@@ -180,20 +180,20 @@
                              path-set (set path)]
                          (mapcat (fn [v]
                                    (if (path-set v)
-                                     ; found the cycle
+                                     ;; found the cycle
                                      [(into []
-                                            ; drop non-cyclic prefix
+                                            ;; drop non-cyclic prefix
                                             (drop-while (complement #{v}))
                                             (conj path v))]
                                      (path->cycles
                                        (conj path v))))
                                  vs)))
         all-cycles (mapcat #(path->cycles [%]) (keys m))
-        ; remove duplicate cycles (that involve the same deps) -- like
-        ;   (into #{}
-        ;         (map (comp first val))
-        ;         (group-by set all-cycles))
-        ; but in a single pass.
+        ;; remove duplicate cycles (that involve the same deps) -- like
+        ;;   (into #{}
+        ;;         (map (comp first val))
+        ;;         (group-by set all-cycles))
+        ;; but in a single pass.
         [cycles-vecs _] (reduce (fn [[cycles-vecs cycle-sets] c]
                                   (let [cset (set c)]
                                     (if (cycle-sets cset)
@@ -223,8 +223,8 @@
                "|_|"])
     (str/join (map-indexed (fn [indent el]
                              (if (= indent (dec (count c)))
-                               ; draw:
-                               ;|___/
+                               ;; draw:
+                               ;; |___/
                                (str
                                  \|
                                  (str/join (repeat (max 1 (- indent 2)) \_))
@@ -245,8 +245,8 @@
   other words, earlier keys do not transitively depend on any later keys."
   ([m]
    (when (seq m)
-     ; Note that 'roots' here are keys which no other keys depend on, hence
-     ; should appear *later* in the sequence.
+     ;; Note that 'roots' here are keys which no other keys depend on, hence
+     ;; should appear *later* in the sequence.
      (let [roots (apply set/difference (set (keys m)) (map set (vals m)))]
        (when (empty? roots)
          (let [cs (->> m

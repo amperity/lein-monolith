@@ -17,10 +17,10 @@ jobs:
       - run:
           name: Install cljstyle CLI
           environment:
-            CLJSTYLE_VERSION: 0.13.0
+            CLJSTYLE_VERSION: 0.15.0
           command: |
-            wget https://github.com/greglook/cljstyle/releases/download/${CLJSTYLE_VERSION}/cljstyle_${CLJSTYLE_VERSION}_linux.tar.gz
-            tar -xzf cljstyle_${CLJSTYLE_VERSION}_linux.tar.gz
+            wget https://github.com/greglook/cljstyle/releases/download/${CLJSTYLE_VERSION}/cljstyle_${CLJSTYLE_VERSION}_linux.zip
+            unzip cljstyle_${CLJSTYLE_VERSION}_linux.zip
       - run:
           name: Check source formatting
           command: "./cljstyle check --report"
@@ -32,9 +32,9 @@ jobs:
       - run:
           name: Install clj-kondo
           environment:
-            CLJ_KONDO_VERSION: 2020.09.09
+            CLJ_KONDO_VERSION: 2022.05.27
           command: |
-            wget https://github.com/borkdude/clj-kondo/releases/download/v${CLJ_KONDO_VERSION}/clj-kondo-${CLJ_KONDO_VERSION}-linux-amd64.zip
+            wget https://github.com/clj-kondo/clj-kondo/releases/download/v${CLJ_KONDO_VERSION}/clj-kondo-${CLJ_KONDO_VERSION}-linux-amd64.zip
             unzip clj-kondo-${CLJ_KONDO_VERSION}-linux-amd64.zip
       - run:
           name: Lint source code

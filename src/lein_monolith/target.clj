@@ -72,26 +72,26 @@
         skippable (resolve-projects subprojects (:skip opts))
         selector (combine-selectors monolith (:select opts))]
     (->
-      ; Start with explicitly-specified 'in' targets.
+      ;; Start with explicitly-specified 'in' targets.
       (resolve-projects subprojects (:in opts))
       (as-> targets
-        ; Merge all targeted upstream dependencies.
+        ;; Merge all targeted upstream dependencies.
         (->> (:upstream-of opts)
              (resolve-projects subprojects)
              (map (partial dep/upstream-keys dependencies))
              (reduce set/union targets))
-        ; Merge all targeted downstream dependencies.
+        ;; Merge all targeted downstream dependencies.
         (->> (:downstream-of opts)
              (resolve-projects subprojects)
              (map (partial dep/downstream-keys dependencies))
              (reduce set/union targets))
-        ; If target set empty, replace with full set.
+        ;; If target set empty, replace with full set.
         (if (empty? targets)
           (set (keys subprojects))
           targets))
       (cond->>
-        ; Exclude all 'skip' targets.
+        ;; Exclude all 'skip' targets.
         skippable (remove skippable)
-        ; Filter using the selector, if any.
+        ;; Filter using the selector, if any.
         selector (filter-selected subprojects selector))
       (set))))
