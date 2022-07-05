@@ -122,20 +122,67 @@
        (kv-hash :files)))
 
 
+(defn- dependency-coordinate-map
+  "Turn a sequence of dependency vectors into a map from dependency symbols to
+  coordinate maps, with the version in `:version` and other qualifiers added as
+  entries."
+  [dependencies]
+  (into (sorted-map)
+        (map
+          (fn dep-entry
+            [[dep-sym version & {:as extra}]]
+            [(if (namespace dep-sym)
+               dep-sym
+               (symbol (name dep-sym) (name dep-sym)))
+             (assoc extra :version version)]))
+        dependencies))
+
+
+(defn- hash-dependency-coordinate
+  "Hash a single dependency coordinate."
+  [coordinate]
+  (kv-hash
+    :dep-coordinate
+    (into {}
+          (map (juxt key (comp pr-str val)))
+          coordinate)))
+
+
+(defn- hash-profile-dependencies
+  "Given a map of profiles, construct a hash of profile name/dependency type
+  keys to hashes."
+  [profiles]
+  (into {}
+        (comp
+          (mapcat
+            (fn lookup-deps
+              [[prof-key profile]]
+              [(when-let [deps (seq (:dependencies profile))]
+                 [prof-key :dependencies (dependency-coordinate-map deps)])
+               (when-let [deps (seq (:managed-dependencies profile))]
+                 [prof-key :managed-dependencies (dependency-coordinate-map deps)])]))
+          (remove nil?)
+          (map
+            (fn hash-deps
+              [[prof-key dep-key deps]]
+              [(str prof-key \tab dep-key)
+               (->> deps
+                    (into {} (map (juxt key (comp hash-dependency-coordinate val))))
+                    (kv-hash :profile-dependencies))])))
+        profiles))
+
+
 (defn- hash-dependencies
   "Hashes a project's dependencies and managed dependencies, as well as that of
   its profiles and project root."
   [project]
-  (let [hashable-info #(select-keys % [:dependencies :managed-dependencies])]
-    (->> (:profiles project)
-         (map (juxt key (comp hashable-info val)))
-         (filter (comp seq second))
-         (into {::default (hashable-info project)})
-         (map #(str (pr-str (key %)) \tab (pr-str (val %))))
-         (sort)
-         (str/join "\n")
-         (str "v2/dependencies\n")
-         (sha1))))
+  (->> (assoc (:profiles project) ::default project)
+       (hash-profile-dependencies)
+       (map #(str (key %) \tab (val %)))
+       (sort)
+       (str/join "\n")
+       (str "v3/dependencies\n")
+       (sha1)))
 
 
 (declare hash-inputs)
