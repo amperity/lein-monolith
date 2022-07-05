@@ -20,8 +20,11 @@
 
 ;; ## Options
 
-(def selection-opts
-  (assoc target/selection-opts :upstream 0 :downstream 0))
+(def task-opts
+  (assoc target/selection-opts
+         :upstream 0
+         :downstream 0
+         :debug 0))
 
 
 ;; ## Hashing projects' inputs
