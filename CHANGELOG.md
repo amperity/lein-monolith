@@ -8,6 +8,14 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 
+### Added
+- Running `lein monolith changed :debug` will now print lots of extra
+  information about what fingerprint values have changed and why.
+  [#89](https://github.com/amperity/lein-monolith/pull/89)
+
+### Changed
+- Renamed the `master` branch to `main`.
+
 
 ## [1.7.1]
 

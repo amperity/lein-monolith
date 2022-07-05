@@ -5,7 +5,7 @@
             :url "http://www.apache.org/licenses/LICENSE-2.0"}
 
   :eval-in-leiningen true
-  :deploy-branches ["master"]
+  :deploy-branches ["main"]
 
   :dependencies
   [[manifold "0.2.4"]
