@@ -20,8 +20,11 @@
 
 ;; ## Options
 
-(def selection-opts
-  (assoc target/selection-opts :upstream 0 :downstream 0))
+(def task-opts
+  (assoc target/selection-opts
+         :upstream 0
+         :downstream 0
+         :debug 0))
 
 
 ;; ## Hashing projects' inputs
@@ -257,29 +260,21 @@
   "Determines if a project has changed since the last fingerprint saved under the
   given marker."
   [ctx marker project-name]
-  (let [{:keys [initial]} ctx
-        current (fingerprints ctx project-name)
-        past (get-in initial [marker project-name])]
+  (let [current (fingerprints ctx project-name)
+        past (get-in ctx [:initial marker project-name])]
     (not= (::final past) (::final current))))
 
 
-(defn- explain-kw
-  [ctx marker project-name]
-  (let [{:keys [initial]} ctx
-        current (fingerprints ctx project-name)
-        past (get-in initial [marker project-name])]
-    (cond
-      (nil? past) ::new-project
-
-      (= (::final past) (::final current)) ::up-to-date
-
-      :else
-      (or (some
-            (fn [ftype]
-              (when (not= (ftype past) (ftype current))
-                ftype))
-            [::version ::seed ::sources ::deps ::upstream])
-          ::unknown))))
+(def ^:private fingerprint-priority
+  "Priority ordered list of fingerprints to check; keys appearing earlier in
+  the list will take precedence when explaining why a project is considered
+  changed."
+  [::version
+   ::seed
+   ::sources
+   ::deps
+   ::java-version
+   ::upstream])
 
 
 (def ^:private reason-details
@@ -292,6 +287,26 @@
    ::deps ["has updated external dependencies" "have updated external dependencies" :yellow]
    ::upstream ["is downstream of an affected project" "are downstream of affected projects" :yellow]
    ::unknown ["has a different fingerprint" "have different fingerprints" :red]})
+
+
+(defn- explain-kw
+  [ctx marker project-name]
+  (let [current (fingerprints ctx project-name)
+        past (get-in ctx [:initial marker project-name])]
+    (cond
+      (nil? past)
+      ::new-project
+
+      (= (::final past) (::final current))
+      ::up-to-date
+
+      :else
+      (or (some
+            (fn [ftype]
+              (when (not= (ftype past) (ftype current))
+                ftype))
+            fingerprint-priority)
+          ::unknown))))
 
 
 (defn explain-str
@@ -347,14 +362,34 @@
                    (colorize :bold marker)
                    "fingerprints:\n")
         (let [reasons (group-by (partial explain-kw ctx marker) targets)]
-          (doseq [k [::unknown ::new-project ::sources ::resources ::deps ::version ::java-version ::upstream ::up-to-date]]
+          (doseq [k (concat [::unknown
+                             ::new-project]
+                            fingerprint-priority
+                            [::up-to-date])]
             (when-let [projs (seq (k reasons))]
               (let [[singular plural color] (reason-details k)
                     c (count projs)]
                 (lein/info "*" (colorize color (count projs))
                            (str (if (= 1 c) singular plural)
                                 (when-not (#{::up-to-date ::upstream} k)
-                                  (str ": " (list-projects projs color)))))))))
+                                  (str ": " (list-projects projs color)))))
+                (when (and (:debug opts)
+                           (not= k ::new-project)
+                           (not= k ::up-to-date))
+                  (doseq [project-name projs]
+                    (let [past (get-in ctx [:initial marker project-name])
+                          current (fingerprints ctx project-name)
+                          attrs (disj (into (sorted-set) (concat (keys past) (keys current))) ::time)]
+                      (println project-name)
+                      (doseq [attr attrs]
+                        (let [past-val (get past attr)
+                              curr-val (get current attr)]
+                          (if (= past-val curr-val)
+                            (printf "%12s: %s\n" (name attr) curr-val)
+                            (printf "%12s: %s => %s\n" (name attr) past-val curr-val)))))
+                    (newline)
+                    (flush)
+                    ,,,))))))
         (lein/info)))))
 
 

@@ -228,9 +228,9 @@
   information.
 
   Usage:
-  lein monolith changed [project-selectors] [marker1 marker2 ...]"
+  lein monolith changed [:debug] [project-selectors] [marker1 marker2 ...]"
   [project args]
-  (let [[opts more] (u/parse-kw-args fingerprint/selection-opts args)
+  (let [[opts more] (u/parse-kw-args fingerprint/task-opts args)
         opts (u/globalize-opts project opts)]
     (fingerprint/changed project opts more)))
 
@@ -245,7 +245,7 @@
   Usage:
   lein monolith mark [project-selectors] marker1 marker2 ..."
   [project args]
-  (let [[opts more] (u/parse-kw-args fingerprint/selection-opts args)
+  (let [[opts more] (u/parse-kw-args fingerprint/task-opts args)
         opts (u/globalize-opts project opts)]
     (fingerprint/mark-fresh project opts more)))
 
@@ -259,7 +259,7 @@
   Usage:
   lein monolith clear [project-selectors] [marker1 marker2 ...]"
   [project args]
-  (let [[opts more] (u/parse-kw-args fingerprint/selection-opts args)
+  (let [[opts more] (u/parse-kw-args fingerprint/task-opts args)
         opts (u/globalize-opts project opts)]
     (fingerprint/clear project opts more)))
 
