@@ -30,7 +30,6 @@
     [opts project-names]))
 
 
-
 ;; ## Subtask Vars
 
 (defn info
@@ -218,7 +217,6 @@
         target-names (remove #(= (dep/project-name project) %)
                              project-names)]
     (checkouts/unlink project opts target-names)))
-
 
 
 ;; ## Fingerprinting

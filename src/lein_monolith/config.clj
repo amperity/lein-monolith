@@ -20,7 +20,6 @@
      value#))
 
 
-
 ;; ## General Configuration
 
 (defn- find-up
@@ -77,7 +76,6 @@
                   (:root project)))
     (lein/debug "Found monolith project rooted at" (:root monolith))
     monolith))
-
 
 
 ;; ## Subproject Configuration

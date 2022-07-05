@@ -150,7 +150,6 @@
       (activate-profile profile-key)))
 
 
-
 ;; ## Plugin Middleware
 
 (defn middleware
@@ -180,7 +179,6 @@
     (if (some #{mw-sym} (:middleware subproject))
       subproject
       (update subproject :middleware (fnil conj []) mw-sym))))
-
 
 
 ;; ## Merged Profiles
