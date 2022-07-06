@@ -15,6 +15,10 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 
 ### Changed
 - Renamed the `master` branch to `main`.
+- Dependency fingerprints are now built from normalized hash trees, so changes
+  to the ordering of dependencies or profiles will no longer change the
+  dependency fingerprint.
+  [#90](https://github.com/amperity/lein-monolith/pull/90)
 
 
 ## [1.7.1]
