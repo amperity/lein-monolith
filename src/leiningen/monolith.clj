@@ -250,6 +250,16 @@
     (fingerprint/mark-fresh project opts more)))
 
 
+(defn show-fingerprints
+  "Show information about the calculation of one or more projects'
+  fingerprints, compared to a current marker.
+
+  Usage:
+  lein monolith show-fingerprints marker project [...]"
+  [project [marker & args]]
+  (fingerprint/show project marker args))
+
+
 (defn clear-fingerprints
   "Clear projects' cached fingerprints so they will be re-built next :refresh.
 
@@ -270,7 +280,7 @@
   "Tasks for working with Leiningen projects inside a monorepo."
   {:subtasks [#'info #'lint #'deps #'deps-on #'deps-of #'graph
               #'with-all #'each #'link #'unlink
-              #'changed #'mark-fresh #'clear-fingerprints]}
+              #'changed #'mark-fresh #'show-fingerprints #'clear-fingerprints]}
   [project command & args]
   (case command
     "info"               (info project args)
@@ -285,6 +295,7 @@
     "unlink"             (unlink project args)
     "changed"            (changed project args)
     "mark-fresh"         (mark-fresh project args)
+    "show-fingerprints"  (show-fingerprints project args)
     "clear-fingerprints" (clear-fingerprints project args)
     (lein/abort (pr-str command) "is not a valid monolith command! Try: lein help monolith"))
   (flush))

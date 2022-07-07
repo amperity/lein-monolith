@@ -190,14 +190,14 @@
 
 (defn- hash-upstream-projects
   [project dep-map subprojects cache]
-  (->> (dep-map (dep/project-name project))
-       (keep (fn hash-upstream
-               [subproject-name]
-               (when-let [subproject (subprojects subproject-name)]
-                 [subproject-name
-                  (::final (hash-inputs subproject dep-map subprojects cache))])))
-       (into {})
-       (kv-hash :projects)))
+  (into (sorted-map)
+        (keep
+          (fn hash-upstream
+            [subproject-name]
+            (when-let [subproject (subprojects subproject-name)]
+              [subproject-name
+               (::final (hash-inputs subproject dep-map subprojects cache))])))
+        (dep-map (dep/project-name project))))
 
 
 (defn- hash-inputs
@@ -211,17 +211,20 @@
   [project dep-map subprojects cache]
   (let [project-name (dep/project-name project)]
     (or (@cache project-name)
-        (let [prints
+        (let [upstream-hashes
+              (hash-upstream-projects project dep-map subprojects cache)
+
+              prints
               {::version (str (:version project))
                ::java-version (System/getProperty "java.version")
                ::seed (str (:monolith/fingerprint-seed project 0))
                ::sources (hash-sources project)
                ::deps (hash-dependencies project)
-               ::upstream (hash-upstream-projects
-                            project dep-map subprojects cache)}
+               ::upstream (kv-hash :projects upstream-hashes)}
 
               prints
               (assoc prints
+                     ::upstream-hashes upstream-hashes
                      ::final (kv-hash :inputs prints)
                      ::time (System/currentTimeMillis))]
           (swap! cache assoc project-name prints)
@@ -377,6 +380,62 @@
        (str/join ", ")))
 
 
+(defn- debug-project-fingerprints
+  "Print a detailed representation of a project's fingerprints for debugging."
+  [project-name past current]
+  (let [all-attrs (disj (into (sorted-set)
+                              (concat (keys past)
+                                      (keys current)))
+                        ::upstream-hashes
+                        ::final
+                        ::time)
+        ordered-attrs (into []
+                            (filter all-attrs)
+                            fingerprint-priority)
+        compare-attrs (concat
+                        ordered-attrs
+                        (sort (remove (set ordered-attrs) all-attrs))
+                        [::final])
+        render-attr (fn render-attr
+                      [old-val new-val same-color]
+                      (cond
+                        (and (nil? old-val) new-val)
+                        (colorize :green new-val)
+
+                        (and old-val (nil? new-val))
+                        (colorize :red old-val)
+
+                        (= old-val new-val)
+                        (if same-color
+                          (colorize same-color new-val)
+                          new-val)
+
+                        :else
+                        (str (colorize :red old-val)
+                             " => "
+                             (colorize :green new-val))))]
+    (println project-name)
+    (doseq [attr compare-attrs]
+      (printf "%24s: %s\n"
+              (colorize :cyan (name attr))
+              (render-attr (get past attr)
+                           (get current attr)
+                           nil))
+      (when (= ::upstream attr)
+        (let [past-map (::upstream-hashes past)
+              curr-map (::upstream-hashes current)]
+          (doseq [upstream (into (sorted-set)
+                                 (concat (keys past-map)
+                                         (keys curr-map)))]
+            (printf "%16s * %s: %s\n"
+                    " " upstream
+                    (render-attr (get past-map upstream)
+                                 (get curr-map upstream)
+                                 :yellow)))))))
+  (newline)
+  (flush))
+
+
 (defn changed
   [project opts markers]
   (let [[monolith subprojects] (u/load-monolith! project)
@@ -424,19 +483,10 @@
                            (not= k ::new-project)
                            (not= k ::up-to-date))
                   (doseq [project-name projs]
-                    (let [past (get-in ctx [:initial marker project-name])
-                          current (fingerprints ctx project-name)
-                          attrs (disj (into (sorted-set) (concat (keys past) (keys current))) ::time)]
-                      (println project-name)
-                      (doseq [attr attrs]
-                        (let [past-val (get past attr)
-                              curr-val (get current attr)]
-                          (if (= past-val curr-val)
-                            (printf "%12s: %s\n" (name attr) curr-val)
-                            (printf "%12s: %s => %s\n" (name attr) past-val curr-val)))))
-                    (newline)
-                    (flush)
-                    ,,,))))))
+                    (debug-project-fingerprints
+                      project-name
+                      (get-in ctx [:initial marker project-name])
+                      (fingerprints ctx project-name))))))))
         (lein/info)))))
 
 
@@ -463,6 +513,22 @@
     (lein/info (format "Set %s markers for %s projects"
                        (colorize :bold (count markers))
                        (colorize :bold (count targets))))))
+
+
+(defn show
+  [project marker targets]
+  (when-not (seq targets)
+    (lein/abort "Please specify at least one project to show"))
+  (let [[monolith subprojects] (u/load-monolith! project)
+        ctx (context monolith subprojects)
+        projects (->> {:in (set targets)}
+                      (target/select monolith subprojects)
+                      (dep/topological-sort (dep/dependency-map subprojects)))]
+    (doseq [project-name projects]
+      (debug-project-fingerprints
+        project-name
+        (get-in ctx [:initial marker project-name])
+        (fingerprints ctx project-name)))))
 
 
 (defn clear
