@@ -1,6 +1,7 @@
 (defproject lein-monolith.example/app-a "MONOLITH-SNAPSHOT"
   :description "Example project with internal and external dependencies."
   :monolith/inherit true
+  :monolith/dependency-set :set-a
   :deployable true
 
   :dependencies

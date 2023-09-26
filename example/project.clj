@@ -49,7 +49,11 @@
    :project-dirs
    ["apps/*"
     "libs/**"
-    "not-found"]}
+    "not-found"]
+
+   :dependency-sets
+   {:set-a
+    [[amperity/greenlight "0.7.1"]]}}
 
   :env
   {:foo "bar"})

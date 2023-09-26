@@ -115,6 +115,24 @@
     profile-config))
 
 
+(defn build-dependency-set-profile
+  "Constructs a profile with managed dependencies from the subproject's dependency set.
+   Returns nil if the subproject does not use a dependency set."
+  [monolith subproject]
+  (when-let [dependency-set (:monolith/dependency-set (meta subproject))]
+    (let [dependencies (or (get-in monolith [:monolith :dependency-sets dependency-set])
+                           (lein/abort (format "Unknown dependency set %s for project %s" dependency-set (:name (meta subproject)))))]
+      {:monolith/dependency-set
+       (vary-meta {:managed-dependencies dependencies} assoc :leaky true)})))
+
+
+(defn build-profiles
+  "Constructs a map of profile keys to inherited profile maps and the dependency set profile map"
+  [monolith subproject]
+  (merge (build-inherited-profiles monolith subproject)
+         (build-dependency-set-profile monolith subproject)))
+
+
 ;; ## Profile Utilities
 
 (defn profile-active?
@@ -150,7 +168,6 @@
       (activate-profile profile-key)))
 
 
-
 ;; ## Plugin Middleware
 
 (defn middleware
@@ -165,7 +182,7 @@
      project
      ;; Monolith subproject has not yet been activated, add inherited profiles.
      (let [monolith (or monolith (config/find-monolith! project))
-           profiles (build-inherited-profiles monolith project)]
+           profiles (build-profiles monolith project)]
        (-> project
            (vary-meta assoc :monolith/active true)
            (project/add-profiles profiles)

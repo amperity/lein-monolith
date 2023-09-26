@@ -13,11 +13,12 @@
 (deftest build-inherited-profiles-test
   (let [monolith (config/find-monolith! (read-example-project))
         subproject (project/read "example/apps/app-a/project.clj")
-        profiles (plugin/build-inherited-profiles monolith subproject)]
+        profiles (plugin/build-profiles monolith subproject)]
     (is (= #{:monolith/inherited
              :monolith/inherited-raw
              :monolith/leaky
-             :monolith/leaky-raw}
+             :monolith/leaky-raw
+             :monolith/dependency-set}
            (set (keys profiles))))
     (is (= {:test-paths ["test/unit" "test/integration"]}
            (:monolith/inherited-raw profiles)))
@@ -29,4 +30,6 @@
             :managed-dependencies [['amperity/greenlight "0.6.0"]]}
            (:monolith/leaky profiles)))
     (is (= {:compile-path "%s/compiled"}
-           (:monolith/leaky-raw profiles)))))
+           (:monolith/leaky-raw profiles)))
+    (is (= {:managed-dependencies [['amperity/greenlight "0.7.1"]]}
+           (:monolith/dependency-set profiles)))))
