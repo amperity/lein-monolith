@@ -1,8 +1,10 @@
 ;; Clojure formatting rules
 ;; vim: filetype=clojure
-{:files {:ignore #{"checkouts" "target"}},
+{:files
+ {:ignore #{"checkouts" "target"}}
+
  :rules
  {:indentation
   {:indents
-   {config/debug-profile [[:block 1]], d/future-with [[:block 1]]}},
-  :blank-lines {:max-consecutive 3}}}
+   {config/debug-profile [[:block 1]]
+    d/future-with [[:block 1]]}}}}

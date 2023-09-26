@@ -1,11 +1,11 @@
-(defproject lein-monolith "1.7.1"
+(defproject lein-monolith "1.8.0"
   :description "Leiningen plugin for managing subrojects within a monorepo."
   :url "https://github.com/amperity/lein-monolith"
   :license {:name "Apache License 2.0"
             :url "http://www.apache.org/licenses/LICENSE-2.0"}
 
   :eval-in-leiningen true
-  :deploy-branches ["master"]
+  :deploy-branches ["main"]
 
   :dependencies
   [[manifold "0.2.4"]

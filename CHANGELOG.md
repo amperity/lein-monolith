@@ -6,10 +6,35 @@ follows the conventions of [keepachangelog.com](http://keepachangelog.com/).
 This project adheres to [Semantic Versioning](http://semver.org/).
 
 
-## [1.7.1]
+## [Unreleased]
+
+...
+
+
+## [1.8.0] - 2022-07-13
+
+### Added
+- Running `lein monolith changed :debug` will now print lots of extra
+  information about what fingerprint values have changed and why.
+  [#89](https://github.com/amperity/lein-monolith/pull/89)
+- New `lein monolith show-fingerprints` command will print out detailed
+  information about the fingerprint calculations for one or more projects,
+  compared to an existing mark.
+  [#91](https://github.com/amperity/lein-monolith/pull/91)
+
+### Changed
+- Renamed the `master` branch to `main`.
+- Dependency fingerprints are now built from normalized hash trees, so changes
+  to the ordering of dependencies or profiles will no longer change the
+  dependency fingerprint.
+  [#90](https://github.com/amperity/lein-monolith/pull/90)
+
+
+## [1.7.1] - 2021-06-11
 
 ### Changed
 - Bump dependency versions.
+
 
 ## [1.7.0] - 2021-06-11
 
@@ -314,7 +339,10 @@ instead of loading them all before running any commands.
 Initial project release
 
 
-[Unreleased]: https://github.com/amperity/lein-monolith/compare/1.6.1...HEAD
+[Unreleased]: https://github.com/amperity/lein-monolith/compare/1.8.0...HEAD
+[1.8.0]: https://github.com/amperity/lein-monolith/compare/1.7.1...1.8.0
+[1.7.1]: https://github.com/amperity/lein-monolith/compare/1.7.0...1.7.1
+[1.7.0]: https://github.com/amperity/lein-monolith/compare/1.6.1...1.7.0
 [1.6.1]: https://github.com/amperity/lein-monolith/compare/1.5.0...1.6.1
 [1.5.0]: https://github.com/amperity/lein-monolith/compare/1.4.0...1.5.0
 [1.4.0]: https://github.com/amperity/lein-monolith/compare/1.3.2...1.4.0

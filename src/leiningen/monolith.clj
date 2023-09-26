@@ -30,7 +30,6 @@
     [opts project-names]))
 
 
-
 ;; ## Subtask Vars
 
 (defn info
@@ -220,7 +219,6 @@
     (checkouts/unlink project opts target-names)))
 
 
-
 ;; ## Fingerprinting
 
 (defn changed
@@ -230,9 +228,9 @@
   information.
 
   Usage:
-  lein monolith changed [project-selectors] [marker1 marker2 ...]"
+  lein monolith changed [:debug] [project-selectors] [marker1 marker2 ...]"
   [project args]
-  (let [[opts more] (u/parse-kw-args fingerprint/selection-opts args)
+  (let [[opts more] (u/parse-kw-args fingerprint/task-opts args)
         opts (u/globalize-opts project opts)]
     (fingerprint/changed project opts more)))
 
@@ -247,9 +245,19 @@
   Usage:
   lein monolith mark [project-selectors] marker1 marker2 ..."
   [project args]
-  (let [[opts more] (u/parse-kw-args fingerprint/selection-opts args)
+  (let [[opts more] (u/parse-kw-args fingerprint/task-opts args)
         opts (u/globalize-opts project opts)]
     (fingerprint/mark-fresh project opts more)))
+
+
+(defn show-fingerprints
+  "Show information about the calculation of one or more projects'
+  fingerprints, compared to a current marker.
+
+  Usage:
+  lein monolith show-fingerprints marker project [...]"
+  [project [marker & args]]
+  (fingerprint/show project marker args))
 
 
 (defn clear-fingerprints
@@ -261,7 +269,7 @@
   Usage:
   lein monolith clear [project-selectors] [marker1 marker2 ...]"
   [project args]
-  (let [[opts more] (u/parse-kw-args fingerprint/selection-opts args)
+  (let [[opts more] (u/parse-kw-args fingerprint/task-opts args)
         opts (u/globalize-opts project opts)]
     (fingerprint/clear project opts more)))
 
@@ -272,7 +280,7 @@
   "Tasks for working with Leiningen projects inside a monorepo."
   {:subtasks [#'info #'lint #'deps #'deps-on #'deps-of #'graph
               #'with-all #'each #'link #'unlink
-              #'changed #'mark-fresh #'clear-fingerprints]}
+              #'changed #'mark-fresh #'show-fingerprints #'clear-fingerprints]}
   [project command & args]
   (case command
     "info"               (info project args)
@@ -287,6 +295,7 @@
     "unlink"             (unlink project args)
     "changed"            (changed project args)
     "mark-fresh"         (mark-fresh project args)
+    "show-fingerprints"  (show-fingerprints project args)
     "clear-fingerprints" (clear-fingerprints project args)
     (lein/abort (pr-str command) "is not a valid monolith command! Try: lein help monolith"))
   (flush))

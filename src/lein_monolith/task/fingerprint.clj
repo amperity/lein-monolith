@@ -20,8 +20,11 @@
 
 ;; ## Options
 
-(def selection-opts
-  (assoc target/selection-opts :upstream 0 :downstream 0))
+(def task-opts
+  (assoc target/selection-opts
+         :upstream 0
+         :downstream 0
+         :debug 0))
 
 
 ;; ## Hashing projects' inputs
@@ -119,20 +122,67 @@
        (kv-hash :files)))
 
 
+(defn- dependency-coordinate-map
+  "Turn a sequence of dependency vectors into a map from dependency symbols to
+  coordinate maps, with the version in `:version` and other qualifiers added as
+  entries."
+  [dependencies]
+  (into (sorted-map)
+        (map
+          (fn dep-entry
+            [[dep-sym version & {:as extra}]]
+            [(if (namespace dep-sym)
+               dep-sym
+               (symbol (name dep-sym) (name dep-sym)))
+             (assoc extra :version version)]))
+        dependencies))
+
+
+(defn- hash-dependency-coordinate
+  "Hash a single dependency coordinate."
+  [coordinate]
+  (kv-hash
+    :dep-coordinate
+    (into {}
+          (map (juxt key (comp pr-str val)))
+          coordinate)))
+
+
+(defn- hash-profile-dependencies
+  "Given a map of profiles, construct a hash of profile name/dependency type
+  keys to hashes."
+  [profiles]
+  (into {}
+        (comp
+          (mapcat
+            (fn lookup-deps
+              [[prof-key profile]]
+              [(when-let [deps (seq (:dependencies profile))]
+                 [prof-key :dependencies (dependency-coordinate-map deps)])
+               (when-let [deps (seq (:managed-dependencies profile))]
+                 [prof-key :managed-dependencies (dependency-coordinate-map deps)])]))
+          (remove nil?)
+          (map
+            (fn hash-deps
+              [[prof-key dep-key deps]]
+              [(str prof-key \tab dep-key)
+               (->> deps
+                    (into {} (map (juxt key (comp hash-dependency-coordinate val))))
+                    (kv-hash :profile-dependencies))])))
+        profiles))
+
+
 (defn- hash-dependencies
   "Hashes a project's dependencies and managed dependencies, as well as that of
   its profiles and project root."
   [project]
-  (let [hashable-info #(select-keys % [:dependencies :managed-dependencies])]
-    (->> (:profiles project)
-         (map (juxt key (comp hashable-info val)))
-         (filter (comp seq second))
-         (into {::default (hashable-info project)})
-         (map #(str (pr-str (key %)) \tab (pr-str (val %))))
-         (sort)
-         (str/join "\n")
-         (str "v2/dependencies\n")
-         (sha1))))
+  (->> (assoc (:profiles project) ::default project)
+       (hash-profile-dependencies)
+       (map #(str (key %) \tab (val %)))
+       (sort)
+       (str/join "\n")
+       (str "v3/dependencies\n")
+       (sha1)))
 
 
 (declare hash-inputs)
@@ -140,14 +190,14 @@
 
 (defn- hash-upstream-projects
   [project dep-map subprojects cache]
-  (->> (dep-map (dep/project-name project))
-       (keep (fn hash-upstream
-               [subproject-name]
-               (when-let [subproject (subprojects subproject-name)]
-                 [subproject-name
-                  (::final (hash-inputs subproject dep-map subprojects cache))])))
-       (into {})
-       (kv-hash :projects)))
+  (into (sorted-map)
+        (keep
+          (fn hash-upstream
+            [subproject-name]
+            (when-let [subproject (subprojects subproject-name)]
+              [subproject-name
+               (::final (hash-inputs subproject dep-map subprojects cache))])))
+        (dep-map (dep/project-name project))))
 
 
 (defn- hash-inputs
@@ -161,17 +211,20 @@
   [project dep-map subprojects cache]
   (let [project-name (dep/project-name project)]
     (or (@cache project-name)
-        (let [prints
+        (let [upstream-hashes
+              (hash-upstream-projects project dep-map subprojects cache)
+
+              prints
               {::version (str (:version project))
                ::java-version (System/getProperty "java.version")
                ::seed (str (:monolith/fingerprint-seed project 0))
                ::sources (hash-sources project)
                ::deps (hash-dependencies project)
-               ::upstream (hash-upstream-projects
-                            project dep-map subprojects cache)}
+               ::upstream (kv-hash :projects upstream-hashes)}
 
               prints
               (assoc prints
+                     ::upstream-hashes upstream-hashes
                      ::final (kv-hash :inputs prints)
                      ::time (System/currentTimeMillis))]
           (swap! cache assoc project-name prints)
@@ -257,29 +310,21 @@
   "Determines if a project has changed since the last fingerprint saved under the
   given marker."
   [ctx marker project-name]
-  (let [{:keys [initial]} ctx
-        current (fingerprints ctx project-name)
-        past (get-in initial [marker project-name])]
+  (let [current (fingerprints ctx project-name)
+        past (get-in ctx [:initial marker project-name])]
     (not= (::final past) (::final current))))
 
 
-(defn- explain-kw
-  [ctx marker project-name]
-  (let [{:keys [initial]} ctx
-        current (fingerprints ctx project-name)
-        past (get-in initial [marker project-name])]
-    (cond
-      (nil? past) ::new-project
-
-      (= (::final past) (::final current)) ::up-to-date
-
-      :else
-      (or (some
-            (fn [ftype]
-              (when (not= (ftype past) (ftype current))
-                ftype))
-            [::version ::seed ::sources ::deps ::upstream])
-          ::unknown))))
+(def ^:private fingerprint-priority
+  "Priority ordered list of fingerprints to check; keys appearing earlier in
+  the list will take precedence when explaining why a project is considered
+  changed."
+  [::version
+   ::seed
+   ::sources
+   ::deps
+   ::java-version
+   ::upstream])
 
 
 (def ^:private reason-details
@@ -292,6 +337,26 @@
    ::deps ["has updated external dependencies" "have updated external dependencies" :yellow]
    ::upstream ["is downstream of an affected project" "are downstream of affected projects" :yellow]
    ::unknown ["has a different fingerprint" "have different fingerprints" :red]})
+
+
+(defn- explain-kw
+  [ctx marker project-name]
+  (let [current (fingerprints ctx project-name)
+        past (get-in ctx [:initial marker project-name])]
+    (cond
+      (nil? past)
+      ::new-project
+
+      (= (::final past) (::final current))
+      ::up-to-date
+
+      :else
+      (or (some
+            (fn [ftype]
+              (when (not= (ftype past) (ftype current))
+                ftype))
+            fingerprint-priority)
+          ::unknown))))
 
 
 (defn explain-str
@@ -313,6 +378,62 @@
   (->> project-names
        (map (partial colorize color))
        (str/join ", ")))
+
+
+(defn- debug-project-fingerprints
+  "Print a detailed representation of a project's fingerprints for debugging."
+  [project-name past current]
+  (let [all-attrs (disj (into (sorted-set)
+                              (concat (keys past)
+                                      (keys current)))
+                        ::upstream-hashes
+                        ::final
+                        ::time)
+        ordered-attrs (into []
+                            (filter all-attrs)
+                            fingerprint-priority)
+        compare-attrs (concat
+                        ordered-attrs
+                        (sort (remove (set ordered-attrs) all-attrs))
+                        [::final])
+        render-attr (fn render-attr
+                      [old-val new-val same-color]
+                      (cond
+                        (and (nil? old-val) new-val)
+                        (colorize :green new-val)
+
+                        (and old-val (nil? new-val))
+                        (colorize :red old-val)
+
+                        (= old-val new-val)
+                        (if same-color
+                          (colorize same-color new-val)
+                          new-val)
+
+                        :else
+                        (str (colorize :red old-val)
+                             " => "
+                             (colorize :green new-val))))]
+    (println project-name)
+    (doseq [attr compare-attrs]
+      (printf "%24s: %s\n"
+              (colorize :cyan (name attr))
+              (render-attr (get past attr)
+                           (get current attr)
+                           nil))
+      (when (= ::upstream attr)
+        (let [past-map (::upstream-hashes past)
+              curr-map (::upstream-hashes current)]
+          (doseq [upstream (into (sorted-set)
+                                 (concat (keys past-map)
+                                         (keys curr-map)))]
+            (printf "%16s * %s: %s\n"
+                    " " upstream
+                    (render-attr (get past-map upstream)
+                                 (get curr-map upstream)
+                                 :yellow)))))))
+  (newline)
+  (flush))
 
 
 (defn changed
@@ -347,14 +468,25 @@
                    (colorize :bold marker)
                    "fingerprints:\n")
         (let [reasons (group-by (partial explain-kw ctx marker) targets)]
-          (doseq [k [::unknown ::new-project ::sources ::resources ::deps ::version ::java-version ::upstream ::up-to-date]]
+          (doseq [k (concat [::unknown
+                             ::new-project]
+                            fingerprint-priority
+                            [::up-to-date])]
             (when-let [projs (seq (k reasons))]
               (let [[singular plural color] (reason-details k)
                     c (count projs)]
                 (lein/info "*" (colorize color (count projs))
                            (str (if (= 1 c) singular plural)
                                 (when-not (#{::up-to-date ::upstream} k)
-                                  (str ": " (list-projects projs color)))))))))
+                                  (str ": " (list-projects projs color)))))
+                (when (and (:debug opts)
+                           (not= k ::new-project)
+                           (not= k ::up-to-date))
+                  (doseq [project-name projs]
+                    (debug-project-fingerprints
+                      project-name
+                      (get-in ctx [:initial marker project-name])
+                      (fingerprints ctx project-name))))))))
         (lein/info)))))
 
 
@@ -381,6 +513,22 @@
     (lein/info (format "Set %s markers for %s projects"
                        (colorize :bold (count markers))
                        (colorize :bold (count targets))))))
+
+
+(defn show
+  [project marker targets]
+  (when-not (seq targets)
+    (lein/abort "Please specify at least one project to show"))
+  (let [[monolith subprojects] (u/load-monolith! project)
+        ctx (context monolith subprojects)
+        projects (->> {:in (set targets)}
+                      (target/select monolith subprojects)
+                      (dep/topological-sort (dep/dependency-map subprojects)))]
+    (doseq [project-name projects]
+      (debug-project-fingerprints
+        project-name
+        (get-in ctx [:initial marker project-name])
+        (fingerprints ctx project-name)))))
 
 
 (defn clear

@@ -91,7 +91,6 @@
   (:monolith/project (meta dependency)))
 
 
-
 ;; ## Dependency Graphs
 
 (defn- collect-dependencies
@@ -262,7 +261,6 @@
                (sort roots)))))
   ([m ks]
    (filter (set ks) (topological-sort m))))
-
 
 
 ;; ## Dependency Resolution

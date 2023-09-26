@@ -82,7 +82,6 @@
       [:start start])))
 
 
-
 ;; ## Project Initialization
 
 (def ^:private init-lock
@@ -123,7 +122,6 @@
 
       ;; default no-op
       nil)))
-
 
 
 ;; ## Output Handling
@@ -249,7 +247,6 @@
                   (.getBytes (format "\n[%s] Elapsed: %s\n"
                                      (Instant/now)
                                      (u/human-duration @elapsed)))))))))
-
 
 
 ;; ## Task Execution
@@ -390,7 +387,6 @@
     (with-redefs [leiningen.core.eval/sh run-with-output]
       (run-all* ctx targets))
     (run-all* ctx targets)))
-
 
 
 ;; ## Each Task
