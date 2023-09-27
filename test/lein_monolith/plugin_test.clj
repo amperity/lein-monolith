@@ -44,7 +44,9 @@
 
 
 (deftest managed-dependencies-order
-  (let [subproject (project/read "example/apps/app-a/project.clj")]
+  (let [monolith (config/find-monolith! (read-example-project))
+        subproject (-> (project/read "example/apps/app-a/project.clj")
+                       (plugin/middleware monolith))]
     (is (= '([amperity/greenlight "0.7.1"] ; This version of greenlight should come first so it'll take precedence over any other versions
              [org.clojure/spec.alpha "0.3.218"]
              [amperity/greenlight "0.6.0"]
