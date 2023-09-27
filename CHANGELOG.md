@@ -8,7 +8,9 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 
-...
+## Added
+- Dependency sets can now be defined in the metaproject, and projects can opt into
+  them with the `:monolith/dependency-set` key.
 
 
 ## [1.8.0] - 2022-07-13

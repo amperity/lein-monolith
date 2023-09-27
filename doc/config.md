@@ -39,3 +39,16 @@ Lastly, `lein-monolith` supports inheriting unprocessed values, via
 inheriting paths, as Leiningen absolutizes paths upon processing a project map.
 By using raw inheritance, you can safely inherit paths, e.g. `:test-paths` or
 `:source-paths`.
+
+## Dependency Sets
+
+The `:monolith/dependency-set` key can be used to opt projects into a specific
+set of managed dependencies instead of using a single list of managed dependencies
+in the metaproject.
+
+Dependency sets are defined in the metaproject with the `:dependency-sets` key.
+By selecting a dependency set from the metaproject with `:monolith/dependency-set`,
+you will merge in a profile with `:managed-dependencies` set to the dependencies within
+the dependency set. If you also set the `:monolith/inherit` key in a project, this profile
+will be merged in *before* the inherited profiles. This means that dependency versions in
+a dependency set will have precedence over versions in an inherited `:managed-dependencies` key.
