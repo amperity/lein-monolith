@@ -184,7 +184,7 @@
            (:monolith/active (meta project)))
      ;; Normal project or already activated monolith subproject, don't activate.
      project
-     ;; Monolith subproject has not yet been activated, add inherited profiles.
+     ;; Monolith subproject has not yet been activated, add profiles.
      (let [monolith (or monolith (config/find-monolith! project))
            profiles (build-profiles monolith project)]
        (-> project
@@ -228,8 +228,8 @@
   (let [profile
         (reduce-kv
           (fn [profile _project-name subproject]
-            (let [with-inherited-profiles (middleware subproject monolith)
-                  project (project/absolutize-paths with-inherited-profiles)]
+            (let [with-profiles (middleware subproject monolith)
+                  project (project/absolutize-paths with-profiles)]
               (reduce (partial add-profile-paths project)
                       profile
                       path-keys)))
