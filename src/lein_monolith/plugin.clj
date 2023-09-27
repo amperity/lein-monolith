@@ -119,9 +119,9 @@
   "Constructs a profile with managed dependencies from the subproject's dependency set.
    Returns nil if the subproject does not use a dependency set."
   [monolith subproject]
-  (when-let [dependency-set (:monolith/dependency-set (meta subproject))]
+  (when-let [dependency-set (:monolith/dependency-set subproject)]
     (let [dependencies (or (get-in monolith [:monolith :dependency-sets dependency-set])
-                           (lein/abort (format "Unknown dependency set %s for project %s" dependency-set (:name (meta subproject)))))]
+                           (lein/abort (format "Unknown dependency set %s for project %s" dependency-set (:name subproject))))]
       {:monolith/dependency-set
        (vary-meta {:managed-dependencies dependencies} assoc :leaky true)})))
 
@@ -129,8 +129,11 @@
 (defn build-profiles
   "Constructs a map of profile keys to inherited profile maps and the dependency set profile map"
   [monolith subproject]
-  (merge (build-inherited-profiles monolith subproject)
-         (build-dependency-set-profile monolith subproject)))
+  (merge
+    ;; The dependency set profile should be the first profile, so that its managed dependencies
+    ;; take precedence.
+    (build-dependency-set-profile monolith subproject)
+    (build-inherited-profiles monolith subproject)))
 
 
 ;; ## Profile Utilities
