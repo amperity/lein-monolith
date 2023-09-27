@@ -103,16 +103,17 @@
 (defn build-inherited-profiles
   "Returns a map from profile keys to inherited profile maps."
   [monolith subproject]
-  (reduce
-    (fn [acc [key config]]
-      (let [profile (some-> (choose-inheritance-source monolith config)
-                            (inherited-profile subproject config)
-                            (maybe-mark-leaky config))]
-        (if profile
-          (assoc acc key profile)
-          acc)))
-    nil
-    profile-config))
+  (when (:monolith/inherit subproject)
+    (reduce
+      (fn [acc [key config]]
+        (let [profile (some-> (choose-inheritance-source monolith config)
+                              (inherited-profile subproject config)
+                              (maybe-mark-leaky config))]
+          (if profile
+            (assoc acc key profile)
+            acc)))
+      nil
+      profile-config)))
 
 
 (defn build-dependency-set-profile
@@ -123,7 +124,7 @@
     (let [dependencies (or (get-in monolith [:monolith :dependency-sets dependency-set])
                            (lein/abort (format "Unknown dependency set %s for project %s" dependency-set (:name subproject))))]
       {:monolith/dependency-set
-       (vary-meta {:managed-dependencies dependencies} assoc :leaky true)})))
+       ^:leaky {:managed-dependencies dependencies}})))
 
 
 (defn build-profiles
@@ -175,11 +176,11 @@
 
 (defn middleware
   "Handles inherited properties in monolith subprojects by looking for the
-  `:monolith/inherit` key."
+  `:monolith/inherit` key, or sets the managed dependencies if :monolith/dependency-set is set."
   ([project]
    (middleware project nil))
   ([project monolith]
-   (if (or (not (:monolith/inherit project))
+   (if (or (not-any? #{:monolith/inherit :monolith/dependency-set} (keys project))
            (:monolith/active (meta project)))
      ;; Normal project or already activated monolith subproject, don't activate.
      project
