@@ -13,7 +13,8 @@
   [[org.clojure/clojure "1.10.1"]]
 
   :managed-dependencies
-  [[amperity/greenlight "0.6.0"]]
+  [[amperity/greenlight "0.6.0"]
+   [com.amperity/vault-clj "2.1.583"]]
 
   :test-selectors
   {:unit (complement :integration)
@@ -53,7 +54,8 @@
 
    :dependency-sets
    {:set-a
-    [[amperity/greenlight "0.7.1"]]}}
+    [[amperity/greenlight "0.7.1"]
+     [org.clojure/spec.alpha "0.3.218"]]}}
 
   :env
   {:foo "bar"})
