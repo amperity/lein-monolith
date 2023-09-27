@@ -8,7 +8,7 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 
-## Added
+### Added
 - Dependency sets can now be defined in the metaproject, and projects can opt into
   them with the `:monolith/dependency-set` key.
   [#93](https://github.com/amperity/lein-monolith/pull/93)
