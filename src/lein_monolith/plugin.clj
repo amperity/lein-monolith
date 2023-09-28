@@ -103,17 +103,16 @@
 (defn build-inherited-profiles
   "Returns a map from profile keys to inherited profile maps."
   [monolith subproject]
-  (when (:monolith/inherit subproject)
-    (reduce
-      (fn [acc [key config]]
-        (let [profile (some-> (choose-inheritance-source monolith config)
-                              (inherited-profile subproject config)
-                              (maybe-mark-leaky config))]
-          (if profile
-            (assoc acc key profile)
-            acc)))
-      nil
-      profile-config)))
+  (reduce
+    (fn [acc [key config]]
+      (let [profile (some-> (choose-inheritance-source monolith config)
+                            (inherited-profile subproject config)
+                            (maybe-mark-leaky config))]
+        (if profile
+          (assoc acc key profile)
+          acc)))
+    nil
+    profile-config))
 
 
 (defn build-dependency-set-profile
