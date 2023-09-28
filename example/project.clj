@@ -1,8 +1,6 @@
 (defproject lein-monolith.example/all "MONOLITH"
   :description "Overarching example project."
 
-  :pedantic? :ranges
-
   :aliases
   {"version+" ["version"]
    "version++" ["version+"]}
