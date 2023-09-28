@@ -101,7 +101,8 @@
 
 
 (defn build-inherited-profiles
-  "Returns a map from profile keys to inherited profile maps."
+  "Returns a vector of map entries from profile keys to inherited profile maps.
+   We use a vector here instead of a map to preserve profile ordering."
   [monolith subproject]
   (reduce
     (fn [acc [key config]]
@@ -109,29 +110,30 @@
                             (inherited-profile subproject config)
                             (maybe-mark-leaky config))]
         (if profile
-          (assoc acc key profile)
+          (conj acc [key profile])
           acc)))
-    nil
+    []
     profile-config))
 
 
 (defn build-dependency-profiles
-  "Constructs a map with a profile containing managed dependencies from the subproject's chosen dependency set.
+  "Constructs a vector with a profile map entries containing managed dependencies from the subproject's chosen dependency set.
    Returns nil if the subproject does not use a dependency set."
   [monolith subproject]
   (when-let [dependency-set (:monolith/dependency-set subproject)]
     (let [dependencies (or (get-in monolith [:monolith :dependency-sets dependency-set])
                            (lein/abort (format "Unknown dependency set %s used in project %s" dependency-set (:name subproject))))]
-      {:monolith/dependency-set
-       ^:leaky {:managed-dependencies dependencies}})))
+      [[:monolith/dependency-set
+        ^:leaky {:managed-dependencies dependencies}]])))
 
 
 (defn build-profiles
-  "Constructs a map of profile keys to inherited profile maps and the dependency set profile map"
+  "Constructs a vector of profile keys to inherited profile maps and the dependency set profile map.
+   We use a vector here instead of a map to preserve profile ordering."
   [monolith subproject]
-  (merge
-    ;; The dependency set profile should be the first profile, so that its managed dependencies
-    ;; take precedence.
+  ;; The dependency set profile should be the first profile, so that its managed dependencies
+  ;; take precedence.
+  (concat
     (build-dependency-profiles monolith subproject)
     (build-inherited-profiles monolith subproject)))
 
@@ -174,12 +176,15 @@
 ;; ## Plugin Middleware
 
 (defn- add-profiles
-  "Adds profiles to the project map, if any."
+  "Adds profiles to the project. Profiles should be passed in as a vector to ensure profiles are
+   added in the right order."
   [project profiles]
-  (cond-> project
-    (seq profiles) (#(-> %
-                         (project/add-profiles profiles)
-                         (project/merge-profiles (keys profiles))))))
+  (reduce (fn [project [profile-key profile]]
+            (-> project
+                (project/add-profiles {profile-key profile})
+                (project/merge-profiles [profile-key])))
+          project
+          profiles))
 
 
 (defn middleware

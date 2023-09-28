@@ -287,8 +287,8 @@
                             (fn inherit-profiles
                               [[k subproject]]
                               [k
-                               (update subproject :profiles merge
-                                       (plugin/build-inherited-profiles
+                               (update subproject :profiles concat
+                                       (plugin/build-profiles
                                          monolith subproject))]))
                           subprojects)]
     {:root root
