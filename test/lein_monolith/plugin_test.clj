@@ -35,7 +35,7 @@
 (deftest build-dependency-set-profile-test
   (let [monolith (config/find-monolith! (read-example-project))
         subproject (project/read "example/apps/app-a/project.clj")
-        profile (plugin/build-dependency-set-profile monolith subproject)]
+        profile (plugin/build-dependency-profiles monolith subproject)]
     (is (= :set-a (:monolith/dependency-set subproject)))
     (is (= [['amperity/greenlight "0.7.1"] ['org.clojure/spec.alpha "0.3.218"]]
            (get-in monolith [:monolith :dependency-sets :set-a])))
