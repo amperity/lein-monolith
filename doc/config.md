@@ -42,13 +42,46 @@ By using raw inheritance, you can safely inherit paths, e.g. `:test-paths` or
 
 ## Dependency Sets
 
-The `:monolith/dependency-set` key can be used to opt projects into a specific
-set of managed dependencies instead of using a single list of managed dependencies
-in the metaproject.
+The `:dependency-sets` key can be configured in the metaproject to provide child
+projects with a curated set of managed dependencies to opt into instead of using
+a single list of managed dependencies in the metaproject. This should be a map of
+dependency set names and their dependencies.
 
-Dependency sets are defined in the metaproject with the `:dependency-sets` key.
+For example, in the metaproject file we can define a dependency set
+called `:set-a` as follows:
+
+```clj
+(defproject lein-monolith.example/all "MONOLITH"
+
+...
+
+:monolith
+  {:dependency-sets
+   {:set-a
+    [[amperity/greenlight "0.7.1"]
+     [org.clojure/spec.alpha "0.3.218"]]}
+
+...
+
+)
+```
+
+The `:monolith/dependency-set` key can then be used to a opt child project into `:set-a` as follows:
+
+```clj
+(defproject lein-monolith.example/app-a "MONOLITH-SNAPSHOT"
+ 
+ ...
+
+ :monolith/dependency-set :set-a
+
+ ...
+
+)
+```
+
 By selecting a dependency set from the metaproject with `:monolith/dependency-set`,
 you will merge in a profile with `:managed-dependencies` set to the dependencies within
-the dependency set. If you also set the `:monolith/inherit` key in a project, this profile
+the dependency set. If you also configure the child project to use inherited profiles, this profile
 will be merged in *before* the inherited profiles. This means that dependency versions in
 a dependency set will have precedence over versions in an inherited `:managed-dependencies` key.
