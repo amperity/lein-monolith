@@ -133,9 +133,9 @@
   [monolith subproject]
   ;; The dependency set profile should be the first profile, so that its managed dependencies
   ;; take precedence.
-  (concat
-    (build-dependency-profiles monolith subproject)
-    (build-inherited-profiles monolith subproject)))
+  (vec (concat
+         (build-dependency-profiles monolith subproject)
+         (build-inherited-profiles monolith subproject))))
 
 
 ;; ## Profile Utilities
@@ -179,12 +179,11 @@
   "Adds profiles to the project. Profiles should be passed in as a vector to ensure profiles are
    added in the right order."
   [project profiles]
-  (reduce (fn [project [profile-key profile]]
-            (-> project
-                (project/add-profiles {profile-key profile})
-                (project/merge-profiles [profile-key])))
-          project
-          profiles))
+  (if (empty? profiles)
+    project
+    (-> project
+        (project/add-profiles (into {} profiles))
+        (project/merge-profiles (mapv first profiles)))))
 
 
 (defn middleware
