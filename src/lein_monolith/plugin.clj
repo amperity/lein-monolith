@@ -173,23 +173,30 @@
 
 ;; ## Plugin Middleware
 
+(defn- add-profiles
+  "Adds profiles to the project map, if any."
+  [project profiles]
+  (cond-> project
+    (seq profiles) (#(-> %
+                         (project/add-profiles profiles)
+                         (project/merge-profiles (keys profiles))))))
+
+
 (defn middleware
   "Handles inherited properties in monolith subprojects by looking for the
-  `:monolith/inherit` key, or sets the managed dependencies if :monolith/dependency-set is set."
+  `:monolith/inherit*` keys, or sets the managed dependencies if :monolith/dependency-set is set."
   ([project]
    (middleware project nil))
   ([project monolith]
-   (if (or (not-any? #{:monolith/inherit :monolith/dependency-set} (keys project))
-           (:monolith/active (meta project)))
-     ;; Normal project or already activated monolith subproject, don't activate.
+   (if (:monolith/active (meta project))
+     ;; Already activated monolith subproject, don't activate.
      project
-     ;; Monolith subproject has not yet been activated, add profiles.
-     (let [monolith (or monolith (config/find-monolith! project))
+     ;; Monolith subproject has not yet been activated, potentially add profiles.
+     (let [monolith (or monolith (config/find-monolith project))
            profiles (build-profiles monolith project)]
        (-> project
            (vary-meta assoc :monolith/active true)
-           (project/add-profiles profiles)
-           (project/merge-profiles (keys profiles)))))))
+           (add-profiles profiles))))))
 
 
 (defn add-middleware
