@@ -288,8 +288,9 @@
                               [[k subproject]]
                               [k
                                (update subproject :profiles merge
-                                       (plugin/build-inherited-profiles
-                                         monolith subproject))]))
+                                       (into {}
+                                             (plugin/build-profiles
+                                               monolith subproject)))]))
                           subprojects)]
     {:root root
      :subprojects subprojects

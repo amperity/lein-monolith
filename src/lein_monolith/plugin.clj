@@ -101,7 +101,8 @@
 
 
 (defn build-inherited-profiles
-  "Returns a map from profile keys to inherited profile maps."
+  "Returns a vector of map entries from profile keys to inherited profile maps.
+   We use a vector here instead of a map to preserve profile ordering."
   [monolith subproject]
   (reduce
     (fn [acc [key config]]
@@ -109,10 +110,32 @@
                             (inherited-profile subproject config)
                             (maybe-mark-leaky config))]
         (if profile
-          (assoc acc key profile)
+          (conj acc [key profile])
           acc)))
-    nil
+    []
     profile-config))
+
+
+(defn build-dependency-profiles
+  "Constructs a vector with a profile map entries containing managed dependencies from the subproject's chosen dependency set.
+   Returns nil if the subproject does not use a dependency set."
+  [monolith subproject]
+  (when-let [dependency-set (:monolith/dependency-set subproject)]
+    (let [dependencies (or (get-in monolith [:monolith :dependency-sets dependency-set])
+                           (lein/abort (format "Unknown dependency set %s used in project %s" dependency-set (:name subproject))))]
+      [[:monolith/dependency-set
+        ^:leaky {:managed-dependencies dependencies}]])))
+
+
+(defn build-profiles
+  "Constructs a vector of profile keys to inherited profile maps and the dependency set profile map.
+   We use a vector here instead of a map to preserve profile ordering."
+  [monolith subproject]
+  ;; The dependency set profile should be the first profile, so that its managed dependencies
+  ;; take precedence.
+  (vec (concat
+         (build-dependency-profiles monolith subproject)
+         (build-inherited-profiles monolith subproject))))
 
 
 ;; ## Profile Utilities
@@ -152,23 +175,32 @@
 
 ;; ## Plugin Middleware
 
+(defn- add-profiles
+  "Adds profiles to the project. Profiles should be passed in as a vector to ensure profiles are
+   added in the right order."
+  [project profiles]
+  (if (empty? profiles)
+    project
+    (-> project
+        (project/add-profiles (into {} profiles))
+        (project/merge-profiles (mapv first profiles)))))
+
+
 (defn middleware
   "Handles inherited properties in monolith subprojects by looking for the
-  `:monolith/inherit` key."
+  `:monolith/inherit*` keys, or sets the managed dependencies if :monolith/dependency-set is set."
   ([project]
    (middleware project nil))
   ([project monolith]
-   (if (or (not (:monolith/inherit project))
-           (:monolith/active (meta project)))
-     ;; Normal project or already activated monolith subproject, don't activate.
+   (if (:monolith/active (meta project))
+     ;; Already activated monolith subproject, don't activate.
      project
-     ;; Monolith subproject has not yet been activated, add inherited profiles.
-     (let [monolith (or monolith (config/find-monolith! project))
-           profiles (build-inherited-profiles monolith project)]
+     ;; Monolith subproject has not yet been activated, potentially add profiles.
+     (let [monolith (or monolith (config/find-monolith project))
+           profiles (build-profiles monolith project)]
        (-> project
            (vary-meta assoc :monolith/active true)
-           (project/add-profiles profiles)
-           (project/merge-profiles (keys profiles)))))))
+           (add-profiles profiles))))))
 
 
 (defn add-middleware
@@ -206,8 +238,8 @@
   (let [profile
         (reduce-kv
           (fn [profile _project-name subproject]
-            (let [with-inherited-profiles (middleware subproject monolith)
-                  project (project/absolutize-paths with-inherited-profiles)]
+            (let [with-profiles (middleware subproject monolith)
+                  project (project/absolutize-paths with-profiles)]
               (reduce (partial add-profile-paths project)
                       profile
                       path-keys)))

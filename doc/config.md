@@ -39,3 +39,49 @@ Lastly, `lein-monolith` supports inheriting unprocessed values, via
 inheriting paths, as Leiningen absolutizes paths upon processing a project map.
 By using raw inheritance, you can safely inherit paths, e.g. `:test-paths` or
 `:source-paths`.
+
+## Dependency Sets
+
+The `:dependency-sets` key can be configured in the metaproject to provide child
+projects with a curated set of managed dependencies to opt into instead of using
+a single list of managed dependencies in the metaproject. This should be a map of
+dependency set names and their dependencies.
+
+For example, in the metaproject file we can define a dependency set
+called `:set-a` as follows:
+
+```clj
+(defproject lein-monolith.example/all "MONOLITH"
+
+...
+
+:monolith
+  {:dependency-sets
+   {:set-a
+    [[amperity/greenlight "0.7.1"]
+     [org.clojure/spec.alpha "0.3.218"]]}
+
+...
+
+)
+```
+
+The `:monolith/dependency-set` key can then be used to a opt child project into `:set-a` as follows:
+
+```clj
+(defproject lein-monolith.example/app-a "MONOLITH-SNAPSHOT"
+ 
+ ...
+
+ :monolith/dependency-set :set-a
+
+ ...
+
+)
+```
+
+By selecting a dependency set from the metaproject with `:monolith/dependency-set`,
+you will merge in a profile with `:managed-dependencies` set to the dependencies within
+the dependency set. If you also configure the child project to use inherited profiles, this profile
+will be merged in *before* the inherited profiles. This means that dependency versions in
+a dependency set will have precedence over versions in an inherited `:managed-dependencies` key.

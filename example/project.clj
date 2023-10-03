@@ -6,14 +6,15 @@
    "version++" ["version+"]}
 
   :plugins
-  [[lein-monolith "1.8.0"]
+  [[lein-monolith "1.9.0-SNAPSHOT"]
    [lein-pprint "1.2.0"]]
 
   :dependencies
   [[org.clojure/clojure "1.10.1"]]
 
   :managed-dependencies
-  [[amperity/greenlight "0.6.0"]]
+  [[amperity/greenlight "0.6.0"]
+   [com.amperity/vault-clj "2.1.583"]]
 
   :test-selectors
   {:unit (complement :integration)
@@ -49,7 +50,12 @@
    :project-dirs
    ["apps/*"
     "libs/**"
-    "not-found"]}
+    "not-found"]
+
+   :dependency-sets
+   {:set-a
+    [[amperity/greenlight "0.7.1"]
+     [org.clojure/spec.alpha "0.3.218"]]}}
 
   :env
   {:foo "bar"})
