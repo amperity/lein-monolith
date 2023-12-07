@@ -6,7 +6,7 @@ follows the conventions of [keepachangelog.com](http://keepachangelog.com/).
 This project adheres to [Semantic Versioning](http://semver.org/).
 
 
-## [Unreleased]
+## [1.9.0] - 2023-12-07
 
 ### Added
 - Dependency sets can now be defined in the metaproject, and projects can opt into
