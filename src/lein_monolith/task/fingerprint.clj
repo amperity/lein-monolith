@@ -200,6 +200,17 @@
         (dep-map (dep/project-name project))))
 
 
+(defn- hash-jar-exclusions
+  [project]
+  (kv-hash
+    :jar-exclusions
+    (into
+      {}
+      (map (fn [[profile-key profile]]
+             [profile-key (pr-str (:jar-exclusions profile))]))
+      (assoc (:profiles project) ::default project))))
+
+
 (defn- hash-inputs
   "Hashes each of a project's inputs, and returns a map containing each individual
   result, so it's easier to explain what aspect of a project caused its overall
@@ -217,7 +228,7 @@
               prints
               {::version (str (:version project))
                ::java-version (System/getProperty "java.version")
-               ::jar-exclusions (pr-str (:jar-exclusions project))
+               ::jar-exclusions (hash-jar-exclusions project)
                ::seed (str (:monolith/fingerprint-seed project 0))
                ::sources (hash-sources project)
                ::deps (hash-dependencies project)
@@ -335,7 +346,7 @@
    ::new-project ["is a new project" "are new projects" :red]
    ::version ["has a different version" "have different versions" :red]
    ::java-version ["has a different java version" "have different java versions" :red]
-   ::jar-exclusions ["has changed JAR exclusions" "have changed JAR exclusions" :red]
+   ::jar-exclusions ["has different JAR exclusions" "have different JAR exclusions" :red]
    ::seed ["has a different seed" "have different seeds" :yellow]
    ::sources ["has updated sources" "have updated sources" :red]
    ::deps ["has updated external dependencies" "have updated external dependencies" :yellow]
