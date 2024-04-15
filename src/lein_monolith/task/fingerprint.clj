@@ -217,6 +217,7 @@
               prints
               {::version (str (:version project))
                ::java-version (System/getProperty "java.version")
+               ::jar-exclusions (pr-str (:jar-exclusions project))
                ::seed (str (:monolith/fingerprint-seed project 0))
                ::sources (hash-sources project)
                ::deps (hash-dependencies project)
@@ -325,7 +326,8 @@
    ::sources
    ::deps
    ::java-version
-   ::upstream])
+   ::upstream
+   ::jar-exclusions])
 
 
 (def ^:private reason-details
@@ -333,6 +335,7 @@
    ::new-project ["is a new project" "are new projects" :red]
    ::version ["has a different version" "have different versions" :red]
    ::java-version ["has a different java version" "have different java versions" :red]
+   ::jar-exclusions ["has changed JAR exclusions" "have changed JAR exclusions" :red]
    ::seed ["has a different seed" "have different seeds" :yellow]
    ::sources ["has updated sources" "have updated sources" :red]
    ::deps ["has updated external dependencies" "have updated external dependencies" :yellow]
