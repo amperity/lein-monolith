@@ -6,6 +6,9 @@ follows the conventions of [keepachangelog.com](http://keepachangelog.com/).
 This project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
+...
+
+## [1.9.1] - 2024-04-17
 
 ### Fixed
 - Subproject fingerprints now include `:jar-exclusions` in the calculation.
@@ -347,7 +350,8 @@ instead of loading them all before running any commands.
 Initial project release
 
 
-[Unreleased]: https://github.com/amperity/lein-monolith/compare/1.9.0...HEAD
+[Unreleased]: https://github.com/amperity/lein-monolith/compare/1.9.1...HEAD
+[1.9.1]: https://github.com/amperity/lein-monolith/compare/1.9.0...1.9.1
 [1.9.0]: https://github.com/amperity/lein-monolith/compare/1.8.0...1.9.0
 [1.8.0]: https://github.com/amperity/lein-monolith/compare/1.7.1...1.8.0
 [1.7.1]: https://github.com/amperity/lein-monolith/compare/1.7.0...1.7.1
