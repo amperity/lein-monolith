@@ -337,8 +337,8 @@
    ::sources
    ::deps
    ::java-version
-   ::upstream
-   ::jar-exclusions])
+   ::jar-exclusions
+   ::upstream])
 
 
 (def ^:private reason-details
@@ -346,7 +346,7 @@
    ::new-project ["is a new project" "are new projects" :red]
    ::version ["has a different version" "have different versions" :red]
    ::java-version ["has a different java version" "have different java versions" :red]
-   ::jar-exclusions ["has different JAR exclusions" "have different JAR exclusions" :red]
+   ::jar-exclusions ["has different JAR exclusions" "have different JAR exclusions" :yellow]
    ::seed ["has a different seed" "have different seeds" :yellow]
    ::sources ["has updated sources" "have updated sources" :red]
    ::deps ["has updated external dependencies" "have updated external dependencies" :yellow]
