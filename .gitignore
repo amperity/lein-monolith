@@ -9,3 +9,6 @@ pom.xml.asc
 *.jar
 test-results
 build.xml
+.lsp/
+.clj-kondo/
+.calva/
