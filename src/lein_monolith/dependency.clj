@@ -206,7 +206,7 @@
 
 (defn pretty-cycle
   "Returns a pretty-printed string representation of cycle c.
-  
+
   eg. (println (pretty-cycle [1 2 3 1])) =>
       + 1
       ^ + 2

@@ -6,7 +6,7 @@
    "version++" ["version+"]}
 
   :plugins
-  [[lein-monolith "1.9.1"]
+  [[lein-monolith "1.10.0-SNAPSHOT"]
    [lein-pprint "1.2.0"]]
 
   :dependencies
@@ -54,6 +54,9 @@
 
    :dependency-sets
    {:set-a
+    [[amperity/greenlight "0.7.0"]
+     [org.clojure/spec.alpha "0.3.218"]]
+    :set-b
     [[amperity/greenlight "0.7.1"]
      [org.clojure/spec.alpha "0.3.218"]]}}
 
