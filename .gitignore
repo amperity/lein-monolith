@@ -11,4 +11,5 @@ test-results
 build.xml
 .lsp/
 .clj-kondo/
+!.clj-kondo/config.edn
 .calva/
