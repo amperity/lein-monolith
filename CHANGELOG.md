@@ -6,9 +6,6 @@ follows the conventions of [keepachangelog.com](http://keepachangelog.com/).
 This project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
-...
-
-## [1.10.1] - 2024-05-23
 
 ### Added
 - Adds higher order task, `with-dependency-set`, that allows running a task with a
