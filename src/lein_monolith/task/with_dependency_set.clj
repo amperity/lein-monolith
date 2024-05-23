@@ -36,15 +36,20 @@
       (assoc project :monolith/dependency-set dependency-set))))
 
 
+(defn- setup
+  [project opts dependency-set]
+  (-> project
+      (reload-project)
+      (change-dependencies dependency-set)
+      (project/init-project)
+      (maybe-remove-dependencies opts)))
+
+
 (defn run-task
   "Runs the given task on the project with the given dependency set by reloading
    the project, changing the dependencies, adding middleware, initializing the
    project, and then running the task."
   [project opts dependency-set task]
   (-> project
-      (reload-project)
-      (change-dependencies dependency-set)
-      (plugin/add-middleware)
-      (project/init-project)
-      (maybe-remove-dependencies opts)
+      (setup opts dependency-set)
       (lein/resolve-and-apply task)))
