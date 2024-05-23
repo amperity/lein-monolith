@@ -8,6 +8,14 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 ## [Unreleased]
 ...
 
+## [1.10.1] - 2024-05-23
+
+### Added
+- Adds higher order task, `with-dependency-set`, that allows running a task with a
+  dependency set defined in the metaproject.
+  [#97](https://github.com/amperity/lein-monolith/pull/97)
+
+
 ## [1.9.1] - 2024-04-17
 
 ### Fixed
