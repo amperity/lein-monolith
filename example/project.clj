@@ -53,10 +53,10 @@
     "not-found"]
 
    :dependency-sets
-   {:set-a
+   {:set-outdated
     [[amperity/greenlight "0.7.0"]
-     [org.clojure/spec.alpha "0.3.218"]]
-    :set-b
+     [org.clojure/spec.alpha "0.2.194"]]
+    :set-a
     [[amperity/greenlight "0.7.1"]
      [org.clojure/spec.alpha "0.3.218"]]}}
 
