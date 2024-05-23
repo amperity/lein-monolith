@@ -41,6 +41,7 @@
   (-> project
       (reload-project)
       (change-dependencies dependency-set)
+      (plugin/add-middleware)
       (project/init-project)
       (maybe-remove-dependencies opts)))
 

@@ -1,8 +1,9 @@
 (ns lein-monolith.task.with-dependency-set-test
   (:require
     [clojure.test :refer [deftest testing is]]
+    [lein-monolith.plugin :as plugin]
     [lein-monolith.task.with-dependency-set :as wds]
-    [lein-monolith.test-utils :refer [use-example-project read-example-project]]
+    [lein-monolith.test-utils :refer [use-example-project]]
     [leiningen.core.main :as lein]
     [leiningen.core.project :as project]))
 
@@ -15,9 +16,16 @@
   (assoc-in project [:monolith :project-selectors :unstable] "non-deterministic"))
 
 
+(defn- read-project
+  [path]
+  (-> (project/read-raw path)
+      (plugin/add-middleware)
+      (project/init-project)))
+
+
 (deftest setup-test
   (with-redefs [lein/resolve-and-apply (fn [project & _] project)]
-    (let [project (remove-unstable (read-example-project))]
+    (let [project (remove-unstable (read-project "example/project.clj"))]
       (testing "Root Project"
         (testing "without :only"
           (is (= (assoc project
@@ -33,7 +41,7 @@
                         :dependencies '())
                  (remove-unstable (wds/run-task project {:only true} :set-a nil)))
               "For root project, with :only, should have no dependencies"))))
-    (let [project (project/read "example/apps/app-a/project.clj")]
+    (let [project (read-project "example/apps/app-a/project.clj")]
       (testing "Subproject"
         (testing "without :only"
           (let [expected (-> project
