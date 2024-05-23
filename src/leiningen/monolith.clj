@@ -278,10 +278,12 @@
 (defn ^:higher-order with-dependency-set
   "Run a task with a set of managed dependencies from a named dependency set.
 
-   Merges the dependencies from the named set into the project's profiles, and
-   runs the given task with the updated profiles. This essentially makes Leiningen
-   aware of the dependencies in the set, allowing you to run tasks that operate
-   on the project's dependencies with the set's dependencies included.
+   Overrides the dependencies from the named dependency set into the project.
+   For the root project, this means the managed dependencies will be overwritten
+   with the dependencies from the named set. For subprojects, the
+   `:monolith/dependency-set` metadata key will be set to the named set. If the
+   project does not have the `:monolith/dependency-set` key defined, it will be
+   added.
 
    A gotcha: this task does not update the project's `project.clj` file, so the
    dependencies will not be saved to disk. This is intentional, as the task is
@@ -290,10 +292,14 @@
    that require the project file to be updated.
 
    Options:
-      :only     Use _only_ the dependencies from the named set, ignoring any
-                other dependencies in the project's profiles. This is useful for
-                running a task that operates only on the dependencies in the set,
-                such as vulnerability scanning, dependency updates, etc.
+     :only    Use _only_ the dependencies from the named set. This replaces
+              the `:dependencies` value with an empty list and has the effect
+              of _only_ including a project's managed dependencies. This can
+              cause issues with tasks that require the project's dependencies
+              to be present in the project map (e.g. compilation or others).
+              This is useful for running a task that operates only on the
+              dependencies values in the project such as vulnerability scanning,
+              dependency tree generation, etc.
 
    Usage:
    lein monolith with-dependency-set [:only] <dependency-set-name> <task> [...]"

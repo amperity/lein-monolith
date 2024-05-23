@@ -91,7 +91,7 @@
   (Object.))
 
 
-(defn init-project
+(defn- init-project
   "Initialize the given subproject to prepare to run a task in it."
   [subproject]
   (locking init-lock

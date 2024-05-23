@@ -117,6 +117,7 @@
 
 
 (defn get-dependencies-from-set!
+  "Returns the managed dependencies from the given dependency set, or aborts if the set is unknown."
   [monolith dependency-set subproject]
   (or (get-in monolith [:monolith :dependency-sets dependency-set])
       (lein/abort
