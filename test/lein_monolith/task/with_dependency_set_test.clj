@@ -20,12 +20,14 @@
                   :managed-dependencies
                   '([amperity/greenlight "0.7.1"]
                     [org.clojure/spec.alpha "0.3.218"]))
-           (remove-unstable (#'wds/setup project {} :set-a))))
+           (remove-unstable (#'wds/setup project {} :set-a)))
+        "For root project, without :only, should have managed dependencies from :set-a")
     (is (= (assoc project :managed-dependencies
                   '([amperity/greenlight "0.7.1"]
                     [org.clojure/spec.alpha "0.3.218"])
                   :dependencies '())
-           (remove-unstable (#'wds/setup project {:only true} :set-a))))))
+           (remove-unstable (#'wds/setup project {:only true} :set-a)))
+        "For root project, with :only, should have no dependencies")))
 
 
 (deftest setup-subproject-test
@@ -40,7 +42,8 @@
                                  '[[amperity/greenlight "0.7.0"]
                                    [org.clojure/spec.alpha "0.2.194"]]))]
       (is (= expected
-             (#'wds/setup project {} :set-outdated))))
+             (#'wds/setup project {} :set-outdated))
+          "For subproject, should have managed dependencies from :set-outdated"))
     (let [expected (-> project
                        (assoc :monolith/dependency-set :set-outdated
                               :managed-dependencies '([amperity/greenlight "0.7.0"]
@@ -52,4 +55,5 @@
                                  '[[amperity/greenlight "0.7.0"]
                                    [org.clojure/spec.alpha "0.2.194"]]))]
       (is (= expected
-             (#'wds/setup project {:only true} :set-outdated))))))
+             (#'wds/setup project {:only true} :set-outdated))
+          "For subproject, with :only, should have no dependencies"))))
