@@ -91,7 +91,7 @@
   (Object.))
 
 
-(defn- init-project
+(defn init-project
   "Initialize the given subproject to prepare to run a task in it."
   [subproject]
   (locking init-lock
@@ -486,22 +486,3 @@
                              (colorize [:bold :cyan] (str/join " " task))
                              (colorize :cyan (count targets))
                              (u/human-duration @elapsed))))))))
-
-
-(defn- maybe-remove-dependencies
-  [project opts]
-  (if (:only opts)
-    (assoc project :dependencies '())
-    project))
-
-
-(defn run-task
-  [project opts dependency-set task]
-  (let [[monolith _] (u/load-monolith! project)
-        dependencies (or (get-in monolith [:monolith :dependency-sets dependency-set])
-                         (lein/abort (format "Unknown dependency set %s used in project %s" dependency-set (:name project))))
-        project (-> project
-                    (init-project)
-                    (assoc :managed-dependencies dependencies)
-                    (maybe-remove-dependencies opts))]
-    (lein/resolve-and-apply project task)))

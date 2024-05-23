@@ -11,6 +11,7 @@
     [lein-monolith.task.graph :as graph]
     [lein-monolith.task.info :as info]
     [lein-monolith.task.util :as u]
+    [lein-monolith.task.with-dependency-set :as wds]
     [leiningen.core.main :as lein]))
 
 
@@ -299,7 +300,7 @@
   [project args]
   (let [[opts more] (u/parse-kw-args {:only 0} args)
         dependency-set (read-string (first more))]
-    (each/run-task project opts dependency-set (rest more))))
+    (wds/run-task project opts dependency-set (rest more))))
 
 
 ;; ## Plugin Entry
