@@ -47,8 +47,8 @@
 
 (defn run-task
   "Runs the given task on the project with the given dependency set by reloading
-   the project, changing the dependencies, adding middleware, initializing the
-   project, and then running the task."
+   the project, changing the dependencies, re-initializing the project, and then
+   running the task."
   [project opts dependency-set task]
   (-> project
       (setup opts dependency-set)

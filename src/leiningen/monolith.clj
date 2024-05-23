@@ -285,6 +285,9 @@
    project does not have the `:monolith/dependency-set` key defined, it will be
    added.
 
+   For combining with other higher-order tasks, this task should be the last
+   evaluated.
+
    A gotcha: this task does not update the project's `project.clj` file, so the
    dependencies will not be saved to disk. This is intentional, as the task is
    meant to be used for temporary operations that need to be run with a specific
@@ -302,7 +305,8 @@
               dependency tree generation, etc.
 
    Usage:
-   lein monolith with-dependency-set [:only] <dependency-set-name> <task> [...]"
+   lein monolith with-dependency-set [:only] <dependency-set-name> <task> [...]
+   lein monolith each [opts] monolith with-dependency-set [...]"
   [project args]
   (let [[opts more] (u/parse-kw-args {:only 0} args)
         dependency-set (read-string (first more))]
