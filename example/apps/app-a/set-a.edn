@@ -1,0 +1,158 @@
+{:description
+ "Example project with internal and external dependencies.",
+ :compile-path
+ "/Users/stephen.gerkin/amperity/lein-monolith/example/apps/app-a/target/compiled",
+ :deploy-repositories
+ [["clojars"
+   {:url "https://repo.clojars.org/",
+    :password :gpg,
+    :username :gpg}]],
+ :group "lein-monolith.example",
+ :injections
+ [(require 'pjstadig.humane-test-output)
+  (pjstadig.humane-test-output/activate!)],
+ :test-refresh
+ {:notify-command
+  ["/opt/homebrew/bin/terminal-notifier"
+   "-group"
+   "lein-test-refresh"
+   "-title"
+   "lein test-refresh"
+   "-message"],
+  :changes-only true},
+ :monolith/dependency-set :set-a,
+ :deployable true,
+ :resource-paths
+ ("/Users/stephen.gerkin/amperity/lein-monolith/example/apps/app-a/dev-resources"
+  "/Users/stephen.gerkin/amperity/lein-monolith/example/apps/app-a/resources"),
+ :uberjar-merge-with
+ {"META-INF/plexus/components.xml" leiningen.uberjar/components-merger,
+  "data_readers.clj" leiningen.uberjar/clj-map-merger,
+  #"META-INF/services/.*"
+  [clojure.core/slurp
+   (fn*
+    [p1__7803__7805__auto__ p2__7804__7806__auto__]
+    (clojure.core/str
+     p1__7803__7805__auto__
+     "\n"
+     p2__7804__7806__auto__))
+   clojure.core/spit]},
+ :name "app-a",
+ :checkout-deps-shares
+ [:source-paths
+  :test-paths
+  :resource-paths
+  :compile-path
+  #'leiningen.core.classpath/checkout-deps-paths],
+ :source-paths
+ ("/Users/stephen.gerkin/amperity/lein-monolith/example/apps/app-a/bench"
+  "/Users/stephen.gerkin/amperity/lein-monolith/example/apps/app-a/src"),
+ :eval-in :subprocess,
+ :repositories
+ (["central"
+   {:url "https://repo1.maven.org/maven2/", :snapshots false}]
+  ["clojars" {:url "https://repo.clojars.org/"}]),
+ :env {:foo "bar"},
+ :test-paths
+ ("/Users/stephen.gerkin/amperity/lein-monolith/example/apps/app-a/test/unit"
+  "/Users/stephen.gerkin/amperity/lein-monolith/example/apps/app-a/test/integration"),
+ :middleware [whidbey.plugin/repl-pprint],
+ :target-path
+ "/Users/stephen.gerkin/amperity/lein-monolith/example/apps/app-a/target",
+ :prep-tasks ["javac" "compile"],
+ :managed-dependencies
+ ([amperity/greenlight "0.7.1"]
+  [org.clojure/spec.alpha "0.3.218"]
+  [amperity/greenlight "0.6.0"]
+  [com.amperity/vault-clj "2.1.583"]),
+ :native-path
+ "/Users/stephen.gerkin/amperity/lein-monolith/example/apps/app-a/target/native",
+ :offline? false,
+ :root
+ "/Users/stephen.gerkin/amperity/lein-monolith/example/apps/app-a",
+ :pedantic? ranges,
+ :clean-targets [:target-path],
+ :plugins
+ ([lein-monolith/lein-monolith "1.10.0-SNAPSHOT"]
+  [lein-kibit/lein-kibit "0.1.8"]
+  [lein-pprint/lein-pprint "1.3.2"]
+  [lein-cprint/lein-cprint "1.3.3"]
+  [mvxcvi/whidbey "2.2.1"]
+  [com.jakemccrary/lein-test-refresh "0.25.0"]
+  [amperity-service/lein-template "MONOLITH-SNAPSHOT"]
+  [amperity-connector/lein-template "MONOLITH-SNAPSHOT"]
+  [lein-ancient/lein-ancient "1.0.0-RC3"]),
+ :profiles
+ {:monolith/dependency-set
+  {:managed-dependencies
+   [[amperity/greenlight "0.7.1"] [org.clojure/spec.alpha "0.3.218"]]},
+  :monolith/inherited
+  {:aliases {"version+" ["version"], "version++" ["version+"]},
+   :test-selectors
+   {:unit (complement :integration), :integration :integration},
+   :env {:foo "bar"}},
+  :uberjar [:shared {:dependencies ([commons-net/commons-net "3.6"])}],
+  :monolith/leaky-raw {:compile-path "%s/compiled"},
+  :monolith/inherited-raw
+  {:test-paths ["test/unit" "test/integration"]},
+  :shared {:source-paths ("bench")},
+  :whidbey/repl
+  {:dependencies [[mvxcvi/whidbey "2.2.1"]],
+   :repl-options
+   {:init
+    (do
+     nil
+     (clojure.core/require 'whidbey.repl)
+     (whidbey.repl/init! nil)),
+    :custom-init (do nil (whidbey.repl/update-print-fn!)),
+    :nrepl-context
+    {:interactive-eval {:printer whidbey.repl/render-str}}}},
+  :monolith/leaky
+  {:repositories
+   [["central"
+     {:url "https://repo1.maven.org/maven2/", :snapshots false}]
+    ["clojars" {:url "https://repo.clojars.org/"}]],
+   :managed-dependencies
+   [[amperity/greenlight "0.6.0"] [com.amperity/vault-clj "2.1.583"]]},
+  :dev
+  [:shared {:dependencies ([clj-stacktrace/clj-stacktrace "0.2.8"])}]},
+ :plugin-repositories
+ [["central"
+   {:url "https://repo1.maven.org/maven2/", :snapshots false}]
+  ["clojars" {:url "https://repo.clojars.org/"}]],
+ :aliases
+ {"downgrade" "upgrade",
+  "version+" ["version"],
+  "version++" ["version+"]},
+ :version "MONOLITH-SNAPSHOT",
+ :jar-exclusions [#"^\." #"\Q/.\E"],
+ :global-vars {},
+ :uberjar-exclusions
+ [#"(?i)^META-INF/[^/]*\.(SF|RSA|DSA)$" #"^module-info.class$"],
+ :jvm-opts
+ ["-XX:-OmitStackTraceInFastThrow"
+  "-XX:+TieredCompilation"
+  "-XX:TieredStopAtLevel=1"],
+ :dependencies
+ ([org.clojure/clojure "1.10.1"]
+  [commons-io/commons-io "2.5"]
+  [lein-monolith.example/lib-a "MONOLITH-SNAPSHOT"]
+  [lein-monolith.example/lib-b "MONOLITH-SNAPSHOT"]
+  [nrepl/nrepl "1.0.0" :exclusions ([org.clojure/clojure])]
+  [org.nrepl/incomplete "0.1.0" :exclusions ([org.clojure/clojure])]
+  [pjstadig/humane-test-output "0.11.0"]
+  [clj-stacktrace/clj-stacktrace "0.2.8"]),
+ :monolith/inherit true,
+ :release-tasks
+ [["vcs" "assert-committed"]
+  ["change" "version" "leiningen.release/bump-version" "release"]
+  ["vcs" "commit"]
+  ["vcs" "tag"]
+  ["deploy"]
+  ["change" "version" "leiningen.release/bump-version"]
+  ["vcs" "commit"]
+  ["vcs" "push"]],
+ :test-selectors
+ {:default (constantly true),
+  :unit (complement :integration),
+  :integration :integration}}
