@@ -122,8 +122,7 @@
   [monolith subproject]
   (when-let [dependency-set (:monolith/dependency-set subproject)]
     (let [dependencies (or (get-in monolith [:monolith :dependency-sets dependency-set])
-                           (lein/abort
-                             (format "Unknown dependency set %s used in project %s" dependency-set (:name subproject))))]
+                           (lein/abort (format "Unknown dependency set %s used in project %s" dependency-set (:name subproject))))]
       [[:monolith/dependency-set
         ^:leaky {:managed-dependencies dependencies}]])))
 
