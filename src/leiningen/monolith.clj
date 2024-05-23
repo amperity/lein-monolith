@@ -285,32 +285,16 @@
    project does not have the `:monolith/dependency-set` key defined, it will be
    added.
 
-   For combining with other higher-order tasks, this task should be the last
-   evaluated.
-
-   A gotcha: this task does not update the project's `project.clj` file, so the
-   dependencies will not be saved to disk. This is intentional, as the task is
-   meant to be used for temporary operations that need to be run with a specific
-   set of dependencies. This also means that the task will not work with tasks
-   that require the project file to be updated.
-
-   Options:
-     :only    Use _only_ the dependencies from the named set. This replaces
-              the `:dependencies` value with an empty list and has the effect
-              of _only_ including a project's managed dependencies. This can
-              cause issues with tasks that require the project's dependencies
-              to be present in the project map (e.g. compilation or others).
-              This is useful for running a task that operates only on the
-              dependencies values in the project such as vulnerability scanning,
-              dependency tree generation, etc.
-
    Usage:
    lein monolith with-dependency-set [:only] <dependency-set-name> <task> [...]
    lein monolith each [opts] monolith with-dependency-set [...]"
   [project args]
-  (let [[opts more] (u/parse-kw-args {:only 0} args)
-        dependency-set (read-string (first more))]
-    (wds/run-task project opts dependency-set (rest more))))
+  (let [dependency-set (read-string (first args))
+        task (rest args)]
+    (when (some #{"monolith"} task)
+      (lein/abort (str "Running monolith with-dependency-set as a top-level task"
+                       " produces undefined behavior. It should be used as a subtask.")))
+    (wds/run-task project dependency-set (rest args))))
 
 
 ;; ## Plugin Entry

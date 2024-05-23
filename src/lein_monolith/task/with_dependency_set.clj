@@ -7,50 +7,40 @@
     [leiningen.core.project :as project]))
 
 
-(defn- maybe-remove-dependencies
-  [project opts]
-  (if (:only opts)
-    (assoc project :dependencies '())
-    project))
-
-
 (defn- reload-project
   "Reloads the raw project.clj file for the given project.
    This has the effect of removing any middleware that was added to the project
    as well as any changes to the project map that were made in the current
    session."
   [project]
-  (-> project
-      (:root)
-      (io/file "project.clj")
-      (str)
-      (project/read-raw)))
+  (let [project-file (io/file (:root project) "project.clj")]
+    (project/read-raw (str project-file))))
 
 
 (defn- change-dependencies
   [project dependency-set]
   (let [[monolith _] (u/load-monolith! project)
-        dependencies (plugin/get-dependencies-from-set! monolith dependency-set project)]
+        dependencies (or (get-in monolith [:monolith :dependency-sets dependency-set])
+                         (lein/abort (format "Unknown dependency set %s" dependency-set)))]
     (if (:monolith project)
       (assoc project :managed-dependencies dependencies)
       (assoc project :monolith/dependency-set dependency-set))))
 
 
 (defn- setup
-  [project opts dependency-set]
+  [project dependency-set]
   (-> project
       (reload-project)
       (change-dependencies dependency-set)
       (plugin/add-middleware)
-      (project/init-project)
-      (maybe-remove-dependencies opts)))
+      (project/init-project)))
 
 
 (defn run-task
   "Runs the given task on the project with the given dependency set by reloading
    the project, changing the dependencies, re-initializing the project, and then
    running the task."
-  [project opts dependency-set task]
+  [project dependency-set task]
   (-> project
-      (setup opts dependency-set)
+      (setup dependency-set)
       (lein/resolve-and-apply task)))
