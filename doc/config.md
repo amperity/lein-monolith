@@ -70,7 +70,7 @@ The `:monolith/dependency-set` key can then be used to a opt child project into 
 
 ```clj
 (defproject lein-monolith.example/app-a "MONOLITH-SNAPSHOT"
- 
+
  ...
 
  :monolith/dependency-set :set-a
@@ -85,3 +85,46 @@ you will merge in a profile with `:managed-dependencies` set to the dependencies
 the dependency set. If you also configure the child project to use inherited profiles, this profile
 will be merged in *before* the inherited profiles. This means that dependency versions in
 a dependency set will have precedence over versions in an inherited `:managed-dependencies` key.
+
+Dependency set evaluation can also be forced using the `with-dependency-set` task:
+
+```sh
+lein monolith with-dependency-set :foo ...
+```
+
+This works by adding and activating a profile that will replace the `:managed-dependencies` profile
+with the named set dependency coordinates, similar to adding the `:monolith/dependency-set` key to
+the project file.
+
+This can be combined with other higher-order tasks (e.g., `each`) to do preliminary testing throughout
+the entire repository without having to manually change each project file. For combining with other
+monolith tasks, `with-dependency-set` should be a sub-task of the task you want to do. For example:
+
+```sh
+lein monolith each ... monolith with-dependency-set :foo test
+```
+
+It is also useful to run on the metaproject for tasks that inspect dependencies, e.g.
+[antq](https://github.com/liquidz/antq) or [lein-ancient](https://github.com/xsc/lein-ancient), but
+are not aware of monolith dependency set definitions.
+
+For example, scanning the example project with `antq`, we will see the `:current` version of the
+dependency set that override the managed dependencies declared in the project:
+```sh
+lein antq
+[##################################################] 15/15
+| :file       | :name                       | :current        | :latest |
+|-------------+-----------------------------+-----------------+---------|
+| project.clj | amperity/greenlight         | 0.6.0           | 0.7.1   | # Older version
+|             | com.amperity/vault-clj      | 2.1.583         | 2.2.586 | # Not in dependency set
+|             | org.clojure/clojure         | 1.10.1          | 1.11.3  | # Global dependency
+
+
+lein monolith with-dependency-set :set-outdated antq
+[##################################################] 15/15
+| :file       | :name                       | :current        | :latest |
+|-------------+-----------------------------+-----------------+---------|
+| project.clj | amperity/greenlight         | 0.7.0           | 0.7.1   | # Version from dependency set
+|             | org.clojure/spec.alpha      | 0.2.194         | 0.5.238 | # Added dependency from set
+|             | org.clojure/clojure         | 1.10.1          | 1.11.3  | # Retains global dependency
+```
