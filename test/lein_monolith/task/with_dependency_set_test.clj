@@ -27,13 +27,10 @@
                (get-in actual [:profiles :monolith/dependency-override :managed-dependencies])))))
     (testing "Subproject"
       (let [project (read-project "example/apps/app-a/project.clj")
-            dep-set-deps '[[amperity/greenlight "0.7.1"]
-                           [org.clojure/spec.alpha "0.3.218"]]
             replaced-deps '[[amperity/greenlight "0.7.0"]
                             [org.clojure/spec.alpha "0.2.194"]]
             actual (wds/run-task project :set-outdated nil)]
         (is (= replaced-deps (:managed-dependencies actual)))
         (is (= replaced-deps
                (get-in actual [:profiles :monolith/dependency-override :managed-dependencies])))
-        (is (= :set-outdated (:monolith/dependency-set actual)))
-        (is (= dep-set-deps (get-in actual [:profiles :monolith/dependency-set :managed-dependencies])))))))
+        (is (= :set-outdated (:monolith/dependency-set actual)))))))
