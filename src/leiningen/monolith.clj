@@ -294,7 +294,7 @@
     (when (some #{"monolith"} task)
       (lein/abort (str "Running monolith with-dependency-set as a top-level task"
                        " produces undefined behavior. It should be used as a subtask.")))
-    (wds/run-task project dependency-set (rest args))))
+    (wds/run-task project dependency-set task)))
 
 
 ;; ## Plugin Entry

@@ -124,7 +124,7 @@
     (let [dependencies (or (get-in monolith [:monolith :dependency-sets dependency-set])
                            (lein/abort (format "Unknown dependency set %s used in project %s" dependency-set (:name subproject))))]
       [[:monolith/dependency-set
-        ^:leaky {:managed-dependencies dependencies}]])))
+        ^:leaky {:managed-dependencies (with-meta dependencies {:replace true})}]])))
 
 
 (defn build-profiles
