@@ -6,7 +6,18 @@ follows the conventions of [keepachangelog.com](http://keepachangelog.com/).
 This project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
-...
+
+### Added
+- Adds higher order task, `with-dependency-set`, that allows running a task with a
+  dependency set defined in the metaproject.
+  [#97](https://github.com/amperity/lein-monolith/pull/97)
+
+### Changed
+- Dependency sets declared in a subproject profile.clj will override the project
+  `:managed-dependencies` rather than concatenating with the metaproject
+  `:managed-dependencies`.
+  [#97](https://github.com/amperity/lein-monolith/pull/97)
+
 
 ## [1.9.1] - 2024-04-17
 

@@ -11,6 +11,7 @@
     [lein-monolith.task.graph :as graph]
     [lein-monolith.task.info :as info]
     [lein-monolith.task.util :as u]
+    [lein-monolith.task.with-dependency-set :as wds]
     [leiningen.core.main :as lein]))
 
 
@@ -274,28 +275,50 @@
     (fingerprint/clear project opts more)))
 
 
+(defn ^:higher-order with-dependency-set
+  "Run a task with a set of managed dependencies from a named dependency set.
+
+   Overrides the dependencies from the named dependency set into the project.
+   For the root project, this means the managed dependencies will be overwritten
+   with the dependencies from the named set. For subprojects, the
+   `:monolith/dependency-set` metadata key will be set to the named set.
+
+   Usage:
+   lein monolith with-dependency-set <dependency-set-name> <task> [...]
+   lein monolith each [opts] monolith with-dependency-set [...]"
+  [project args]
+  (let [dependency-set (read-string (first args))
+        task (rest args)]
+    (when (some #{"monolith"} task)
+      (lein/abort (str "Running monolith with-dependency-set as a top-level task"
+                       " produces undefined behavior. It should be used as a subtask.")))
+    (wds/run-task project dependency-set task)))
+
+
 ;; ## Plugin Entry
 
 (defn monolith
   "Tasks for working with Leiningen projects inside a monorepo."
   {:subtasks [#'info #'lint #'deps #'deps-on #'deps-of #'graph
               #'with-all #'each #'link #'unlink
-              #'changed #'mark-fresh #'show-fingerprints #'clear-fingerprints]}
+              #'changed #'mark-fresh #'show-fingerprints #'clear-fingerprints
+              #'with-dependency-set]}
   [project command & args]
   (case command
-    "info"               (info project args)
-    "lint"               (lint project args)
-    "deps"               (deps project args)
-    "deps-on"            (deps-on project args)
-    "deps-of"            (deps-of project args)
-    "graph"              (graph project args)
-    "with-all"           (with-all project args)
-    "each"               (each project args)
-    "link"               (link project args)
-    "unlink"             (unlink project args)
-    "changed"            (changed project args)
-    "mark-fresh"         (mark-fresh project args)
-    "show-fingerprints"  (show-fingerprints project args)
-    "clear-fingerprints" (clear-fingerprints project args)
+    "info"                (info project args)
+    "lint"                (lint project args)
+    "deps"                (deps project args)
+    "deps-on"             (deps-on project args)
+    "deps-of"             (deps-of project args)
+    "graph"               (graph project args)
+    "with-all"            (with-all project args)
+    "each"                (each project args)
+    "link"                (link project args)
+    "unlink"              (unlink project args)
+    "changed"             (changed project args)
+    "mark-fresh"          (mark-fresh project args)
+    "show-fingerprints"   (show-fingerprints project args)
+    "clear-fingerprints"  (clear-fingerprints project args)
+    "with-dependency-set" (with-dependency-set project args)
     (lein/abort (pr-str command) "is not a valid monolith command! Try: lein help monolith"))
   (flush))
