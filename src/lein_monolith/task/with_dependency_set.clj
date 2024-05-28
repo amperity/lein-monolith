@@ -13,7 +13,7 @@
   (let [[monolith _] (u/load-monolith! project)
         dependencies (or (get-in monolith [:monolith :dependency-sets dependency-set])
                          (lein/abort (format "Unknown dependency set %s" dependency-set)))
-        managed-deps {:managed-dependencies (with-meta dependencies {:replace true})}
+        managed-deps {:managed-dependencies (vary-meta dependencies assoc :replace true)}
         profile (merge managed-deps
                        (when-not (:monolith project)
                          {:monolith/dependency-set dependency-set}))

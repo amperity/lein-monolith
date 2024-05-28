@@ -47,6 +47,6 @@
   (let [monolith (config/find-monolith! (read-example-project))
         subproject (-> (project/read "example/apps/app-a/project.clj")
                        (plugin/middleware monolith))]
-    (is (= '([amperity/greenlight "0.7.1"]
-             [org.clojure/spec.alpha "0.3.218"])
+    (is (= [['amperity/greenlight "0.7.1"]
+            ['org.clojure/spec.alpha "0.3.218"]]
            (:managed-dependencies subproject)))))

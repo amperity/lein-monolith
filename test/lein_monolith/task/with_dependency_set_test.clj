@@ -10,25 +10,20 @@
 (use-example-project)
 
 
-(defn- read-project
-  [path]
-  (project/read path))
-
-
 (deftest setup-test
   (with-redefs [lein/resolve-and-apply (fn [project & _] project)]
     (testing "Root Project"
-      (let [project (read-project "example/project.clj")
-            deps '([amperity/greenlight "0.7.1"]
-                   [org.clojure/spec.alpha "0.3.218"])
+      (let [project (project/read "example/project.clj")
+            deps [['amperity/greenlight "0.7.1"]
+                  ['org.clojure/spec.alpha "0.3.218"]]
             actual (wds/run-task project :set-a nil)]
         (is (= deps (:managed-dependencies actual)))
         (is (= deps
                (get-in actual [:profiles :monolith/dependency-override :managed-dependencies])))))
     (testing "Subproject"
-      (let [project (read-project "example/apps/app-a/project.clj")
-            replaced-deps '[[amperity/greenlight "0.7.0"]
-                            [org.clojure/spec.alpha "0.2.194"]]
+      (let [project (project/read "example/apps/app-a/project.clj")
+            replaced-deps [['amperity/greenlight "0.7.0"]
+                           ['org.clojure/spec.alpha "0.2.194"]]
             actual (wds/run-task project :set-outdated nil)]
         (is (= replaced-deps (:managed-dependencies actual)))
         (is (= replaced-deps

@@ -281,12 +281,10 @@
    Overrides the dependencies from the named dependency set into the project.
    For the root project, this means the managed dependencies will be overwritten
    with the dependencies from the named set. For subprojects, the
-   `:monolith/dependency-set` metadata key will be set to the named set. If the
-   project does not have the `:monolith/dependency-set` key defined, it will be
-   added.
+   `:monolith/dependency-set` metadata key will be set to the named set.
 
    Usage:
-   lein monolith with-dependency-set [:only] <dependency-set-name> <task> [...]
+   lein monolith with-dependency-set <dependency-set-name> <task> [...]
    lein monolith each [opts] monolith with-dependency-set [...]"
   [project args]
   (let [dependency-set (read-string (first args))
