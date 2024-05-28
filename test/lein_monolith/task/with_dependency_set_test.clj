@@ -4,13 +4,14 @@
     [lein-monolith.task.with-dependency-set :as wds]
     [lein-monolith.test-utils :refer [use-example-project]]
     [leiningen.core.main :as lein]
-    [leiningen.core.project :as project]))
+    [leiningen.core.project :as project]
+    [leiningen.monolith :as monolith]))
 
 
 (use-example-project)
 
 
-(deftest setup-test
+(deftest run-task-test
   (with-redefs [lein/resolve-and-apply (fn [project & _] project)]
     (testing "Root Project"
       (let [project (project/read "example/project.clj")
@@ -28,4 +29,15 @@
         (is (= replaced-deps (:managed-dependencies actual)))
         (is (= replaced-deps
                (get-in actual [:profiles :monolith/dependency-override :managed-dependencies])))
-        (is (= :set-outdated (:monolith/dependency-set actual)))))))
+        (is (= :set-outdated (:monolith/dependency-set actual)))))
+    (testing "Unknown dependency set"
+      (let [project (project/read "example/project.clj")]
+        (is (thrown? Exception (wds/run-task project :unknown nil)))))))
+
+
+(deftest monolith-task-test
+  (testing "Parent subtask throws"
+    (let [project (project/read "example/project.clj")]
+      (is (thrown? Exception (monolith/monolith project
+                                                "with-dependency-set"
+                                                [":foo" "monolith" "each" "clean"]))))))
