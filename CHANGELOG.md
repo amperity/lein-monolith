@@ -7,6 +7,11 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 
+...
+
+
+## [1.10.0] - 2024-06-03
+
 ### Added
 - Adds higher order task, `with-dependency-set`, that allows running a task with a
   dependency set defined in the metaproject.
@@ -361,7 +366,8 @@ instead of loading them all before running any commands.
 Initial project release
 
 
-[Unreleased]: https://github.com/amperity/lein-monolith/compare/1.9.1...HEAD
+[Unreleased]: https://github.com/amperity/lein-monolith/compare/1.10.0...HEAD
+[1.10.0]: https://github.com/amperity/lein-monolith/compare/1.9.1...1.10.0
 [1.9.1]: https://github.com/amperity/lein-monolith/compare/1.9.0...1.9.1
 [1.9.0]: https://github.com/amperity/lein-monolith/compare/1.8.0...1.9.0
 [1.8.0]: https://github.com/amperity/lein-monolith/compare/1.7.1...1.8.0
