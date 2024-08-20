@@ -7,7 +7,10 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 
-...
+### Changed
+- Subproject `:clean-targets` will automatically be updated with absolute paths to support running
+  the `clean` task as part of `lein monolith each`.
+  [#99](https://github.com/amperity/lein-monolith/pull/99)
 
 
 ## [1.10.0] - 2024-06-03
