@@ -121,6 +121,19 @@
     :else nil))
 
 
+(defn- with-absolute-clean-targets
+  "Returns the given project map with its clean targets updated to use absolute paths
+   to work around https://github.com/technomancy/leiningen/issues/2707"
+  [{:keys [root clean-targets] :as project}]
+  (let [abs-target-fn (fn [target]
+                        (if (and (string? target)
+                                 (not (.isAbsolute (io/file target))))
+                          (str (io/file root target))
+                          target))
+        abs-clean-targets (with-meta (mapv abs-target-fn clean-targets) (meta clean-targets))]
+    (assoc project :clean-targets abs-clean-targets)))
+
+
 (defn- read-subproject
   "Reads a leiningen project definition from the given directory and returns
   the loaded project map, or nil if the directory does not contain a valid
@@ -129,7 +142,8 @@
   (let [project-file (io/file dir "project.clj")]
     (when (.exists project-file)
       (lein/debug "Reading subproject definition from" (str project-file))
-      (project/read-raw (str project-file)))))
+      (-> (project/read-raw (str project-file))
+          (with-absolute-clean-targets)))))
 
 
 (defn read-subprojects!

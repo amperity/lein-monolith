@@ -4,4 +4,6 @@
 
   :dependencies
   [[org.clojure/clojure "1.10.1"]
-   [lein-monolith.example/lib-a "MONOLITH-SNAPSHOT"]])
+   [lein-monolith.example/lib-a "MONOLITH-SNAPSHOT"]]
+
+  :clean-targets ^{:protect false} ["target" "resources"])
