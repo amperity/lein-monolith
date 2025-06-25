@@ -6,6 +6,7 @@
     [lein-monolith.plugin :as plugin]
     [lein-monolith.target :as target]
     [lein-monolith.task.checkouts :as checkouts]
+    [lein-monolith.task.coverage :as coverage]
     [lein-monolith.task.each :as each]
     [lein-monolith.task.fingerprint :as fingerprint]
     [lein-monolith.task.graph :as graph]
@@ -295,6 +296,12 @@
     (wds/run-task project dependency-set task)))
 
 
+(defn coverage
+  "Run tests and generate a coverage report."
+  [project args]
+  (coverage/run-task project args))
+
+
 ;; ## Plugin Entry
 
 (defn monolith
@@ -302,7 +309,8 @@
   {:subtasks [#'info #'lint #'deps #'deps-on #'deps-of #'graph
               #'with-all #'each #'link #'unlink
               #'changed #'mark-fresh #'show-fingerprints #'clear-fingerprints
-              #'with-dependency-set]}
+              #'with-dependency-set
+              #'coverage]}
   [project command & args]
   (case command
     "info"                (info project args)
@@ -320,5 +328,6 @@
     "show-fingerprints"   (show-fingerprints project args)
     "clear-fingerprints"  (clear-fingerprints project args)
     "with-dependency-set" (with-dependency-set project args)
+    "coverage"            (coverage project args)
     (lein/abort (pr-str command) "is not a valid monolith command! Try: lein help monolith"))
   (flush))

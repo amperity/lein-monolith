@@ -9,7 +9,8 @@
 
   :dependencies
   [[manifold "0.2.4"]
-   [rhizome "0.2.9"]]
+   [rhizome "0.2.9"]
+   [lein-cloverage "1.2.4"]]
 
   :hiera
   {:vertical false
@@ -19,8 +20,7 @@
 
   :profiles
   {:dev
-   {:plugins [[lein-cloverage "1.2.4"]]
-    :dependencies [[org.clojure/clojure "1.10.3"]]}
+   {:dependencies [[org.clojure/clojure "1.10.3"]]}
 
    :ci
    {:plugins [[test2junit "1.4.2"]]
