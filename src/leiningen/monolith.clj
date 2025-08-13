@@ -157,6 +157,13 @@
     :silent                 Don't print task output unless a subproject fails.
     :output <path>          Save each project's individual output in the given directory.
 
+    :parallel-unordered <threads> Like `:parallel`, but process projects as quickly
+                                  as possible, ignoring dependency order. This can yield
+                                  a speedup for some shapes of depdendency graphs,
+                                  but should only be used for tasks for which project order
+                                  doesn't matter. Otherwise, it will produce errors or incorrect results!
+                                  Mutually exclusive with `:parallel`.
+
   Targeting Options:
     :in <names>             Add the named projects directly to the targets.
     :upstream               Add the transitive dependencies of the current project to the targets.
@@ -183,8 +190,10 @@
   (let [[opts task] (u/parse-kw-args each/task-opts args)]
     (when (empty? task)
       (lein/abort "Cannot run each without a task argument!"))
-    (when (and (:start opts) (:parallel opts))
-      (lein/abort "The :parallel and :start options are not compatible!"))
+    (when (and (:start opts) (or (:parallel opts) (:parallel-unordered opts)))
+      (lein/abort "The :start option is not compatible with parallel processing!"))
+    (when (and (:parallel opts) (:parallel-unordered opts))
+      (lein/abort "The :parallel and :parallel-unordered options cannot be used at the same time!"))
     (each/run-tasks project opts task)))
 
 

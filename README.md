@@ -113,6 +113,8 @@ In addition to targeting options, `each` accepts:
 - `:report` show a detailed timing report after the tasks finish executing.
 - `:silent` suppress task output for successful projects.
 - `:output` path to a directory to save individual build output in.
+- `:parallel-unordered` like `:parallel`, but processes projects
+  as quickly as possible, ignoring dependency order.
 
 #### Incremental Builds
 

@@ -34,6 +34,7 @@
   (merge
     target/selection-opts
     {:parallel 1
+     :parallel-unordered 1
      :endure 0
      :report 0
      :silent 0
@@ -52,6 +53,8 @@
   (concat
     (when-let [threads (:parallel opts)]
       [:parallel threads])
+    (when-let [threads (:parallel-unordered opts)]
+      [:parallel-unordered threads])
     (when (:endure opts)
       [:endure])
     (when (:report opts)
@@ -301,7 +304,7 @@
             (print (str task-output))
             (flush)))
         ;; Print convenience resume tip for user.
-        (when-not (or (:parallel opts) (:endure opts))
+        (when-not (or (:parallel opts) (:parallel-unordered opts) (:endure opts))
           (let [resume-args (into
                               ["lein" "monolith" "each"]
                               (map u/shell-escape)
@@ -366,18 +369,47 @@
         (mapv (comp deref computations second) targets)))))
 
 
+(defn- run-parallel-unordered!
+  "Runs the tasks for targets in multiple worker threads, ignoring dependency
+  order. Returns a vector of result maps in the order the tasks finished
+  executing."
+  [ctx threads targets]
+  (let [thread-pool (executor/fixed-thread-executor threads)]
+    (resolve-tasks (:monolith ctx) (:task ctx))
+    (->
+      (reduce
+        (fn future-builder
+          [computations [_ target]]
+          (let [task-future (d/future-with thread-pool
+                              (lein/debug "Starting project" target)
+                              (run-task! ctx target))]
+            (assoc computations target task-future)))
+        {}
+        targets)
+      (as-> computations
+        (mapv (comp deref computations second) targets)))))
+
+
 (defn- run-all*
   "Run all tasks, using the `:parallel` option to determine whether to run them
   serially or concurrently."
   [ctx targets]
-  (if-let [threads (get-in ctx [:opts :parallel])]
-    (run-parallel! ctx (Integer/parseInt threads) targets)
-    (run-linear! ctx targets)))
+  (let [parallel (get-in ctx [:opts :parallel])
+        parallel-unordered (get-in ctx [:opts :parallel-unordered])]
+    (cond
+      parallel
+      (run-parallel! ctx (Integer/parseInt parallel) targets)
+
+      parallel-unordered
+      (run-parallel-unordered! ctx (Integer/parseInt parallel-unordered) targets)
+
+      :else
+      (run-linear! ctx targets))))
 
 
 (defn- run-all!
-  "Run all tasks, using the `:parallel`, `:silent`, and `:output` options to
-  determine behavior."
+  "Run all tasks, using the `:parallel`, `:parallel-unordered`, `:silent`, and
+  `:output` options to determine behavior."
   [ctx targets]
   (if (or (get-in ctx [:opts :silent])
           (get-in ctx [:opts :output]))
