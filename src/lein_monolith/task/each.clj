@@ -13,7 +13,7 @@
     [leiningen.core.eval :as eval]
     [leiningen.core.main :as lein]
     [leiningen.core.project :as project]
-    [leiningen.core.utils :refer [rebind-io!]]
+    [leiningen.core.utils :as utils :refer [rebind-io!]]
     [leiningen.do :as lein-do]
     [manifold.deferred :as d]
     [manifold.executor :as executor])
@@ -84,20 +84,12 @@
 
 ;; ## Project Initialization
 
-(def ^:private init-lock
-  "An object to lock on to ensure that projects are not initialized
-  concurrently. This prevents the mysterious 'unbound fn' errors that sometimes
-  crop up during parallel execution."
-  (Object.))
-
-
 (defn- init-project
   "Initialize the given subproject to prepare to run a task in it."
   [subproject]
-  (locking init-lock
-    (config/debug-profile "init-subproject"
-      (project/init-project
-        (plugin/add-middleware subproject)))))
+  (config/debug-profile "init-subproject"
+    (project/init-project
+      (plugin/add-middleware subproject))))
 
 
 (defn- resolve-tasks
@@ -251,14 +243,29 @@
 
 ;; ## Task Execution
 
+(defn- thread-safe-require-resolve
+  "Replacement for `leiningen.core.utils/require-resolve` that is safe to
+  execute in multiple threads."
+  ([ns sym]
+   (thread-safe-require-resolve (symbol ns sym)))
+  ([sym]
+   (if (qualified-symbol? sym)
+     (try
+       (requiring-resolve sym)
+       (catch Exception _
+         nil))
+     (resolve sym))))
+
+
 (defn- apply-subproject-task
   "Applies the task to the given subproject."
   [subproject task]
   (binding [lein/*exit-process?* false
             eval/*dir* (:root subproject)]
-    (let [initialized (init-project subproject)]
-      (config/debug-profile "apply-task"
-        (lein/resolve-and-apply initialized task)))))
+    (with-redefs [utils/require-resolve thread-safe-require-resolve]
+      (let [initialized (init-project subproject)]
+        (config/debug-profile "apply-task"
+          (lein/resolve-and-apply initialized task))))))
 
 
 (defn- run-task!
