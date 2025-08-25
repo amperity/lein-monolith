@@ -344,7 +344,7 @@
   order. Returns a vector of result maps in the order the tasks finished executing."
   [ctx threads targets]
   (let [deps (partial dep/upstream-keys (dep/dependency-map (:subprojects ctx)))
-        thread-pool (executor/fixed-thread-executor threads)]
+        thread-pool (executor/fixed-thread-executor threads {:initial-thread-count threads})]
     (resolve-tasks (:monolith ctx) (:task ctx))
     (->
       (reduce

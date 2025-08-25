@@ -7,7 +7,9 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 
-...
+### Fixed
+- Fixed a bug where `each :parallel <threads>` would run tasks
+  sequentially for the first 10 seconds.
 
 
 ## [1.10.1] - 2024-10-15
