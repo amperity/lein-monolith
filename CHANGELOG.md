@@ -7,10 +7,15 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 
+...
+
+## [1.10.3] - 2025-08-25
+
 ### Fixed
 - Attempted to fix non-deterministic errors in `each :parallel <threads>` by
   synchronizing namespace loading. These errors existed before, but were made
   much more likely to occur by to [#102](https://github.com/amperity/lein-monolith/pull/102).
+  [#103](https://github.com/amperity/lein-monolith/pull/103)
 
 ## [1.10.2] - 2025-08-25
 
@@ -383,7 +388,8 @@ instead of loading them all before running any commands.
 Initial project release
 
 
-[Unreleased]: https://github.com/amperity/lein-monolith/compare/1.10.2...HEAD
+[Unreleased]: https://github.com/amperity/lein-monolith/compare/1.10.3...HEAD
+[1.10.3]: https://github.com/amperity/lein-monolith/compare/1.10.2...1.10.3
 [1.10.2]: https://github.com/amperity/lein-monolith/compare/1.10.1...1.10.2
 [1.10.1]: https://github.com/amperity/lein-monolith/compare/1.10.0...1.10.1
 [1.10.0]: https://github.com/amperity/lein-monolith/compare/1.9.1...1.10.0
