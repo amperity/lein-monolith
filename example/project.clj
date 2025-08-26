@@ -6,7 +6,7 @@
    "version++" ["version+"]}
 
   :plugins
-  [[lein-monolith "1.10.3"]
+  [[lein-monolith "1.10.4-SNAPSHOT"]
    [lein-pprint "1.2.0"]]
 
   :dependencies
