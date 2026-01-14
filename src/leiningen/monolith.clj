@@ -156,12 +156,10 @@
     :report                 Print a detailed timing report after running tasks.
     :silent                 Don't print task output unless a subproject fails.
     :output <path>          Save each project's individual output in the given directory.
-
-    :no-dep-order Ignore dependency ordering. This can yield
-                         a speedup for some shapes of depdendency graphs,
-                         but should only be used for tasks for which project order
-                         doesn't matter. Otherwise, it will produce errors or incorrect results!
-                         Mutually exclusive with `:parallel`.
+    :no-dep-order           Ignore dependency ordering. This can yield a speedup for some
+                            shapes of depdendency graphs, but should only be used for tasks for which
+                            project order doesn't matter. Otherwise, it will produce errors or incorrect
+                            results!
 
   Targeting Options:
     :in <names>             Add the named projects directly to the targets.
