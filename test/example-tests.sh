@@ -40,7 +40,7 @@ test_monolith each :parallel 3 :report :endure pprint :group
 test_monolith each :refresh foo install
 test_monolith each :refresh foo install
 test_monolith each :parallel 3 :refresh bar install
-test_monolith each :parallel-unordered 3 test
+test_monolith each :parallel :no-dep-order 3 test
 test_monolith changed
 test_monolith clear-fingerprints :upstream-of lib-b
 test_monolith mark-fresh :upstream-of lib-b foo bar

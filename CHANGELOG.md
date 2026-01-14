@@ -8,7 +8,7 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 ## [Unreleased]
 
 ### Added
-- Add an option `:parallel-unordered` to the `each` task that
+- Add an option `:no-dep-order` to the `each` task that
   processes projects in parallel as quickly as possible, ignoring dependency order.
 
 ## [1.10.1] - 2024-10-15

@@ -113,8 +113,10 @@ In addition to targeting options, `each` accepts:
 - `:report` show a detailed timing report after the tasks finish executing.
 - `:silent` suppress task output for successful projects.
 - `:output` path to a directory to save individual build output in.
-- `:parallel-unordered` like `:parallel`, but processes projects
-  as quickly as possible, ignoring dependency order.
+- `:no-dep-order` normally `each` processes projects in dependency order
+  using a topological sort. With this option, projects are processed
+  without any respect to dependency order. This offers a speedup for
+  tasks that are not sensitive to dependency order.
 
 #### Incremental Builds
 
