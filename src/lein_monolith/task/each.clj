@@ -262,10 +262,9 @@
   [subproject task]
   (binding [lein/*exit-process?* false
             eval/*dir* (:root subproject)]
-    (with-redefs [utils/require-resolve thread-safe-require-resolve]
-      (let [initialized (init-project subproject)]
-        (config/debug-profile "apply-task"
-          (lein/resolve-and-apply initialized task))))))
+    (let [initialized (init-project subproject)]
+      (config/debug-profile "apply-task"
+        (lein/resolve-and-apply initialized task)))))
 
 
 (defn- run-task!
@@ -386,14 +385,15 @@
   "Run all tasks, using the `:parallel`, `:silent`, and `:output` options to
   determine behavior."
   [ctx targets]
-  (if (or (get-in ctx [:opts :silent])
-          (get-in ctx [:opts :output]))
-    ;; NOTE: this is done here rather than inside each task so that tasks
-    ;; starting across threads don't have a chance to see the `sh` var between
-    ;; rebindings.
-    (with-redefs [leiningen.core.eval/sh run-with-output]
-      (run-all* ctx targets))
-    (run-all* ctx targets)))
+  ;; NOTE: these redefs are done here rather than inside each task so that
+  ;; tasks starting across threads don't have a chance to see the vars between
+  ;; rebindings.
+  (with-redefs [utils/require-resolve thread-safe-require-resolve]
+    (if (or (get-in ctx [:opts :silent])
+            (get-in ctx [:opts :output]))
+      (with-redefs [leiningen.core.eval/sh run-with-output]
+        (run-all* ctx targets))
+      (run-all* ctx targets))))
 
 
 ;; ## Each Task
