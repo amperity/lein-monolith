@@ -2,7 +2,6 @@
   (:require
     [clojure.edn :as edn]
     [clojure.java.io :as io]
-    [clojure.pprint :refer [pprint]]
     [clojure.string :as str]
     [lein-monolith.color :refer [colorize]]
     [lein-monolith.dependency :as dep]
@@ -273,7 +272,7 @@
 (defn- write-fingerprints-file!
   [root fingerprints]
   (let [file (fingerprints-file root)]
-    (spit file (with-out-str (pprint fingerprints)))))
+    (spit file (pr-str fingerprints))))
 
 
 (let [lock (Object.)]
