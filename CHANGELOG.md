@@ -7,7 +7,9 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 
-...
+### Fixed
+- Fix performance bottleneck in writing fingerprints files.
+  [#105](https://github.com/amperity/lein-monolith/pull/102)
 
 ## [1.10.3] - 2025-08-25
 
