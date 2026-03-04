@@ -236,6 +236,9 @@
               prints
               (assoc prints
                      ::upstream-hashes upstream-hashes
+                     ;; ::self is a hash of everything _except_ upstream stuff.
+                     ;; standalone hash that only changes when this projects itself changed.
+                     ::self (kv-hash :self (dissoc prints ::upstream))
                      ::final (kv-hash :inputs prints)
                      ::time (System/currentTimeMillis))]
           (swap! cache assoc project-name prints)
