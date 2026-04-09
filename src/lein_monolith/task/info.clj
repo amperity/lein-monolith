@@ -103,16 +103,24 @@
         resolved-names (map (partial dep/resolve-name! (keys dep-map))
                             project-names)]
     (doseq [dep-name resolved-names]
+      (when-not (get dep-map dep-name)
+        (lein/abort dep-name "is not a valid subproject!"))
       (when-not (:bare opts)
-        (lein/info "\nSubprojects which depend on" (colorize [:bold :yellow] dep-name)))
-      (doseq [subproject-name (dep/topological-sort dep-map)]
-        (when-let [spec (->> (get-in subprojects [subproject-name :dependencies])
-                             (filter (comp #{dep-name} dep/condense-name first))
-                             (first))]
-          (if (:bare opts)
-            (println subproject-name (first spec) (second spec))
-            (println "  " (colorize :bold subproject-name)
-                     "->" (colorize :bold spec))))))))
+        (lein/info (str "\nSubprojects which "
+                        (when (:transitive opts) "transitively ")
+                        "depend on "
+                        (colorize [:bold :yellow] dep-name))))
+      (let [match-names (if (:transitive opts)
+                          (dep/downstream-keys dep-map dep-name)
+                          #{dep-name})]
+        (doseq [subproject-name (dep/topological-sort dep-map)]
+          (when-let [spec (->> (get-in subprojects [subproject-name :dependencies])
+                               (filter (comp match-names dep/condense-name first))
+                               (first))]
+            (if (:bare opts)
+              (println subproject-name (first spec) (second spec))
+              (println "  " (colorize :bold subproject-name)
+                       "->" (colorize :bold spec)))))))))
 
 
 (defn deps-of
@@ -135,7 +143,7 @@
                     (-> (dep/upstream-keys dep-map project-name)
                         (disj project-name)
                         (->> (dep/topological-sort dep-map)))
-                    (dep-map project-name))]
+                    (filter #(contains? dep-map %) (dep-map project-name)))]
         (if (:bare opts)
           (println project-name dep)
           (println "  " (colorize :bold project-name)

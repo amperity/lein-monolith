@@ -5,6 +5,18 @@ All notable changes to this project will be documented in this file, which
 follows the conventions of [keepachangelog.com](http://keepachangelog.com/).
 This project adheres to [Semantic Versioning](http://semver.org/).
 
+## [1.11.0] - 2026-04-09
+
+### Added
+- `deps-on` now supports a `:transitive` option to show all transitive
+  dependents, not just direct ones. Each entry shows the linking dependency
+  that connects it to the tree.
+
+### Fixed
+- `deps-of` now correctly filters out external dependencies in non-transitive
+  mode, showing only internal subprojects.
+- `deps-of` now correctly parses the `:transitive` option from the command line.
+
 ## Unreleased
 
 ...

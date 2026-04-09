@@ -75,9 +75,10 @@
   to the current project if none are provided.
 
   Options:
-    :bare          Only print the project names and dependent versions, one per line"
+    :bare          Only print the project names and dependent versions, one per line
+    :transitive    Include transitive dependents in addition to direct ones"
   [project args]
-  (let [[opts project-names] (opts+projects {:bare 0} project args)]
+  (let [[opts project-names] (opts+projects {:bare 0, :transitive 0} project args)]
     (info/deps-on project opts project-names)))
 
 
@@ -89,7 +90,7 @@
     :bare          Only print the project names and dependent versions, one per line
     :transitive    Include transitive dependencies in addition to direct ones"
   [project args]
-  (let [[opts project-names] (opts+projects {:bare 0} project args)]
+  (let [[opts project-names] (opts+projects {:bare 0, :transitive 0} project args)]
     (info/deps-of project opts project-names)))
 
 
