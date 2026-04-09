@@ -5,21 +5,22 @@ All notable changes to this project will be documented in this file, which
 follows the conventions of [keepachangelog.com](http://keepachangelog.com/).
 This project adheres to [Semantic Versioning](http://semver.org/).
 
+## Unreleased
+
+...
+
 ## [1.11.0] - 2026-04-09
 
 ### Added
 - `deps-on` now supports a `:transitive` option to show all transitive
   dependents, not just direct ones. Each entry shows the linking dependency
   that connects it to the tree.
+  [#108](https://github.com/amperity/lein-monolith/pull/108)
 
 ### Fixed
 - `deps-of` now correctly filters out external dependencies in non-transitive
   mode, showing only internal subprojects.
 - `deps-of` now correctly parses the `:transitive` option from the command line.
-
-## Unreleased
-
-...
 
 ## [1.10.4] - 2025-02-16
 
@@ -406,7 +407,8 @@ instead of loading them all before running any commands.
 Initial project release
 
 
-[Unreleased]: https://github.com/amperity/lein-monolith/compare/1.10.4...HEAD
+[Unreleased]: https://github.com/amperity/lein-monolith/compare/1.11.0...HEAD
+[1.11.0]: https://github.com/amperity/lein-monolith/compare/1.10.4...1.11.0
 [1.10.4]: https://github.com/amperity/lein-monolith/compare/1.10.3...1.10.4
 [1.10.3]: https://github.com/amperity/lein-monolith/compare/1.10.2...1.10.3
 [1.10.2]: https://github.com/amperity/lein-monolith/compare/1.10.1...1.10.2
