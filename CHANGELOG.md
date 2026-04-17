@@ -9,7 +9,7 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 
 ...
 
-## [1.11.0] - 2026-04-09
+## [1.11.0] - 2026-04-17
 
 ### Added
 - `deps-on` now supports a `:transitive` option to show all transitive
