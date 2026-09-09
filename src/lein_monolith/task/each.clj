@@ -18,6 +18,7 @@
     [manifold.deferred :as d]
     [manifold.executor :as executor])
   (:import
+    clojure.lang.RT
     (com.hypirion.io
       ClosingPipe
       Pipe
@@ -250,11 +251,27 @@
    (thread-safe-require-resolve (symbol ns sym)))
   ([sym]
    (if (qualified-symbol? sym)
-     (try
-       (requiring-resolve sym)
-       (catch Exception _
-         nil))
+     ;; Require under the global lock before resolving. A bare `resolve` (as
+     ;; in `requiring-resolve`) can observe unbound vars in a namespace that
+     ;; another thread is still loading, and neither `find-ns` nor
+     ;; `loaded-libs` can detect an in-progress load. The ns-exists? check
+     ;; keeps missing namespaces off the lock.
+     (when (utils/ns-exists? (namespace sym))
+       (try
+         (locking RT/REQUIRE_LOCK
+           (require (-> sym namespace symbol)))
+         (resolve sym)
+         (catch Exception _
+           nil)))
      (resolve sym))))
+
+
+(def ^:private require-resolve-fix
+  "Delay which installs the thread-safe `require-resolve` replacement. Uses
+  `alter-var-root` because a `with-redefs` exit can restore the original
+  function while other threads are still running."
+  (delay
+    (alter-var-root #'utils/require-resolve (constantly thread-safe-require-resolve))))
 
 
 (defn- apply-subproject-task
@@ -262,10 +279,9 @@
   [subproject task]
   (binding [lein/*exit-process?* false
             eval/*dir* (:root subproject)]
-    (with-redefs [utils/require-resolve thread-safe-require-resolve]
-      (let [initialized (init-project subproject)]
-        (config/debug-profile "apply-task"
-          (lein/resolve-and-apply initialized task))))))
+    (let [initialized (init-project subproject)]
+      (config/debug-profile "apply-task"
+        (lein/resolve-and-apply initialized task)))))
 
 
 (defn- run-task!
@@ -351,26 +367,30 @@
   order. Returns a vector of result maps in the order the tasks finished executing."
   [ctx threads targets]
   (let [deps (partial dep/upstream-keys (dep/dependency-map (:subprojects ctx)))
-        thread-pool (executor/fixed-thread-executor threads {:initial-thread-count threads})]
+        thread-pool (executor/fixed-thread-executor threads {:initial-thread-count threads})
+        future-builder (fn future-builder
+                         [computations [_ target]]
+                         (let [upstream-futures (keep computations (deps target))
+                               task-runner (fn task-runner
+                                             [_]
+                                             (d/future-with thread-pool
+                                               (lein/debug "Starting project" target)
+                                               (run-task! ctx target)))
+                               task-future (if (seq upstream-futures)
+                                             (d/chain (apply d/zip upstream-futures) task-runner)
+                                             (task-runner nil))]
+                           (assoc computations target task-future)))]
+    (force require-resolve-fix)
     (resolve-tasks (:monolith ctx) (:task ctx))
-    (->
-      (reduce
-        (fn future-builder
-          [computations [_ target]]
-          (let [upstream-futures (keep computations (deps target))
-                task-runner (fn task-runner
-                              [_]
-                              (d/future-with thread-pool
-                                (lein/debug "Starting project" target)
-                                (run-task! ctx target)))
-                task-future (if (seq upstream-futures)
-                              (d/chain (apply d/zip upstream-futures) task-runner)
-                              (task-runner nil))]
-            (assoc computations target task-future)))
-        {}
-        targets)
-      (as-> computations
-        (mapv (comp deref computations second) targets)))))
+    ;; Run the first target on this thread so shared namespaces load once
+    ;; before the workers spawn. The first target in topological order never
+    ;; depends on another target.
+    (let [warmup-result (run-task! ctx (second (first targets)))
+          remaining (rest targets)
+          computations (reduce future-builder {} remaining)]
+      (into [warmup-result]
+            (map (comp deref computations second))
+            remaining))))
 
 
 (defn- run-all*
