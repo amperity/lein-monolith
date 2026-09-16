@@ -1,5 +1,7 @@
 (ns lein-monolith.task.each-test
   (:require
+    [cemerick.pomegranate]
+    [clojure.data]
     [clojure.java.io :as io]
     [clojure.string :as str]
     [clojure.test :refer [deftest is testing]]
@@ -36,3 +38,25 @@
               parent-dir (io/file (.getParent test-file))]
           (is (not (.exists test-file)) "The test file should not exist after a lein clean")
           (is (not (.exists parent-dir)) "The target directory should not exist after a lein clean"))))))
+
+
+(deftest thread-safe-require-resolve-semantics
+  (let [tsrr #'each/thread-safe-require-resolve]
+    (testing "missing namespace resolves to nil"
+      (is (nil? (tsrr 'no.such.namespace/some-fn))))
+    (testing "loadable namespace is required and resolved"
+      (is (= #'clojure.data/diff (tsrr 'clojure.data/diff))))
+    (testing "in-memory namespace falls through to resolve"
+      (create-ns 'each-test.mem-only)
+      (intern 'each-test.mem-only 'answer 42)
+      (is (= 42 @(tsrr 'each-test.mem-only/answer))))
+    (testing "unqualified symbol resolves in the current namespace"
+      (is (= #'clojure.core/map (tsrr 'map))))
+    (testing "load errors propagate instead of resolving to nil"
+      (let [tmp-dir (io/file (System/getProperty "java.io.tmpdir")
+                             (str "tsrr-test-" (System/nanoTime)))]
+        (io/make-parents (io/file tmp-dir "broken_load_for_test.clj"))
+        (spit (io/file tmp-dir "broken_load_for_test.clj")
+              "(ns broken-load-for-test)\n(defn oops [] (undefined-var))\n")
+        (cemerick.pomegranate/add-classpath tmp-dir)
+        (is (thrown? Exception (tsrr 'broken-load-for-test/oops)))))))
