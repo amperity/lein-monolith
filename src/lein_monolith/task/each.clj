@@ -25,6 +25,7 @@
       RevivableInputStream)
     (java.io
       ByteArrayOutputStream
+      FileNotFoundException
       OutputStream)
     java.time.Instant))
 
@@ -250,26 +251,27 @@
   ([ns sym]
    (thread-safe-require-resolve (symbol ns sym)))
   ([sym]
-   (if (qualified-symbol? sym)
-     ;; Require under the global lock before resolving. A bare `resolve` (as
-     ;; in `requiring-resolve`) can observe unbound vars in a namespace that
-     ;; another thread is still loading, and neither `find-ns` nor
-     ;; `loaded-libs` can detect an in-progress load. The ns-exists? check
-     ;; keeps missing namespaces off the lock.
-     (when (utils/ns-exists? (namespace sym))
+   (if-let [ns-name (namespace sym)]
+     (when (utils/ns-exists? ns-name)
+       ;; Require under the global lock before resolving. A bare `resolve` (as
+       ;; in `requiring-resolve`) can observe unbound vars in a namespace that
+       ;; another thread is still loading, and neither `find-ns` nor
+       ;; `loaded-libs` can detect an in-progress load. Namespaces that exist
+       ;; only in memory have no file to require.
        (try
          (locking RT/REQUIRE_LOCK
-           (require (-> sym namespace symbol)))
-         (resolve sym)
-         (catch Exception _
-           nil)))
+           (require (symbol ns-name)))
+         (catch FileNotFoundException _
+           nil))
+       (resolve sym))
      (resolve sym))))
 
 
 (def ^:private require-resolve-fix
-  "Delay which installs the thread-safe `require-resolve` replacement. Uses
-  `alter-var-root` because a `with-redefs` exit can restore the original
-  function while other threads are still running."
+  "Delay which installs the thread-safe `require-resolve` replacement. The
+  replacement preserves the original's semantics, so it is left in place;
+  restoring it is unsafe because a `with-redefs`-style exit can reinstate the
+  original while other threads are still running."
   (delay
     (alter-var-root #'utils/require-resolve (constantly thread-safe-require-resolve))))
 
