@@ -20,7 +20,8 @@
   :profiles
   {:dev
    {:plugins [[lein-cloverage "1.2.4"]]
-    :dependencies [[org.clojure/clojure "1.10.3"]]}
+    :dependencies [[org.clojure/clojure "1.10.3"]]
+    :resource-paths ["test-resources"]}
 
    :ci
    {:plugins [[test2junit "1.4.2"]]

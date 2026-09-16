@@ -1,6 +1,5 @@
 (ns lein-monolith.task.each-test
   (:require
-    [cemerick.pomegranate]
     [clojure.data]
     [clojure.java.io :as io]
     [clojure.string :as str]
@@ -53,10 +52,9 @@
     (testing "unqualified symbol resolves in the current namespace"
       (is (= #'clojure.core/map (tsrr 'map))))
     (testing "load errors propagate instead of resolving to nil"
-      (let [tmp-dir (io/file (System/getProperty "java.io.tmpdir")
-                             (str "tsrr-test-" (System/nanoTime)))]
-        (io/make-parents (io/file tmp-dir "broken_load_for_test.clj"))
-        (spit (io/file tmp-dir "broken_load_for_test.clj")
-              "(ns broken-load-for-test)\n(defn oops [] (undefined-var))\n")
-        (cemerick.pomegranate/add-classpath tmp-dir)
-        (is (thrown? Exception (tsrr 'broken-load-for-test/oops)))))))
+      ;; The fixture namespace (on the dev :resource-paths) throws at load
+      ;; time. A failed load still registers in *loaded-libs*, so unwind any
+      ;; earlier attempt to keep this test repeatable in one JVM.
+      (remove-ns 'broken-load-for-test)
+      (dosync (alter @#'clojure.core/*loaded-libs* disj 'broken-load-for-test))
+      (is (thrown? Exception (tsrr 'broken-load-for-test/anything))))))
