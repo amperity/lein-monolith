@@ -1,4 +1,4 @@
-(defproject lein-monolith "1.11.0"
+(defproject lein-monolith "1.11.1-SNAPSHOT"
   :description "Leiningen plugin for managing subrojects within a monorepo."
   :url "https://github.com/amperity/lein-monolith"
   :license {:name "Apache License 2.0"
@@ -20,7 +20,8 @@
   :profiles
   {:dev
    {:plugins [[lein-cloverage "1.2.4"]]
-    :dependencies [[org.clojure/clojure "1.10.3"]]}
+    :dependencies [[org.clojure/clojure "1.10.3"]]
+    :resource-paths ["test-resources"]}
 
    :ci
    {:plugins [[test2junit "1.4.2"]]
